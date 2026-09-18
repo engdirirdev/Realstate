@@ -1,0 +1,237 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ================================================================
+   GLOBAL CSS — AI Real Estate Design System
+   Color System: Navy + Emerald + Cyan
+================================================================ */
+
+@layer base {
+  :root {
+    /* shadcn/ui HSL tokens mapped to new palette */
+    --background:  210 40% 98%;        /* #F8FAFC */
+    --foreground:  222 47% 11%;        /* #0F172A */
+    --card:        0 0% 100%;          /* #FFFFFF */
+    --card-foreground: 222 47% 11%;
+    --popover:     0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary:     161 94% 30%;        /* #10B981 emerald */
+    --primary-foreground: 0 0% 100%;
+    --secondary:   210 40% 96%;        /* #F1F5F9 */
+    --secondary-foreground: 222 47% 11%;
+    --muted:       210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent:      152 81% 96%;        /* #ECFDF5 */
+    --accent-foreground: 161 84% 31%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border:      214 32% 91%;        /* #E2E8F0 */
+    --input:       214 32% 91%;
+    --ring:        161 94% 30%;
+    --radius:      0.625rem;           /* 10px */
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-[#F8FAFC] text-[#0F172A];
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight text-[#0F172A];
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  a {
+    @apply transition-colors duration-200;
+  }
+}
+
+@layer components {
+
+  /* ── Section container ─────────────────────────────────────── */
+  .section-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* ── Property card ─────────────────────────────────────────── */
+  .property-card {
+    @apply rounded-2xl overflow-hidden bg-white border border-[#E2E8F0]
+           shadow-card transition-all duration-300 cursor-pointer;
+  }
+  .property-card:hover {
+    @apply shadow-card-hover -translate-y-1;
+  }
+
+  /* ── Stat card ─────────────────────────────────────────────── */
+  .stat-card {
+    @apply bg-white rounded-2xl p-6 shadow-card border border-[#E2E8F0]
+           transition-all duration-300;
+  }
+  .stat-card:hover {
+    @apply shadow-card-hover -translate-y-1;
+  }
+
+  /* ── Primary button ────────────────────────────────────────── */
+  .btn-primary {
+    @apply bg-[#10B981] text-white font-semibold rounded-xl
+           px-6 py-3 transition-all duration-200
+           hover:bg-[#059669] active:scale-95;
+  }
+
+  /* ── Secondary button ──────────────────────────────────────── */
+  .btn-secondary {
+    @apply bg-white text-[#0F172A] font-semibold rounded-xl
+           px-6 py-3 border border-[#E2E8F0] transition-all duration-200
+           hover:bg-[#F8FAFC] active:scale-95;
+  }
+
+  /* ── AI button (cyan accent) ───────────────────────────────── */
+  .btn-ai {
+    @apply bg-[#ECFEFF] text-[#0891B2] font-semibold rounded-xl
+           px-6 py-3 border border-[#A5F3FC] transition-all duration-200
+           hover:bg-[#CFFAFE] active:scale-95;
+  }
+
+  /* ── Dashboard sidebar link ────────────────────────────────── */
+  .sidebar-link {
+    @apply flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium
+           text-[#CBD5E1] hover:bg-white/10 hover:text-white
+           transition-all duration-200;
+  }
+  .sidebar-link.active {
+    @apply bg-[#10B981]/15 text-[#10B981] font-semibold;
+  }
+
+  /* ── Input field ───────────────────────────────────────────── */
+  .input-field {
+    @apply w-full px-4 py-3 rounded-xl border border-[#E2E8F0] bg-white
+           text-[#0F172A] placeholder-[#94A3B8] text-sm
+           focus:outline-none focus:ring-2 focus:ring-[#10B981]/30
+           focus:border-[#10B981] transition-all duration-200;
+  }
+
+  /* ── Badge styles ──────────────────────────────────────────── */
+  .badge-primary {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+           bg-[#D1FAE5] text-[#065F46];
+  }
+  .badge-navy {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+           bg-[#F1F5F9] text-[#334155];
+  }
+  .badge-cyan {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+           bg-[#ECFEFF] text-[#0891B2];
+  }
+  .badge-success {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+           bg-[#DCFCE7] text-[#166534];
+  }
+  .badge-warning {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+           bg-[#FEF9C3] text-[#854D0E];
+  }
+  .badge-danger {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+           bg-[#FEE2E2] text-[#991B1B];
+  }
+
+  /* ── AI chat bubbles ───────────────────────────────────────── */
+  .chat-bubble-user {
+    @apply bg-[#10B981] text-white rounded-2xl rounded-tr-sm
+           px-4 py-3 max-w-xs lg:max-w-md;
+  }
+  .chat-bubble-ai {
+    @apply bg-white border border-[#E2E8F0] text-[#0F172A]
+           rounded-2xl rounded-tl-sm px-4 py-3
+           max-w-xs lg:max-w-md shadow-card;
+  }
+
+  /* ── Skeleton loader ───────────────────────────────────────── */
+  .skeleton {
+    @apply bg-[#E2E8F0] rounded animate-pulse;
+  }
+
+  /* ── Glass card ────────────────────────────────────────────── */
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-md border border-[#E2E8F0]
+           rounded-2xl shadow-card;
+  }
+}
+
+@layer utilities {
+  /* Hero background */
+  .bg-hero {
+    background: linear-gradient(135deg, #F8FAFC 0%, #ECFDF5 50%, #F0FDFA 100%);
+  }
+
+  /* AI section background */
+  .bg-ai-section {
+    background: linear-gradient(135deg, #ECFEFF 0%, #F0FDFA 100%);
+  }
+
+  /* Navy section */
+  .bg-navy {
+    background-color: #0F172A;
+  }
+
+  /* Text gradient (emerald) */
+  .text-gradient {
+    @apply bg-gradient-to-r from-[#059669] to-[#10B981] bg-clip-text text-transparent;
+  }
+
+  /* Price highlight */
+  .price-text {
+    @apply text-[#059669] font-bold;
+  }
+
+  /* Scrollbar */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+  /* Fade in animation */
+  .animate-fade-in {
+    animation: fade-in 0.35s ease-out forwards;
+  }
+
+  /* Font display utility */
+  .font-display {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+  }
+}
+
+/* ── Keyframe animations ─────────────────────────────────────── */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+/* ── Custom scrollbar ────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #F1F5F9; }
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover { background: #94A3B8; }

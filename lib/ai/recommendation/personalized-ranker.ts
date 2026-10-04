@@ -198,7 +198,38 @@ export function rankPropertiesPersonalized(
   const topCity = Object.entries(learned.preferredCities).sort((a, b) => b[1] - a[1])[0]?.[0];
   const topType = Object.entries(learned.preferredTypes).sort((a, b) => b[1] - a[1])[0]?.[0];
 
-  for (const prop of properties) {
+  // Enforce Inviolable Hard Constraints:
+  // If explicit criteria are provided, hard constraints always win over soft personalization.
+  let candidatePool = properties;
+  if (explicit && Object.keys(explicit).length > 0) {
+    const hasConstraint = explicit.location || explicit.preferredType || explicit.preferredBedrooms || explicit.maxBudget;
+    if (hasConstraint) {
+      const strictMatches = properties.filter((prop) => {
+        if (explicit.location) {
+          const prefLoc = explicit.location.toLowerCase();
+          const propCity = (prop.city || "").toLowerCase();
+          const propLoc = (prop.location || "").toLowerCase();
+          if (propCity !== prefLoc && !propLoc.includes(prefLoc) && !propCity.includes(prefLoc)) return false;
+        }
+        if (explicit.preferredType && prop.type !== explicit.preferredType) {
+          return false;
+        }
+        if (explicit.preferredBedrooms && prop.bedrooms !== explicit.preferredBedrooms) {
+          return false;
+        }
+        if (explicit.maxBudget && prop.price > explicit.maxBudget) {
+          return false;
+        }
+        return true;
+      });
+
+      if (strictMatches.length > 0) {
+        candidatePool = strictMatches;
+      }
+    }
+  }
+
+  for (const prop of candidatePool) {
     const sExplicit = computeExplicitScore(prop, explicit);
     const sBehavior = computeBehavioralScore(prop, learned);
     const sSemantic = computeSemanticScore(prop, learned);

@@ -5,21 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, Bot } from "lucide-react";
 
 export default function AIAssistantPage() {
-<<<<<<< HEAD
   const router = useRouter();
-=======
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "assistant",
-      content: "👋 Welcome to Kiro-Maal Real Estate Concierge. I am connected live to our verified property database across Somalia. I can recommend exclusive listings, estimate valuation indices, compare amenities, and answer any property questions.\n\nWhat can I assist you with today?",
-      timestamp: new Date(),
-    },
-  ]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
->>>>>>> 1a04d526277b6dcc468ae22e8e83397673c6e17c
 
   useEffect(() => {
     // Read optional query parameter ?q=
@@ -39,58 +25,8 @@ export default function AIAssistantPage() {
       router.replace("/properties");
     }, 120);
 
-<<<<<<< HEAD
     return () => clearTimeout(timer);
   }, [router]);
-=======
-    const userMessage: Message = { role: "user", content, timestamp: new Date() };
-    setMessages((prev) => [...prev, userMessage]);
-    setInput("");
-    setLoading(true);
-
-    try {
-      // Send conversation history to preserve filter memory
-      const chatHistory = messages.map((m) => ({ role: m.role, content: m.content }));
-
-      const res = await fetch("/api/ai-chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: content,
-          history: chatHistory,
-          sessionId: sessionId || undefined,
-        }),
-      });
-      const data = await res.json();
-      if (data.sessionId && !sessionId) {
-        setSessionId(data.sessionId);
-      }
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: data.reply || "Sorry, I couldn't process that. Please try again.",
-          timestamp: new Date(),
-          properties: data.shouldRenderPropertyCards && data.properties ? data.properties : [],
-        },
-      ]);
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "⚠️ Connection error. Please check your network and try again.", timestamp: new Date() },
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
->>>>>>> 1a04d526277b6dcc468ae22e8e83397673c6e17c
 
   return (
     <div className="min-h-[75vh] flex flex-col items-center justify-center bg-[#F5F1EA] text-[#07111F] p-6">

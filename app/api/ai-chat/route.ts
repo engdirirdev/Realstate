@@ -241,11 +241,13 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Fetch authentic historical session messages for sliding window multi-turn memory
-    const dbMessages = await prisma.chatMessage.findMany({
-      where: { sessionId: activeSessionId },
-      orderBy: { createdAt: "asc" },
-      take: 20,
-    });
+    const dbMessages = activeSessionId
+      ? await prisma.chatMessage.findMany({
+          where: { sessionId: activeSessionId },
+          orderBy: { createdAt: "asc" },
+          take: 20,
+        })
+      : [];
 
     // 6. Process conversational turn with full context continuity, entity memory, and multilingual support
     const historyToUse = dbMessages.length > 1
@@ -267,7 +269,7 @@ export async function POST(request: NextRequest) {
         }));
 
     const turnResult = await processConversationalTurn({
-      sessionId: activeSessionId,
+      sessionId: activeSessionId ?? (typeof requestedSessionId === "string" && requestedSessionId ? requestedSessionId : `guest-${Date.now()}`),
       message: message.trim(),
       history: historyToUse,
       userName,
@@ -293,26 +295,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-<<<<<<< HEAD
-    // Persist ASSISTANT message if session is active
-    if (activeSessionId) {
-      await prisma.chatMessage.create({
-        data: {
-          sessionId: activeSessionId,
-          role: "assistant",
-          content: reply,
-          metadata: JSON.stringify({
-            intent: intentResult.intent,
-            confidence: intentResult.confidence,
-            totalMatches,
-            propertyIds: properties.map((p) => p.id),
-          }),
-        },
-      }).catch((err) => console.error("Failed to persist assistant chat message:", err));
-    }
-=======
-    // 7. Persist ASSISTANT message with full conversation state in metadata
-    await prisma.chatMessage.create({
+    // 7. Persist ASSISTANT message with full conversation state in metadata (authenticated sessions only)
+    if (activeSessionId) await prisma.chatMessage.create({
       data: {
         sessionId: activeSessionId,
         role: "assistant",
@@ -333,7 +317,6 @@ export async function POST(request: NextRequest) {
         }),
       },
     }).catch((err) => console.error("Failed to persist assistant chat message:", err));
->>>>>>> 1a04d526277b6dcc468ae22e8e83397673c6e17c
 
     return NextResponse.json({
       sessionId: activeSessionId,

@@ -187,4 +187,34 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* ── Master Gold Border Beam Animation ───────────────────────── */
+  @keyframes gold-spin-beam {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .animate-gold-beam {
+    animation: gold-spin-beam 5s linear infinite;
+  }
+
+  @keyframes gold-halo-pulse {
+    0%, 100% {
+      opacity: 0.45;
+      transform: scale(0.99);
+    }
+    50% {
+      opacity: 0.85;
+      transform: scale(1.01);
+    }
+  }
+
+  .animate-gold-halo {
+    animation: gold-halo-pulse 3.5s ease-in-out infinite;
+  }
 }
+

@@ -194,11 +194,12 @@ function AuthContent({ initialTab = "login" }: AuthPageProps) {
   return (
     <div className="min-h-screen lg:h-screen w-full flex flex-col lg:flex-row relative bg-[#07111F] overflow-x-hidden font-sans">
       {/* ─────────────────────────────────────────────────────────────
-          LEFT PANEL: Dark Luxury Twilight Villa & AI Features
+          GLOBAL SEAMLESS TWILIGHT VILLA BACKDROP
+          Extends across the left & behind the curve so there is NEVER
+          any sharp vertical cutoff line
           ───────────────────────────────────────────────────────────── */}
-      <div className="relative w-full lg:w-[52%] min-h-[440px] lg:h-screen flex flex-col justify-between p-4 sm:p-6 lg:p-7 xl:p-8 overflow-hidden z-0">
-        {/* Background Villa Image with Twilight Ambience */}
-        <div className="absolute inset-0 z-0">
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+        <div className="relative w-full lg:w-[68%] xl:w-[64%] h-full">
           <Image
             src="/images/luxury_villa_twilight.jpg"
             alt="Luxury Villa at Twilight"
@@ -206,11 +207,18 @@ function AuthContent({ initialTab = "login" }: AuthPageProps) {
             priority
             className="object-cover object-center"
           />
-          {/* Deep Navy Gradient Overlay */}
+          {/* Deep Navy Gradient Overlays */}
           <div className="absolute inset-0 bg-gradient-to-r from-[#07111F]/95 via-[#0B1728]/85 to-[#07111F]/70" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#040E1B] via-transparent to-[#07111F]/80" />
+          {/* Soft smooth horizontal fade on right edge into dark navy */}
+          <div className="hidden lg:block absolute inset-y-0 right-0 w-64 bg-gradient-to-r from-transparent to-[#07111F]" />
         </div>
+      </div>
 
+      {/* ─────────────────────────────────────────────────────────────
+          LEFT PANEL: Dark Luxury Twilight Villa & AI Features Content
+          ───────────────────────────────────────────────────────────── */}
+      <div className="relative w-full lg:w-[48%] xl:w-[49%] min-h-[440px] lg:h-screen flex flex-col justify-between p-4 sm:p-6 lg:p-7 xl:p-8 z-20">
         {/* ─── Top: Kiro-Maal Dark Logo (Clean Blend with mix-blend-screen) ─── */}
         <div className="relative z-20 shrink-0">
           <Link href="/" className="inline-block group">
@@ -313,47 +321,150 @@ function AuthContent({ initialTab = "login" }: AuthPageProps) {
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
+          MASTER ARCHITECTURAL GOLD CURVED SWOOSH & CREAM CANVAS
+          Seamless organic luxury boundary dividing dark villa & cream
+          ───────────────────────────────────────────────────────────── */}
+      <div className="hidden lg:block absolute inset-y-0 right-0 w-[55%] xl:w-[53%] pointer-events-none z-10">
+        <svg
+          className="w-full h-full"
+          viewBox="0 0 600 1000"
+          preserveAspectRatio="none"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            {/* Multi-stop metallic luxury gold gradient */}
+            <linearGradient id="luxuryGoldRibbon" x1="0%" y1="0%" x2="50%" y2="100%">
+              <stop offset="0%" stopColor="#A97918" />
+              <stop offset="15%" stopColor="#E2B755" />
+              <stop offset="35%" stopColor="#FFF2CE" />
+              <stop offset="55%" stopColor="#C89B3C" />
+              <stop offset="80%" stopColor="#F5D37E" />
+              <stop offset="100%" stopColor="#7E5912" />
+            </linearGradient>
+
+            {/* Luminous Specular Filament Gradient */}
+            <linearGradient id="goldFilament" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#FFF7D6" stopOpacity="0.9" />
+              <stop offset="50%" stopColor="#FFFFFF" stopOpacity="0.95" />
+              <stop offset="100%" stopColor="#E5C16C" stopOpacity="0.8" />
+            </linearGradient>
+
+            {/* Deep Luxury Architectural Drop Shadow onto the villa */}
+            <filter id="ribbonShadow" x="-50%" y="-20%" width="200%" height="140%">
+              <feGaussianBlur stdDeviation="18" result="blur" />
+              <feColorMatrix type="matrix" values="0 0 0 0 0.02   0 0 0 0 0.05   0 0 0 0 0.1   0 0 0 0.8 0"/>
+            </filter>
+
+            {/* Soft Ambient Gold Glow */}
+            <filter id="ribbonGlow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="8" result="glow" />
+              <feComposite in="SourceGraphic" in2="glow" operator="over" />
+            </filter>
+          </defs>
+
+          {/* 1. Deep 3D Shadow cast to the left */}
+          <path
+            d="M 125 0 C 45 260, 48 530, 105 750 C 135 855, 158 935, 175 1000"
+            stroke="#020813"
+            strokeWidth="36"
+            strokeOpacity="0.85"
+            filter="url(#ribbonShadow)"
+          />
+
+          {/* 2. Seamless Cream Surface Fill covering from the curve to the right edge (x=600) */}
+          <path
+            d="M 125 0 C 45 260, 48 530, 105 750 C 135 855, 158 935, 175 1000 L 600 1000 L 600 0 Z"
+            fill="#F7F3EA"
+          />
+
+          {/* 3. Outer Ambient Gold Glow */}
+          <path
+            d="M 125 0 C 45 260, 48 530, 105 750 C 135 855, 158 935, 175 1000"
+            stroke="#C89B3C"
+            strokeWidth="16"
+            strokeOpacity="0.25"
+            filter="url(#ribbonGlow)"
+          />
+
+          {/* 4. Primary 3D Metallic Luxury Gold Ribbon */}
+          <path
+            d="M 125 0 C 45 260, 48 530, 105 750 C 135 855, 158 935, 175 1000"
+            stroke="url(#luxuryGoldRibbon)"
+            strokeWidth="8"
+            strokeLinecap="round"
+          />
+
+          {/* 5. Core Specular Luminous Gold Highlight */}
+          <path
+            d="M 125 0 C 45 260, 48 530, 105 750 C 135 855, 158 935, 175 1000"
+            stroke="url(#goldFilament)"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+          />
+
+          {/* 6. Parallel Architectural Accent Filament */}
+          <path
+            d="M 143 0 C 63 260, 66 530, 123 750 C 153 855, 176 935, 193 1000"
+            stroke="url(#luxuryGoldRibbon)"
+            strokeWidth="1.5"
+            strokeOpacity="0.75"
+          />
+
+          {/* 7. Architectural Geometric Accents (Diamonds along the curve) */}
+          <g transform="translate(62, 380) rotate(45)">
+            <rect x="-6" y="-6" width="12" height="12" fill="url(#luxuryGoldRibbon)" rx="1.5" />
+            <rect x="-2.5" y="-2.5" width="5" height="5" fill="#FFFFFF" rx="0.5" />
+          </g>
+          <g transform="translate(105, 750) rotate(45)">
+            <rect x="-5" y="-5" width="10" height="10" fill="url(#luxuryGoldRibbon)" rx="1.5" />
+            <rect x="-2" y="-2" width="4" height="4" fill="#FFFFFF" rx="0.5" />
+          </g>
+        </svg>
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────────
           RIGHT PANEL: Warm Cream Luxury Backdrop & Floating Card
           ───────────────────────────────────────────────────────────── */}
-      <div className="relative w-full lg:w-[48%] min-h-[500px] lg:h-screen flex items-center justify-center p-3 sm:p-5 lg:p-6 z-10 bg-[#F7F3EA] overflow-y-auto scrollbar-hide">
-        {/* Soft Modern Architectural Backdrop */}
-        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+      <div className="relative w-full lg:w-[52%] xl:w-[51%] min-h-[500px] lg:h-screen flex items-center justify-center p-3 sm:p-5 lg:p-6 z-20 bg-[#F7F3EA] lg:bg-transparent overflow-y-auto scrollbar-hide">
+        {/* Soft Modern Architectural Backdrop with left fade mask */}
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none hidden lg:block [mask-image:linear-gradient(to_right,transparent_20%,black_50%)]">
           <Image
             src="/images/bright_luxury_cityscape.jpg"
             alt="Cityscape"
             fill
-            className="object-cover object-center opacity-25 blur-[1px]"
+            className="object-cover object-center opacity-15 blur-[1px]"
           />
-          <div className="absolute inset-0 bg-gradient-to-br from-[#F7F3EA]/95 via-[#FAF6ED]/90 to-[#EFE8DC]/85" />
-
-          {/* Curved Gold Swoosh Divider on Desktop */}
-          <div className="hidden lg:block absolute -left-20 top-0 bottom-0 w-32 pointer-events-none">
-            <svg
-              className="h-full w-full"
-              viewBox="0 0 100 1000"
-              preserveAspectRatio="none"
-              fill="none"
-            >
-              <path
-                d="M 100 0 C 25 300, 15 650, 100 1000 L 100 0 Z"
-                fill="#F7F3EA"
-              />
-              <path
-                d="M 100 0 C 25 300, 15 650, 100 1000"
-                stroke="#C89B3C"
-                strokeWidth="3"
-                className="opacity-80"
-                style={{ filter: "drop-shadow(0 0 12px rgba(200,155,60,0.6))" }}
-              />
-            </svg>
-          </div>
         </div>
+        {/* Mobile solid background */}
+        <div className="lg:hidden absolute inset-0 bg-[#F7F3EA] -z-10" />
 
-        {/* ─── Centered Unified Glass Card (Ultra-Compact, Guaranteed Full Visibility) ─── */}
-        <div className="relative z-20 w-full max-w-[400px] my-auto py-2">
-          <div className="bg-[#FCFBF7]/95 backdrop-blur-xl rounded-[24px] border border-[#E8E1D4] p-4 sm:p-5 shadow-[0_15px_40px_-15px_rgba(200,155,60,0.18)] transition-all">
-            {/* Centered Kiro-Maal Logo Header */}
-            <div className="flex items-center justify-center gap-2.5 mb-2.5">
+        {/* ─── Centered Unified Glass Card with Advanced Animated Gold Border ─── */}
+        <div className="relative z-20 w-full max-w-[405px] my-auto py-2 group">
+          {/* 1. Outer Ambient Breathing Gold Halo */}
+          <div className="absolute -inset-2 rounded-[32px] bg-gradient-to-r from-[#C89B3C]/20 via-[#E2B755]/35 to-[#C89B3C]/20 blur-xl animate-gold-halo pointer-events-none -z-10" />
+
+          {/* 2. Precision Animated 360° Conic Metallic Gold Laser Border Beam */}
+          <div className="relative rounded-[26px] p-[2.5px] overflow-hidden shadow-[0_20px_50px_-12px_rgba(200,155,60,0.32)] transition-all duration-300">
+            {/* Spinning Conic Gold Light Beam */}
+            <div
+              className="absolute -inset-[150%] animate-gold-beam pointer-events-none"
+              style={{
+                background:
+                  "conic-gradient(from 0deg at 50% 50%, transparent 0deg, transparent 50deg, rgba(169, 121, 24, 0.4) 90deg, rgba(200, 155, 60, 0.95) 130deg, rgba(255, 246, 218, 1) 180deg, rgba(217, 180, 91, 0.95) 220deg, rgba(169, 121, 24, 0.4) 260deg, transparent 310deg, transparent 360deg)",
+              }}
+            />
+
+            {/* Static refined hairline gold casing border */}
+            <div className="absolute inset-0 rounded-[26px] border border-[#C89B3C]/40 pointer-events-none" />
+
+            {/* 3. The Inner Ivory Glass Card Content */}
+            <div className="relative bg-[#FCFBF7]/95 backdrop-blur-xl rounded-[23.5px] p-4 sm:p-5 transition-all">
+              {/* Top Glass Specular Reflection Highlight */}
+              <div className="absolute top-0 inset-x-8 h-[1px] bg-gradient-to-r from-transparent via-[#FFF6D8] to-transparent opacity-90 pointer-events-none" />
+
+              {/* Centered Kiro-Maal Logo Header */}
+              <div className="flex items-center justify-center gap-2.5 mb-2.5">
               <div className="w-9 h-9 relative shrink-0">
                 <Image
                   src="/images/kiro_maal_logo.png"
@@ -687,7 +798,8 @@ function AuthContent({ initialTab = "login" }: AuthPageProps) {
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 }
 
 export default function LoginPage() {

@@ -131,10 +131,9 @@ export function createRateLimitResponse(result: RateLimitResult): NextResponse {
   );
 }
 
-// Default presets
 export const RATE_LIMIT_PRESETS = {
-  // 20 requests per minute for AI Chat
-  AI_CHAT: { limit: 20, windowSeconds: 60 },
+  // 60 requests per minute for AI Chat
+  AI_CHAT: { limit: 60, windowSeconds: 60 },
   // 30 requests per minute for Price Prediction
   PRICE_PREDICTION: { limit: 30, windowSeconds: 60 },
 };

@@ -18,7 +18,10 @@
     "test:phase2b": "node tests/phase2b-hybrid-search.mjs",
     "test:phase2c": "npx tsx tests/phase2c-personalized-recommendations.mjs",
     "test:phase3": "npx tsx tests/phase3-valuation-ml.mjs",
-    "test": "node tests/phase1-verification.mjs && node tests/phase2a-semantic-search.mjs && node tests/phase2b-hybrid-search.mjs && npx tsx tests/phase2c-personalized-recommendations.mjs && npx tsx tests/phase3-valuation-ml.mjs"
+    "test:conversational": "npx tsx tests/conversational-ai-memory.mjs",
+    "test:conversational-quality": "npx tsx tests/conversational-ai-quality-correction.mjs",
+    "test:somali-nlu": "npx tsx tests/somali-nlu-location.mjs",
+    "test": "node tests/phase1-verification.mjs && node tests/phase2a-semantic-search.mjs && node tests/phase2b-hybrid-search.mjs && npx tsx tests/phase2c-personalized-recommendations.mjs && npx tsx tests/phase3-valuation-ml.mjs && npx tsx tests/conversational-ai-memory.mjs && npx tsx tests/conversational-ai-quality-correction.mjs && npx tsx tests/somali-nlu-location.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.2",

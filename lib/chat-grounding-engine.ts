@@ -502,18 +502,26 @@ export async function searchDatabaseProperties(
       if (semanticRes.results.length > 0) {
         const matchedIds = semanticRes.results.map((r) => r.propertyId);
         const semanticProps = await prisma.property.findMany({
-          where: { id: { in: matchedIds }, status: "APPROVED" },
+          where: {
+            id: { in: matchedIds },
+            status: "APPROVED",
+            ...(intent.city ? { city: { contains: intent.city } } : {}),
+          },
           include: {
             images: { orderBy: { order: "asc" }, take: 4 },
             manager: { select: { name: true } },
           },
         });
 
-        // Retain semantic similarity rank order
-        semanticProps.sort((a, b) => matchedIds.indexOf(a.id) - matchedIds.indexOf(b.id));
+        // Retain semantic similarity rank order and strictly enforce city barrier
+        const cityFilteredProps = intent.city
+          ? semanticProps.filter((p) => p.city.trim().toLowerCase() === intent.city!.trim().toLowerCase())
+          : semanticProps;
 
-        if (semanticProps.length > 0) {
-          rawProperties.push(...semanticProps);
+        cityFilteredProps.sort((a, b) => matchedIds.indexOf(a.id) - matchedIds.indexOf(b.id));
+
+        if (cityFilteredProps.length > 0) {
+          rawProperties.push(...cityFilteredProps);
         }
       }
     } catch (e) {

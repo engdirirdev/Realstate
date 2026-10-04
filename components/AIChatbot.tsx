@@ -179,7 +179,7 @@ export default function AIChatbot() {
           hour: "2-digit",
           minute: "2-digit",
         }),
-        properties: data.properties || [],
+        properties: data.shouldRenderPropertyCards && data.properties ? data.properties : [],
       };
 
       setMessages((prev) => [...prev, botMsg]);

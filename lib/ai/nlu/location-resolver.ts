@@ -5,6 +5,7 @@
 
 export interface ResolvedLocation {
   canonicalCity: string;
+  city: string;
   matchedAlias: string;
   confidence: number;
   isInDatabase: boolean;
@@ -275,8 +276,10 @@ export function resolveLocation(text: string): ResolvedLocation | null {
   // 1. Direct whole-string match (e.g. user just entered "caabudwaaq" or "Muqdisho")
   const directMatch = ALIAS_LOOKUP_MAP.get(lower) || ALIAS_LOOKUP_MAP.get(collapsed);
   if (directMatch) {
+    const canonical = directMatch.dbCityName || directMatch.canonicalName;
     return {
-      canonicalCity: directMatch.dbCityName || directMatch.canonicalName,
+      canonicalCity: canonical,
+      city: canonical,
       matchedAlias: rawTrimmed,
       confidence: 1.0,
       isInDatabase: directMatch.hasApprovedInventory,
@@ -293,8 +296,10 @@ export function resolveLocation(text: string): ResolvedLocation | null {
         : new RegExp(`\\b${escapeRegExp(alias)}\\b`, "i").test(lower);
 
       if (matched) {
+        const canonical = city.dbCityName || city.canonicalName;
         return {
-          canonicalCity: city.dbCityName || city.canonicalName,
+          canonicalCity: canonical,
+          city: canonical,
           matchedAlias: alias,
           confidence: 0.95,
           isInDatabase: city.hasApprovedInventory,

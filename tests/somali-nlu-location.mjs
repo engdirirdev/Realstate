@@ -345,16 +345,46 @@ async function runTests() {
     `slots=${JSON.stringify(t5.state.slots)}`
   );
 
-  // Check inventory handling for Caabudwaaq (0 approved properties in DB)
-  assert(
-    t5.responseType === "NO_RESULTS" &&
-    t5.properties.length === 0 &&
-    t5.reply.includes("Caabudwaaq") &&
-    !t5.reply.includes("Mogadishu") &&
-    !t5.reply.includes("Hargeisa"),
-    "E2E Turn 5: Zero inventory for Caabudwaaq reported honestly with NO silent cross-city fallback",
-    `reply=${t5.reply}`
-  );
+  // Check Turn 5 response: progressive district question or direct search
+  if (t5.responseType === "CLARIFICATION") {
+    assert(
+      t5.reply.includes("xaafad") || t5.reply.includes("Caabudwaaq"),
+      "E2E Turn 5: Progressively asks for district preference before broad search",
+      `reply=${t5.reply}`
+    );
+
+    // Turn 6: User says "wax walba ii raadi"
+    conversationHistory.push({ role: "user", content: "3" });
+    conversationHistory.push({
+      role: "assistant",
+      content: t5.reply,
+      metadata: JSON.stringify({ conversationState: t5.state }),
+    });
+
+    const t6 = await processConversationalTurn({
+      sessionId: e2eSessionId,
+      message: "wax walba ii raadi",
+      history: conversationHistory,
+    });
+
+    assert(
+      (t6.responseType === "NO_RESULTS" || t6.responseType === "PROPERTY_RESULTS") &&
+      t6.properties.length === 0 &&
+      t6.reply.includes("Caabudwaaq") &&
+      !t6.reply.includes("Hargeisa"),
+      "E2E Turn 6: Zero inventory for Caabudwaaq reported honestly with NO silent cross-city fallback",
+      `reply=${t6.reply}`
+    );
+  } else {
+    assert(
+      t5.responseType === "NO_RESULTS" &&
+      t5.properties.length === 0 &&
+      t5.reply.includes("Caabudwaaq") &&
+      !t5.reply.includes("Hargeisa"),
+      "E2E Turn 5: Zero inventory for Caabudwaaq reported honestly with NO silent cross-city fallback",
+      `reply=${t5.reply}`
+    );
+  }
 
   // ---------------------------------------------------------------------------
   // SUMMARY

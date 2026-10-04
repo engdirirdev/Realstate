@@ -15,10 +15,13 @@ import {
   ResponseType,
   InterviewStage,
   SearchReadinessDecision,
+  ContextAwareIntent,
+  ReferenceResolution,
 } from "./types";
-import { ExtractedEntities } from "../nlu/entity-extractor";
+import { extractEntities, ExtractedEntities } from "../nlu/entity-extractor";
 import { QueryIntent } from "../nlu/intent-classifier";
 import { analyzeConversationalSlang } from "./slang-normalizer";
+import { resolveConversationalReference } from "./reference-resolver";
 
 const OFF_TOPIC_PATTERNS = [
   /\b(weather|joke|football|recipe|politics|president|movie|song|who won|capital of|poem)\b/i,
@@ -51,7 +54,13 @@ export function detectSlotRemovals(text: string): string[] {
   const lower = text.toLowerCase();
   const removals: string[] = [];
 
-  if (lower.match(/\b(remove|without|no|dont\s*need|ha\s*yeelanin|bilaa)\s+parking\b/i) || lower.includes("baarkin la'aan")) {
+  if (
+    lower.match(/\b(remove|without|no|dont\s*need|ha\s*yeelanin|bilaa)\s+parking\b/i) ||
+    lower.includes("baarkin la'aan") ||
+    lower.match(/\b(parking|baarkin)\s+muhiim\s+ma\s+ah(a|an)\b/i) ||
+    lower.includes("parking is not important") ||
+    lower.includes("no need for parking")
+  ) {
     removals.push("parking");
   }
   if (lower.match(/\b(remove|without|no)\s+pool\b/i) || lower.includes("dabaal la'aan")) {
@@ -71,6 +80,33 @@ export function detectSlotRemovals(text: string): string[] {
   return removals;
 }
 
+const DISTRICT_PATTERNS: Record<string, string> = {
+  "hodan": "Hodan",
+  "wadajir": "Wadajir",
+  "karaan": "Karaan",
+  "yaqshid": "Yaqshid",
+  "taleex": "Taleex",
+  "km4": "KM4",
+  "banaadir": "Banaadir",
+  "waberi": "Waberi",
+  "waaberi": "Waberi",
+  "shibis": "Shibis",
+  "hamar weyne": "Hamar Weyne",
+  "xamar weyne": "Hamar Weyne",
+  "dayniile": "Dayniile",
+  "kaxda": "Kaxda",
+  "hawl wadaag": "Hawl Wadaag",
+  "howlwadaag": "Hawl Wadaag",
+  "dharkenley": "Dharkenley",
+  "huriwaa": "Huriwaa",
+  "heliwaa": "Huriwaa",
+  "bondhere": "Bondhere",
+  "boondheere": "Bondhere",
+  "bakaaraha": "Bakaaraha",
+  "bakaraha": "Bakaaraha",
+  "suuqa bakaaraha": "Bakaaraha",
+};
+
 /**
  * Detects if the current turn signifies an explicit topic change
  */
@@ -81,6 +117,15 @@ export function detectTopicTransition(
 ): { topic: ConversationTopic; confidence: number; isTopicChange: boolean } {
   const lower = text.toLowerCase();
 
+  // 0. Reset / Start Over
+  if (lower.match(/\b(bilow mar kale|aan dib uga bilowno|start over|forget this search|new search)\b/i)) {
+    return {
+      topic: "RESET",
+      confidence: 0.98,
+      isTopicChange: true,
+    };
+  }
+
   // 1. Off-topic check
   if (OFF_TOPIC_PATTERNS.some((p) => p.test(lower))) {
     return {
@@ -90,7 +135,43 @@ export function detectTopicTransition(
     };
   }
 
-  // 2. Booking intent
+  // 2. User uncertain / Guided flow
+  if (lower.match(/\b(ma aqaan waxa aan rabo|ma garanayo waxa aan rabo|runtii ma aqaan|i don't know what i want|help me choose|iga caawi)\b/i) && !lower.includes("guri")) {
+    return {
+      topic: "USER_UNCERTAIN",
+      confidence: 0.95,
+      isTopicChange: true,
+    };
+  }
+
+  // 3. Consultation / Advice
+  if (lower.match(/\b(maxaad igula talin lahayd|what would you recommend|what do you recommend|igula tali|single person|qof keli ah)\b/i)) {
+    return {
+      topic: "ADVICE",
+      confidence: 0.95,
+      isTopicChange: true,
+    };
+  }
+
+  // 4. Educational / Real estate concept explanation
+  if (
+    lower.includes("furnished maxay tahay") ||
+    lower.includes("what is a villa") ||
+    lower.includes("what is a lease") ||
+    lower.includes("what is escrow") ||
+    lower.includes("what does furnished mean") ||
+    lower.includes("farqiga u dhexeeya apartment iyo villa") ||
+    lower.includes("security deposit maxay tahay") ||
+    lower.includes("what is a mortgage")
+  ) {
+    return {
+      topic: "EDUCATION",
+      confidence: 0.95,
+      isTopicChange: true,
+    };
+  }
+
+  // 5. Booking intent
   if (lower.includes("book") || lower.includes("visit") || lower.includes("ballan") || lower.includes("حجز")) {
     return {
       topic: "BOOKING",
@@ -99,7 +180,7 @@ export function detectTopicTransition(
     };
   }
 
-  // 3. Valuation intent
+  // 6. Valuation intent
   if (lower.includes("valuation") || lower.includes("appraisal") || lower.includes("predict price") ||
       lower.includes("qiimee") || lower.includes("qiyaas qiimaha") || lower.includes("تقييم")) {
     return {
@@ -109,7 +190,7 @@ export function detectTopicTransition(
     };
   }
 
-  // 4. Comparison intent
+  // 7. Comparison intent
   if (lower.includes("compare") || lower.includes("barbar dhig") || lower.includes("قارن")) {
     return {
       topic: "PROPERTY_COMPARISON",
@@ -118,7 +199,7 @@ export function detectTopicTransition(
     };
   }
 
-  // 5. Details on referenced property
+  // 8. Details on referenced property
   if (lower.includes("details") || lower.includes("tell me more") || lower.includes("falanqee") || lower.includes("تفاصيل")) {
     return {
       topic: "PROPERTY_DETAILS",
@@ -127,7 +208,7 @@ export function detectTopicTransition(
     };
   }
 
-  // 6. Educational / Platform questions
+  // 9. Educational / Platform questions
   if (detectedIntent === "general_inquiry" || lower.includes("how does escrow work") || lower.includes("what is ai")) {
     return {
       topic: "GENERAL_INQUIRY",
@@ -157,6 +238,36 @@ export function updateConversationState(
   const currentSlots: ConversationSlotState = { ...prevState.slots };
   const changedSlots: { slot: string; from: any; to: any }[] = [];
   const newSlots: Partial<ConversationSlotState> = {};
+  const lowerMsg = userMessage.toLowerCase();
+
+  // 0. Topic transition evaluation
+  const topicEval = detectTopicTransition(userMessage, prevState.currentTopic, detectedIntent);
+
+  // If user asked to reset, wipe active slots
+  if (topicEval.topic === "RESET") {
+    for (const k of Object.keys(currentSlots)) {
+      delete (currentSlots as any)[k];
+    }
+    return {
+      state: {
+        ...prevState,
+        slots: {},
+        activeResultSet: [],
+        currentTopic: "PROPERTY_SEARCH",
+        unresolvedSlots: ["city", "propertyType"],
+        turnCount: prevState.turnCount + 1,
+        lastUserMessage: userMessage,
+        updatedAt: new Date().toISOString(),
+      },
+      delta: {
+        newSlots: {},
+        changedSlots: [],
+        removedSlots: ["all"],
+        isFollowUp: false,
+        isQueryModification: true,
+      },
+    };
+  }
 
   // 1. Detect slot removals
   const removedSlots = detectSlotRemovals(userMessage);
@@ -164,6 +275,73 @@ export function updateConversationState(
     if ((currentSlots as any)[slotKey] !== undefined) {
       delete (currentSlots as any)[slotKey];
     }
+  }
+
+  // 1b. Explicit Corrections Handling (e.g. "500 ma aha, 400", "Hodan ma aha, Wadajir", "Maya Hodan ma aha, Wadajir ayaan rabaa", "3 qol ma aha, 4 qol")
+  let handledPriceCorr = false;
+  const priceCorr = lowerMsg.match(/(?:not\s+\$?(\d+)|\$?(\d+)\s*(?:dollar|doolar|\$)?\s*ma\s+aha)[,\s]+(?:actually\s+)?\$?(\d+)/i);
+  if (priceCorr) {
+    const fromVal = parseInt(priceCorr[1] || priceCorr[2], 10);
+    const toVal = parseInt(priceCorr[3], 10);
+    if (!isNaN(toVal) && toVal > 0) {
+      changedSlots.push({ slot: "maxPrice", from: fromVal, to: toVal });
+      currentSlots.maxPrice = toVal;
+      handledPriceCorr = true;
+    }
+  }
+
+  // Single price corrections (e.g. "$350 ayaan ula jeedaa", "Maya $350 ayaan ula jeedaa")
+  const singlePriceCorr = lowerMsg.match(/(?:maya\s+)?\$?(\d+)(?:\s*(?:dollar|doolar|\$))?\s*ayaan\s*ula\s*(?:jeedaa|jeeday)/i);
+  if (singlePriceCorr && !handledPriceCorr) {
+    const newPrice = parseInt(singlePriceCorr[1], 10);
+    if (!isNaN(newPrice) && newPrice > 0) {
+      changedSlots.push({ slot: "maxPrice", from: currentSlots.maxPrice, to: newPrice });
+      currentSlots.maxPrice = newPrice;
+      handledPriceCorr = true;
+    }
+  }
+
+  let handledDistrictCorr = false;
+  const districtCorr = lowerMsg.match(/(?:maya\s+)?(?:not\s+([a-z\s]+)|([a-z\s]+)\s+ma\s+aha)[,\s]+(?:actually\s+)?([a-z]+)(?:\s+ayaan\s+(?:rabaa|ula\s*jeeday|ula\s*jeedaa|doonayaa))?/i);
+  if (districtCorr) {
+    const rawFrom = (districtCorr[1] || districtCorr[2] || "").replace(/^maya\s+/i, "").trim().toLowerCase();
+    const rawTo = (districtCorr[3] || "").trim().toLowerCase();
+    const matchedDistrict = DISTRICT_PATTERNS[rawTo] || (rawTo.charAt(0).toUpperCase() + rawTo.slice(1));
+    if (matchedDistrict && matchedDistrict.length > 2) {
+      changedSlots.push({ slot: "district", from: rawFrom, to: matchedDistrict });
+      currentSlots.district = matchedDistrict;
+      if (!currentSlots.city) currentSlots.city = "Mogadishu";
+      handledDistrictCorr = true;
+    }
+  }
+
+  let handledBedCorr = false;
+  const bedCorr = lowerMsg.match(/(?:not\s+(\d+)|\b(\d+)\s*qol\s*ma\s+aha)[,\s]+(?:actually\s+)?(\d+)/i);
+  if (bedCorr) {
+    const fromVal = parseInt(bedCorr[1] || bedCorr[2], 10);
+    const toVal = parseInt(bedCorr[3], 10);
+    if (!isNaN(toVal) && toVal > 0) {
+      changedSlots.push({ slot: "bedrooms", from: fromVal, to: toVal });
+      currentSlots.bedrooms = toVal;
+      handledBedCorr = true;
+    }
+  }
+
+  // Requirement updates
+  const budgetUpdate = lowerMsg.match(/(?:budget-ka|miisaaniyadda|make\s+budget|set\s+budget)\s*(?:waa|=|:)?\s*\$?(\d+)(?:\s*ka\s*dhig)?/i);
+  if (budgetUpdate && !handledPriceCorr) {
+    const newBudget = parseInt(budgetUpdate[1], 10);
+    if (!isNaN(newBudget) && newBudget > 0) {
+      changedSlots.push({ slot: "maxPrice", from: currentSlots.maxPrice, to: newBudget });
+      currentSlots.maxPrice = newBudget;
+      handledPriceCorr = true;
+    }
+  }
+
+  if (lowerMsg.match(/\b(parking-na\s+waa\s+muhiim|parking\s+ha\s+lahaado|parking\s+waa\s+muhiim|parking\s+is\s+important|must\s+have\s+parking)\b/i)) {
+    changedSlots.push({ slot: "parking", from: currentSlots.parking, to: true });
+    currentSlots.parking = true;
+    newSlots.parking = true;
   }
 
   // 2. City update / retention
@@ -175,6 +353,27 @@ export function updateConversationState(
         newSlots.city = entities.city;
       }
       currentSlots.city = entities.city;
+    }
+  }
+
+  // 2b. District extraction & update (e.g. "Hodan", "Wadajir", "Actually Wadajir ayaan rabaa")
+  if (!handledDistrictCorr) {
+    for (const [key, dist] of Object.entries(DISTRICT_PATTERNS)) {
+      if (new RegExp(`\\b${key}\\b`, "i").test(lowerMsg)) {
+        if (currentSlots.district !== dist) {
+          if (currentSlots.district) {
+            changedSlots.push({ slot: "district", from: currentSlots.district, to: dist });
+          } else {
+            newSlots.district = dist;
+          }
+          currentSlots.district = dist;
+        }
+        if (!currentSlots.city) {
+          currentSlots.city = "Mogadishu";
+          newSlots.city = "Mogadishu";
+        }
+        break;
+      }
     }
   }
 
@@ -190,8 +389,8 @@ export function updateConversationState(
     }
   }
 
-  // 4. Bedrooms update
-  if (entities.bedrooms && typeof entities.bedrooms.value === "number") {
+  // 4. Bedrooms update (supports "Actually 4 qol", "3", etc.)
+  if (!handledBedCorr && entities.bedrooms && typeof entities.bedrooms.value === "number") {
     const val = entities.bedrooms.value;
     if (currentSlots.bedrooms !== val) {
       if (currentSlots.bedrooms !== undefined) {
@@ -217,7 +416,7 @@ export function updateConversationState(
   }
 
   // 6. Price update
-  if (entities.price) {
+  if (!handledPriceCorr && entities.price) {
     if (entities.price.maxPrice) {
       if (currentSlots.maxPrice !== entities.price.maxPrice) {
         if (currentSlots.maxPrice !== undefined) {
@@ -239,8 +438,7 @@ export function updateConversationState(
     }
   }
 
-  // 7. Cheaper query modifier ("show me cheaper ones", "find cheaper")
-  const lowerMsg = userMessage.toLowerCase();
+  // 7. Cheaper query modifier ("show me cheaper ones", "find cheaper", "mid ka jaban")
   if ((lowerMsg.includes("cheaper") || lowerMsg.includes("ka jaban") || lowerMsg.includes("أرخص")) &&
       !entities.price?.maxPrice && prevState.activeResultSet.length > 0) {
     const lowestReturned = Math.min(...prevState.activeResultSet.map((p) => p.price));
@@ -250,7 +448,10 @@ export function updateConversationState(
   }
 
   // 8. Boolean Flags (parking, furnished)
-  if (entities.parking !== undefined && !removedSlots.includes("parking")) {
+  if (lowerMsg.match(/\b(parking|baarkin)\s+ha\s+lahaado\b/i) || lowerMsg.includes("with parking") || lowerMsg.includes("leh parking")) {
+    currentSlots.parking = true;
+    newSlots.parking = true;
+  } else if (entities.parking !== undefined && !removedSlots.includes("parking")) {
     currentSlots.parking = entities.parking;
   }
   if (entities.isFurnished !== undefined && !removedSlots.includes("furnished")) {
@@ -272,8 +473,13 @@ export function updateConversationState(
     currentSlots.pricePeriod = entities.price.period;
   }
 
-  // 9. Topic transition evaluation
-  const topicEval = detectTopicTransition(userMessage, prevState.currentTopic, detectedIntent);
+  // 8c. Vague goals and trade-offs
+  if (lowerMsg.includes("fiican oo jaban") || lowerMsg.includes("jaban laakiin meel fiican") || lowerMsg.includes("cheap but good")) {
+    currentSlots.tradeOff = "balanced";
+  }
+  if (lowerMsg.match(/\b(guri fiican|wax fiican|good home|good house)\b/i) && !currentSlots.maxPrice && !currentSlots.bedrooms) {
+    currentSlots.goalPriority = "uncertain";
+  }
 
   // 10. Compute unresolved slots
   const unresolved: string[] = [];
@@ -308,6 +514,7 @@ export function updateConversationState(
     },
   };
 }
+
 
 /**
  * Attaches a newly returned property result set to conversation memory
@@ -352,6 +559,10 @@ export function validatePropertyAgainstQuery(
     type?: string;
     furnished?: boolean;
     parking?: boolean;
+    location?: string;
+    address?: string;
+    title?: string;
+    description?: string;
   },
   slots: ConversationSlotState
 ): { isValid: boolean; violationReason?: string } {
@@ -371,6 +582,18 @@ export function validatePropertyAgainstQuery(
       return {
         isValid: false,
         violationReason: `City constraint violation: property is in ${property.city}, expected ${slots.city}`,
+      };
+    }
+  }
+
+  // 2b. Hard district check (if district constraint is specified)
+  if (slots.district) {
+    const targetDist = slots.district.trim().toLowerCase();
+    const searchable = `${property.location || ""} ${property.address || ""} ${property.title || ""} ${property.description || ""}`.toLowerCase();
+    if (searchable.trim().length > 0 && !searchable.includes(targetDist)) {
+      return {
+        isValid: false,
+        violationReason: `District constraint violation: property does not match district ${slots.district}`,
       };
     }
   }
@@ -408,28 +631,572 @@ export function validatePropertyAgainstQuery(
   return { isValid: true };
 }
 
+export type MessageScopeAnalysis = {
+  isRealEstate: boolean;
+  isOutOfScope: boolean;
+  isMixed: boolean;
+  outOfScopeCategory?: "school_homework" | "crypto_finance" | "assignment" | "general_offtopic";
+  unrelatedPart?: string;
+};
+
+/**
+ * Advanced Context-Aware Intent Engine
+ * Deterministically classifies user messages by synthesizing:
+ * Current Message + Previous Assistant Message + Active Context + Known Search State
+ */
+export function detectContextAwareIntent(
+  userMessage: string,
+  state?: ConversationState | null,
+  entities?: ExtractedEntities | null,
+  lastAssistantMessage?: string | null
+): {
+  intent: ContextAwareIntent;
+  confidence: number;
+  explanation: string;
+  matchedSignals: string[];
+  resolvedReference?: ReferenceResolution;
+} {
+  const safeState = state || initializeConversationState("temp-context");
+  const safeEntities = entities || extractEntities(userMessage);
+  const priorAsstMsg = lastAssistantMessage || safeState.lastAssistantMessage || "";
+  const lower = userMessage.toLowerCase().trim();
+  const slang = analyzeConversationalSlang(userMessage);
+
+  // 1. OUT_OF_SCOPE check first if explicit off-topic terms exist (e.g. "Sidee loo sameeyaa assignment?", "Bitcoin meeqa ayuu yahay?")
+  const scope = analyzeMessageScope(userMessage, safeEntities, safeState);
+  if (scope.isOutOfScope) {
+    return {
+      intent: "OUT_OF_SCOPE",
+      confidence: 0.98,
+      explanation: `Explicit out-of-scope query: ${scope.outOfScopeCategory || "general_offtopic"}`,
+      matchedSignals: ["out_of_scope_domain"],
+    };
+  }
+
+  // 2. GREETING
+  // e.g. "Asc", "Hello", "Hi", "Salaam", "Wcs", "Marhaba"
+  if (
+    slang.isGreeting ||
+    slang.isGreetingResponse ||
+    /^(asc|hello|hi|hey|salaam|marhaba|wcs)\b/i.test(lower)
+  ) {
+    return {
+      intent: (state as any)?.activeTopic === "casual" ? "CASUAL_CONVERSATION" : "GREETING",
+      confidence: 0.96,
+      explanation: "Greeting from user",
+      matchedSignals: ["greeting_signal"],
+    };
+  }
+
+  // 3. CASUAL_CONVERSATION
+  // e.g. "Sidee tahay?", "See tahay?", "How are you?", "Mahadsanid", "Ok", "Thanks"
+  if (
+    slang.isGratitude ||
+    /^(how are you|sidee tahay|see tahay|seetahay|ok|okay|waad mahadsantahay|thanks|thx|nabad|fiican|waan fiicanahay)\b/i.test(lower)
+  ) {
+    return {
+      intent: "CASUAL_CONVERSATION",
+      confidence: 0.95,
+      explanation: "Casual small talk or gratitude",
+      matchedSignals: ["casual_conversation"],
+    };
+  }
+
+  // 4. CONFIRMATION_REQUEST
+  // e.g. "Ma hubtaa?", "Sax miyaa?", "Runtii?", "Ma dhab baa?", "Are you sure?", "Ma hubtaa midaas?", "Sure?", "Really?"
+  if (
+    !lower.includes("ma aqaan") &&
+    !lower.includes("ma garanayo") &&
+    (/\b(ma\s+hubtaa|ma\s+hubtaa\s+midaas|ma\s+hubtaa\s+waxaas|taasi\s+ma\s+hubtaa|ma\s+sidaas\s+baa|sax\s+miyaa|ma\s+sax\s+baa|runtii\?|ma\s+dhab\s+baa|ma\s+dhabtaa|dhab\s+miyaa|hubi|are\s+you\s+sure|you\s+sure|are\s+you\s+certain|is\s+that\s+(true|correct|real)|sure\?|really\?|هل\s+أنت\s+متأكد|حقاً|صحيح)\b/i.test(lower) ||
+    lower === "haa?" || lower === "sax miyaa?" || lower === "runtii" || lower === "runtii?" || lower === "hubtaa" || lower === "hubtaa?" || lower === "sure?" || lower === "you sure?")
+  ) {
+    return {
+      intent: "CONFIRMATION_REQUEST",
+      confidence: 0.96,
+      explanation: "User requested confirmation of assistant's previous statement",
+      matchedSignals: ["confirmation_inquiry"],
+    };
+  }
+
+  // 5. CLARIFICATION_REQUEST
+  // e.g. "Maxaad ula jeeddaa?", "Sidee?", "Maxay ka dhigan tahay?", "Faahfaahi", "Wax yar ii sharax"
+  if (
+    (/\b(maxaad\s+ula\s+jeeddaa|maxaad\s+ka\s+waddaa|sidee\?|maxay\s+ka\s+dhigan\s+tahay|faahfaahi|wax\s+yar\s+ii\s+sharax|sharaxaad\s+ka\s+bixi|waa\s+maxay\?|sabab\?|sabab\b|maxaa\?|haddaba\?|laakiin\?|what\s+do\s+you\s+mean|how\s+so|can\s+you\s+explain|explain\s+further|why\?|what\s+does\s+that\s+mean|ماذا\s+تعني|كيف\s+ذلك|اشرح\s+لي)\b/i.test(lower) ||
+    lower === "sidee" || lower === "sidee?" || lower === "maxaa?" || lower === "sabab?") &&
+    !safeEntities.city && !safeEntities.bedrooms && !safeEntities.price
+  ) {
+    return {
+      intent: "CLARIFICATION_REQUEST",
+      confidence: 0.95,
+      explanation: "User requested clarification of assistant's previous statement",
+      matchedSignals: ["clarification_inquiry"],
+    };
+  }
+
+  // 6. CORRECTION
+  // e.g. "500 ma aha, 400 ayaan ula jeeday", "Hodan ma aha, Wadajir", "Maya $350 ayaan ula jeedaa", "$350 ayaan ula jeedaa", "3 qol ma aha, 4 qol"
+  const isOrdinalRefCorrection = Boolean(
+    safeState.activeResultSet &&
+    safeState.activeResultSet.length > 0 &&
+    resolveConversationalReference(userMessage, safeState.activeResultSet).type !== "NONE"
+  );
+
+  if (
+    !isOrdinalRefCorrection &&
+    /\b(\d+\s*ma\s+aha|\w+\s+ma\s+aha|ma\s+aha|waxaan\s+ula\s+jeeday|ayaan\s+ula\s+jeeday|waxaan\s+ula\s+jeedaa|ayaan\s+ula\s+jeedaa|actually|not\s+\w+)\b/i.test(lower)
+  ) {
+    return {
+      intent: "CORRECTION",
+      confidence: 0.95,
+      explanation: "User correcting previously provided parameter",
+      matchedSignals: ["correction_signal"],
+    };
+  }
+
+  // 7. PROPERTY_NEGOTIATION
+  // e.g. "$350 ma looga dhigi karaa?", "qiimaha ma la dhimi karaa?", "can we negotiate?", "is price negotiable?"
+  if (
+    /\b(ma\s+looga\s+dhigi\s+karaa|qiimaha\s+ma\s+la\s+dhimi\s+karaa|ma\s+la\s+gorgortami\s+karaa|can\s+we\s+negotiate|is\s+the\s+price\s+negotiable|is\s+it\s+negotiable|qiimo\s+dhimis|discount)\b/i.test(lower)
+  ) {
+    return {
+      intent: "PROPERTY_NEGOTIATION",
+      confidence: 0.95,
+      explanation: "User inquired about price negotiation or discount",
+      matchedSignals: ["property_negotiation"],
+    };
+  }
+
+  // 8. PROPERTY_AVAILABILITY
+  // e.g. "ma bannaan yahay?", "hadda ma diyaar baa?", "is it available?", "bannaan miyaa?"
+  if (
+    /\b(ma\s+bannaan\s+yahay|ma\s+banaan\s+yahay|bannaan\s+miyaa|hadda\s+ma\s+diyaar\s+baa|is\s+it\s+available|is\s+it\s+ready|ma\s+la\s+heli\s+karaa)\b/i.test(lower)
+  ) {
+    return {
+      intent: "PROPERTY_AVAILABILITY",
+      confidence: 0.95,
+      explanation: "User inquired about property availability",
+      matchedSignals: ["property_availability"],
+    };
+  }
+
+  // 9. PROPERTY_COMPARISON
+  // e.g. "Labadan kee jaban?", "Labadan kee fiican?", "Kan iyo kii hore kee jaban?", "Midkee parking fiican leh?", "compare 1 and 2"
+  if (
+    /\b(labadan\s+kee|labadaan\s+kee|kan\s+iyo\s+kii\s+hore\s+kee|kee\s+jaban|kee\s+fiican|midkee\s+parking\s+fiican\s+leh|midkee\s+ku\s+habboon\s+budget|compare\s+(?:the\s+)?(?:first|1st|second|2nd|1|2|properties)|which\s+one\s+is\s+(?:cheaper|better)|barbar\s+dhig)\b/i.test(lower)
+  ) {
+    return {
+      intent: "PROPERTY_COMPARISON",
+      confidence: 0.94,
+      explanation: "User requested side-by-side comparison between listings",
+      matchedSignals: ["property_comparison"],
+    };
+  }
+
+  // 10. AMBIGUOUS
+  // e.g. "Kan ma fiican yahay?" when there is no single focused reference, or "Kan ii samee" with empty results
+  if (
+    (/\b(kan\s+ma\s+fiican\s+yahay|ma\s+fiican\s+yahay|is\s+this\s+one\s+good|which\s+one\s+is\s+better)\b/i.test(lower) &&
+      (!safeState.referencedPropertyId || safeState.activeResultSet.length !== 1)) ||
+    (lower.match(/\b(kan\s+ii\s+samee|kan\s+yeel|kaas\s+samee|do\s+that|do\s+this)\b/i) && safeState.activeResultSet.length === 0)
+  ) {
+    return {
+      intent: "AMBIGUOUS",
+      confidence: 0.90,
+      explanation: "Ambiguous pointer without active reference",
+      matchedSignals: ["unresolvable_pointer"],
+    };
+  }
+
+  // 11. PROPERTY_DETAILS
+  // e.g. "Kan labaad parking ma leeyahay?", "Kan labaad ma furnished baa?", "Parking?", "Furnished?"
+  if (
+    (/\b(kan\s+labaad|kii\s+labaad|kan\s+hore|kii\s+hore|the\s+second\s+one|second\s+one|that\s+one)\b/i.test(lower) &&
+      /\b(parking|baarkin|garaash|furnished|furnshed|alaab|qalab|price|qiimo|bedrooms?|qolal?|bathrooms?|musqul)\b/i.test(lower)) ||
+    (lower.match(/^(?:parking|baarkin|furnished|furnshed|alaab|bedrooms?|qolal?|bathrooms?|musqul|price|qiimo|location|availability)\??$/i) && safeState.activeResultSet.length > 0)
+  ) {
+    const refResolution = resolveConversationalReference(userMessage, safeState.activeResultSet);
+    return {
+      intent: "PROPERTY_DETAILS",
+      confidence: 0.95,
+      explanation: "Attribute question on referenced property",
+      matchedSignals: ["property_details"],
+      resolvedReference: refResolution,
+    };
+  }
+
+  // 12. PROPERTY_REFERENCE
+  if (
+    /\b(kan|kii\s+hore|kan\s+hore|kan\s+labaad|kii\s+labaad|saddexaad|midkaas|labadaas|kan\s+ugu\s+jaban|kii\s+aad\s+hadda\s+sheegtay|the\s+second\s+one|first\s+one|cheaper\s+one|الأول|الثاني|الثالث|ugu\s*horeeyey|ugu\s*horeeya|koowaad|1aad)\b/i.test(lower) &&
+    safeState.activeResultSet &&
+    safeState.activeResultSet.length > 0
+  ) {
+    const refResolution = resolveConversationalReference(userMessage, safeState.activeResultSet);
+    return {
+      intent: "PROPERTY_REFERENCE",
+      confidence: 0.94,
+      explanation: "Reference to property in active result set",
+      matchedSignals: ["property_reference"],
+      resolvedReference: refResolution,
+    };
+  }
+
+  // 13. PROPERTY_SEARCH_UPDATE
+  if (
+    /\b(update\s+search|modify\s+search|beddel\s+raadinta|cusboonaysii\s+raadinta)\b/i.test(lower)
+  ) {
+    return {
+      intent: "PROPERTY_SEARCH_UPDATE",
+      confidence: 0.93,
+      explanation: "User requested search modification",
+      matchedSignals: ["property_search_update"],
+    };
+  }
+
+  // 14. REQUIREMENT_UPDATE
+  if (
+    /\b(parking-na\s+waa\s+muhiim|parking\s+ha\s+lahaado|parking\s+muhiim\s+ma\s+aha|ka\s+dhig|make\s+budget|set\s+budget|mid\s+ka\s+jaban|cheaper)\b/i.test(lower)
+  ) {
+    return {
+      intent: "REQUIREMENT_UPDATE",
+      confidence: 0.92,
+      explanation: "User updating specific criteria or requirements",
+      matchedSignals: ["requirement_update"],
+    };
+  }
+
+  // 15. REAL_ESTATE_FOLLOW_UP
+  if (
+    /\b(parking\s+ma\s+leeyahay|qiimihiisu\s+waa\s+imisa|owner-ka\s+yaa\s+leh|koronto\s+ma\s+leeyahay|biyo\s+ma\s+leeyahay|xaggee\s+ku\s+yaal|does\s+it\s+have\s+parking)\b/i.test(lower)
+  ) {
+    return {
+      intent: "REAL_ESTATE_FOLLOW_UP",
+      confidence: 0.94,
+      explanation: "Attribute or status question about a property",
+      matchedSignals: ["property_attribute_query"],
+    };
+  }
+
+  // 16. REAL_ESTATE_SEARCH
+  return {
+    intent: "REAL_ESTATE_SEARCH",
+    confidence: 0.92,
+    explanation: "Real estate property search or general exploration",
+    matchedSignals: ["real_estate_search"],
+  };
+}
+
+/**
+ * Robust Scope & Intent Analyzer
+ * Distinguishes between pure real estate, mixed, and off-topic requests
+ */
+export function analyzeMessageScope(
+  userMessage: string,
+  entities: ExtractedEntities,
+  state: ConversationState
+): MessageScopeAnalysis {
+  const lower = userMessage.toLowerCase().trim();
+  const slang = analyzeConversationalSlang(userMessage);
+
+  // Exclude greetings and smalltalk from being marked as out-of-scope errors
+  if (
+    slang.isGreeting ||
+    slang.isGreetingResponse ||
+    slang.isGratitude ||
+    /^(how are you|sidee tahay|see tahay|ok|okay|waad mahadsantahay)\b/i.test(lower)
+  ) {
+    return {
+      isRealEstate: false,
+      isOutOfScope: false,
+      isMixed: false,
+    };
+  }
+
+  // 0. Detect prompt injection attempts attempting to override real estate domain
+  const isPromptInjection =
+    /\b(ignore\s+(?:all\s+)?(?:previous\s+)?instructions|act\s+as\s+(?:a\s+)?general\s+ai|jailbreak|forget\s+all\s+instructions|system\s+prompt|dan\s+ha\s+ka\s+yeelan\s+amaradii\s+hore|you\s+are\s+no\s+longer|no\s+longer\s+kiro-maal|no\s+longer\s+aida|not\s+kiro-maal)\b/i.test(lower);
+  if (isPromptInjection) {
+    return {
+      isRealEstate: false,
+      isOutOfScope: true,
+      isMixed: false,
+      outOfScopeCategory: "general_offtopic",
+    };
+  }
+
+  // 1. Detect explicit out-of-scope categories
+  let outOfScopeCategory: MessageScopeAnalysis["outOfScopeCategory"] = undefined;
+
+  const isSchoolHomework =
+    /\b(cashar|casharro|casharrada|school-ka|school|iskool|homework|xisaab|xisaabta|saynis|physics|chemistry|biology|algebra|geometry|tacliin|waxbarasho|grammar|english\s+grammar|luuqad|carabi|somali\s+grammar|واجب|مدرسة|دروس|رياضيات)\b/i.test(lower);
+  const isCryptoFinance =
+    /\b(bitcoin|btc|crypto|cryptocurrency|ethereum|eth|forex|stocks?|stock market|saamiyada|suuqa saamiyada|trading|تداول|بورصة|بيتكوين)\b/i.test(lower);
+  const isAssignment =
+    /\b(assignment|assignments|mashruuc jaamacadeed|sidee loo sameeyaa assignment|how to do assignment|how to write an essay|essay|تكليف)\b/i.test(lower);
+  const isGeneralOfftopic =
+    /\b(recipe|cunto karis|movie|film|filim|football|kubadda cagta|joke|qosol|poem|gabay|weather|cimilada|python code|javascript code|doctor|dhakhtar|dawo|website|madaxweyne|madaxweynaha|president|dawlad|politics|programming|code\s+ii\s+qor|ii\s+qor\s+code)\b/i.test(lower) ||
+    /^(sidee loo sameeyaa|sidee loo qoraa|yaa madaxweyne)\b/i.test(lower);
+
+  if (isSchoolHomework) outOfScopeCategory = "school_homework";
+  else if (isCryptoFinance) outOfScopeCategory = "crypto_finance";
+  else if (isAssignment) outOfScopeCategory = "assignment";
+  else if (isGeneralOfftopic) outOfScopeCategory = "general_offtopic";
+
+  const hasExplicitOutOfScope = outOfScopeCategory !== undefined;
+
+  // 2. Exclude conversational contextual messages (confirmations, clarifications, corrections, references) if no explicit out-of-scope category
+  if (!hasExplicitOutOfScope) {
+    const isPropertyAttrFollowup =
+      Boolean(state.activeResultSet &&
+      state.activeResultSet.length > 0 &&
+      /^(price|qiimo|qiimaha|location|halkee|availability|available|diyaar|bannaan|bedrooms?|bathrooms?|musqul|qol|parking|baarkin|furnished|alaab)\??$/i.test(lower));
+
+    const isContextualQuery =
+      /\b(ma\s+hubtaa|taasi\s+ma\s+hubtaa|ma\s+sidaas\s+baa|you\s+sure|sax\s+miyaa|runtii|ma\s+dhab\s+baa|dhab\s+miyaa|hubi|are\s+you\s+sure|is\s+that\s+true|maxaad\s+ula\s+jeeddaa|sidee\?|maxay\s+ka\s+dhigan\s+tahay|faahfaahi|sharax|wax\s+yar\s+ii\s+sharax|sabab|maxaa|haddaba|laakiin|what\s+do\s+you\s+mean|can\s+you\s+explain|ma\s+aha|ula\s+jeeday|actually|beddel|badal|ka\s+dhig|muhiim\s+ma\s+aha|waa\s+muhiim|kan\s+ii\s+samee|kaas|kan\s+kee|kan\s+ma\s+fiican\s+yahay|ma\s+fiican\s+yahay|is\s+this\s+one\s+good|which\s+one\s+is\s+better|kee\s+jaban|kee\s+fiican|labadan\s+kee|labadan|labada)\b/i.test(lower) ||
+      /^(haa\?|sax\s+miyaa\?|ok|okay|haye|hmm)\b/i.test(lower);
+
+    if (isContextualQuery || isPropertyAttrFollowup) {
+      return {
+        isRealEstate: true,
+        isOutOfScope: false,
+        isMixed: false,
+      };
+    }
+  }
+
+  // 2. Check for real estate intent in the current message
+  const hasRealEstateKeywords =
+    /\b(guri|guryo|guriga|apartment|apartments|villa|villas|fiilo|dhul|dhulka|land|plot|xafiis|office|commercial|bakhaar|warehouse|kiro|kirro|kiree|kirada|rent|rental|lease|iib|iibso|iibi|gadasho|buy|purchase|sale|qol|qolal|bedroom|bedrooms|suuli|musqul|bathroom|bathrooms|fadhiga|living room|jiko|kitchen|parking|garaash|baarkin|balcony|dabaq|floor|furnished|alaab|qalab|unfurnished|magaalo|property|properties|listing|listings|viewing|ballan|milkiile|owner|broker|dilaal|jaban|qaali|qiimo|qiimaha|budget|cheap|affordable|meel|xaafad|raadi|ii raadi|i tus|keen|wax walba|find|search|show me|browse|list|dhammaan|all|أبحث|ابحث|اعرض|hodan|wadajir|yaaqshiid|howlwadaag|waberi|kaaraan|shibis|boondheere|shangaani|hamarweyne|hamarjajab|dharkenley|kaxda|dayniile|muqdisho|mogadishu|hargeisa|garowe|kismayo|bosaso|berbera|baydhabo|caabudwaaq|عقار|شقة|منزل|فيلا|للإيجار|للبيع|إيجار|شراء|real\s+estate|escrow|mortgage|tenant|landlord|deposit|security\s+deposit)\b/i.test(lower);
+
+  const hasEntities = Boolean(
+    entities.city ||
+    entities.propertyType ||
+    entities.bedrooms ||
+    entities.price?.maxPrice ||
+    entities.price?.approxPrice ||
+    entities.purpose
+  );
+
+  const hasReferenceToActiveResults = Boolean(
+    state?.activeResultSet &&
+    state.activeResultSet.length > 0 &&
+    /\b(kan|kii|kan hore|kii hore|kan labaad|kii labaad|saddexaad|ka jaban|cheaper|parking|alaab|furnished|qiimihiisu|is it|does it have|labadan|labada|midka|kee)\b/i.test(lower)
+  );
+
+  const hasActiveConversationContext = Boolean(
+    state?.slots &&
+    (state.slots.city || state.slots.purpose || state.slots.maxPrice || state.slots.bedrooms)
+  );
+
+  const hasRealEstateIntent = hasRealEstateKeywords || hasEntities || hasReferenceToActiveResults || (hasActiveConversationContext && /\b(raadi|ii raadi|i tus|keen|wax walba|find|search|show me|all|dhammaan)\b/i.test(lower));
+
+  if (hasExplicitOutOfScope && hasRealEstateIntent) {
+    return {
+      isRealEstate: true,
+      isOutOfScope: false,
+      isMixed: true,
+      outOfScopeCategory,
+      unrelatedPart: outOfScopeCategory === "school_homework" ? "cashar xisaab" : outOfScopeCategory,
+    };
+  }
+
+  if (hasExplicitOutOfScope && !hasRealEstateIntent) {
+    return {
+      isRealEstate: false,
+      isOutOfScope: true,
+      isMixed: false,
+      outOfScopeCategory,
+    };
+  }
+
+  return {
+    isRealEstate: hasRealEstateIntent,
+    isOutOfScope: !hasRealEstateIntent && lower.length > 15 && state.interviewStage === "IDLE",
+    isMixed: false,
+    outOfScopeCategory: "general_offtopic",
+  };
+}
+
 /**
  * Deterministic Search Readiness & Conversational Interview Decision Engine
- *
- * Distinguishes between:
- * - Greetings (asc, hello, hi, etc.)
- * - Casual conversation & gratitude (mahadsanid, thanks, ok, sxb)
- * - Educational / FAQ questions (what is escrow, what is a villa, how does valuation work)
- * - Valuation requests
- * - In-set reference resolutions (the second one, cheaper)
- * - Property search with missing slots (interview mode: ask for city -> budget -> bedrooms)
- * - Ready for search
  */
 export function evaluateSearchReadiness(
   state: ConversationState,
   userMessage: string,
   entities: ExtractedEntities,
-  activeLanguage: ExtendedLanguage = "en"
+  activeLanguage: ExtendedLanguage = "en",
+  lastAssistantMessage?: string
 ): SearchReadinessDecision {
   const slang = analyzeConversationalSlang(userMessage);
   const lower = userMessage.toLowerCase().trim();
+  const lastAsst = lastAssistantMessage || state.lastAssistantMessage || "";
 
-  // 1. Pure greeting check (e.g. "asc", "hello", "hi", "wcs", "salaam")
+  // 1. Context-Aware Intent Check
+  const contextIntent = detectContextAwareIntent(userMessage, state, entities, lastAsst);
+
+  // A. Confirmation Request (e.g. "Ma hubtaa?", "Sax miyaa?", "Runtii?", "Are you sure?")
+  if (contextIntent.intent === "CONFIRMATION_REQUEST") {
+    return {
+      isReady: false,
+      responseType: "CONFIRMATION",
+      reason: "User requested confirmation of assistant's previous statement",
+    };
+  }
+
+  // B. Clarification Request (e.g. "Maxaad ula jeeddaa?", "Sidee?", "Faahfaahi", "What do you mean?")
+  if (contextIntent.intent === "CLARIFICATION_REQUEST") {
+    return {
+      isReady: false,
+      responseType: "CLARIFICATION",
+      clarificationQuestion:
+        activeLanguage === "so"
+          ? "Waxaan ula jeedaa inaan si fiican u fahmo baahidaada dhabta ah si aan kuugu helo guryaha ugu habboon ee ku jira Kiro-Maal, halkii aan kugu wareerin lahaa xulashooyin aan kugu habboonayn. 😊"
+          : activeLanguage === "ar"
+          ? "أقصد فهم متطلباتك بدقة حتى أتمكن من إيجاد أفضل العقارات المناسبة لك على كيرو-مال بدلاً من عرض خيارات غير ملائمة. 😊"
+          : "I mean to clearly understand your exact property preferences so I can match you with the best available homes on Kiro-Maal, rather than overwhelming you with unsuitable options. 😊",
+      reason: "User requested clarification of assistant's previous statement",
+    };
+  }
+
+  // C. Ambiguous message (e.g. "Kan ma fiican yahay?", "Kan ii samee" with no identifiable target)
+  if (contextIntent.intent === "AMBIGUOUS") {
+    const isMultiOption = state.activeResultSet && state.activeResultSet.length >= 2;
+    return {
+      isReady: false,
+      responseType: "AMBIGUOUS",
+      clarificationQuestion: isMultiOption
+        ? (activeLanguage === "so"
+            ? "Midkee ayaad ula jeeddaa—kan 1aad mise kan 2aad?"
+            : activeLanguage === "ar"
+            ? "أيهما تقصد—الأول أم الثاني؟"
+            : "Which one do you mean—the 1st or the 2nd one?")
+        : (activeLanguage === "so"
+            ? "Maxaad ula jeeddaa kan? Ii sheeg property-ga ama fariintii aad tixraacayso si aan si sax ah kaaga caawiyo."
+            : activeLanguage === "ar"
+            ? "ماذا تقصد بهذا؟ يرجى تحديد العقار أو الرسالة التي تشير إليها حتى أتمكن من مساعدتك."
+            : "What do you mean by that? Please specify the property or message you are referring to so I can assist you accurately."),
+      reason: "Ambiguous pointer without identifiable referent",
+    };
+  }
+
+  // D. Correction response type
+  if (contextIntent.intent === "CORRECTION") {
+    return {
+      isReady: false,
+      responseType: "CORRECTION",
+      reason: "User corrected previously provided parameter",
+    };
+  }
+
+  // E. Negotiation response type
+  if (contextIntent.intent === "PROPERTY_NEGOTIATION") {
+    return {
+      isReady: false,
+      responseType: "PROPERTY_NEGOTIATION",
+      reason: "User inquired about price negotiation or discount",
+    };
+  }
+
+  // F. Availability response type
+  if (contextIntent.intent === "PROPERTY_AVAILABILITY") {
+    return {
+      isReady: false,
+      responseType: "PROPERTY_AVAILABILITY",
+      reason: "User inquired about property availability",
+    };
+  }
+
+  // G. Greeting response type
+  if (contextIntent.intent === "GREETING") {
+    if (!entities.city && !entities.bedrooms && !entities.price && (!entities.propertyType || lower.length < 15)) {
+      return {
+        isReady: false,
+        responseType: "GREETING",
+        reason: "User provided a greeting without search criteria",
+      };
+    }
+  }
+
+  // -1. Strict Scope Check (AIDA Real Estate-Only Scope)
+  const scope = analyzeMessageScope(userMessage, entities, state);
+
+  if (scope.isOutOfScope) {
+    return {
+      isReady: false,
+      responseType: "OUT_OF_SCOPE",
+      reason: `User asked non-real-estate out-of-scope question (${scope.outOfScopeCategory || "general_offtopic"})`,
+    };
+  }
+
+  if (scope.isMixed) {
+    return {
+      isReady: false,
+      responseType: "MIXED_QUERY",
+      reason: "User combined real estate requirements with unrelated question",
+    };
+  }
+
+  // Unrealistic Low Budget Check (Section 9 & Section 19: clarification safeguard, not universal rejection)
+  if (state.slots.maxPrice !== undefined && state.slots.maxPrice > 0 && state.slots.maxPrice < 30) {
+    const isRespondingToLowBudgetClarification =
+      lastAsst.includes("way adkaan kartaa") ||
+      lastAsst.includes("difficult to find") ||
+      lastAsst.includes("الصعب جداً") ||
+      lower.match(/\b(waan\s+hubaa|haa|yes|confirm|i am sure|waan\s+rabaa\s+\$?\d+)\b/i);
+
+    if (!isRespondingToLowBudgetClarification) {
+      const bVal = state.slots.maxPrice;
+      return {
+        isReady: false,
+        responseType: "CLARIFICATION",
+        missingSlot: "budget",
+        clarificationQuestion:
+          activeLanguage === "so"
+            ? `$${bVal} bishii guri kirro ah way adkaan kartaa in laga helo suuqa caadiga ah. Haddii aad ula jeeddo $${bVal * 100}, fadlan ii xaqiiji.`
+            : activeLanguage === "ar"
+            ? `${bVal} دولارات شهرياً للإيجار قد يكون من الصعب جداً العثور عليه في السوق. إذا كنت تقصد ${bVal * 100} دولار، يرجى التأكيد.`
+            : `$${bVal}/month for a rental home can be very difficult to find in the normal market. If you meant $${bVal * 100}, please confirm.`,
+        reason: "Unrealistic low rental budget detected; requesting confirmation without silent conversion",
+      };
+    }
+  }
+
+  // 0. Reset / Start Over
+  if (lower.match(/\b(bilow mar kale|aan dib uga bilowno|start over|forget this search|new search)\b/i)) {
+    return {
+      isReady: false,
+      responseType: "RESET",
+      clarificationQuestion: activeLanguage === "so"
+        ? "Waa hagaag! Waxaan dib uga bilaabaynaa raadinta. Maxaan hadda kuu qabtaa—guri noocee ah ayaad rabtaa?"
+        : "Sure! Resetting our search criteria. What kind of home or city would you like to explore now?",
+      reason: "User requested search reset",
+    };
+  }
+
+  // 0b. User uncertain / Guided flow
+  if (lower.match(/\b(runtii ma aqaan|ma aqaan waxa aan rabo|ma garanayo waxa aan rabo|i don't know what i want|help me choose|iga caawi)\b/i) && !entities.city && !entities.bedrooms && !entities.price) {
+    return {
+      isReady: false,
+      responseType: "USER_UNCERTAIN",
+      clarificationQuestion: activeLanguage === "so"
+        ? "Dhib ma leh 😊 Aan kuu fududeeyo. Marka hore, ma rabtaa inaad guri kiraysato mise aad iibsato?"
+        : "No problem at all 😊 Let me help simplify this. First, are you looking to rent or buy a home?",
+      reason: "User requested help choosing / uncertain goal",
+    };
+  }
+
+  // 0c. Consultation / Advice
+  if (lower.match(/\b(maxaad igula talin lahayd|what would you recommend|what do you recommend|igula tali|single person|qof keli ah)\b/i)) {
+    return {
+      isReady: false,
+      responseType: "ADVICE",
+      clarificationQuestion: activeLanguage === "so"
+        ? "Haddii aad kaligaa tahay oo budget-kaagu yahay $500 bishii, waxaan kugula talin lahaa inaad marka hore eegto apartment 1–2 qol jiif ah oo ku yaal meel kuu dhow shaqadaada. Haddii aad ii sheegto xaafadda ama meesha aad ka shaqeyso, waxaan kuu raadin karaa options ku habboon oo aan isbarbar dhigi karo."
+        : "If you're living alone with a $500/month budget, I'd recommend starting with 1–2 bedroom apartments in convenient areas close to your work. If you tell me your preferred neighborhood or where you work, I can help compare suitable options.",
+      reason: "User requested real estate consultation / advice",
+    };
+  }
+
+  // 1. Pure greeting check (e.g. "asc", "hello", "hi", "wcs", "salaam", "asc sxb")
   if (slang.isGreeting || slang.isGreetingResponse) {
     if (!entities.city && !entities.bedrooms && !entities.price && (!entities.propertyType || lower.length < 15)) {
       return {
@@ -440,7 +1207,7 @@ export function evaluateSearchReadiness(
     }
   }
 
-  // 2. Gratitude / Casual conversation (e.g. "mahadsanid", "thanks", "how are you", "sxb", "ok")
+  // 2. Gratitude / Casual conversation (e.g. "mahadsanid", "thanks", "how are you", "ok")
   if (
     slang.isGratitude ||
     (slang.hasInformalAddress && lower.length < 10) ||
@@ -455,18 +1222,21 @@ export function evaluateSearchReadiness(
     }
   }
 
-  // 3. Educational / Real estate FAQ inquiries
+  // 3. Educational / Real estate concept inquiries
   const isEducationalQuestion =
+    lower.includes("furnished maxay tahay") ||
     lower.includes("what is a villa") ||
+    lower.includes("what is a lease") ||
+    lower.includes("what is escrow") ||
+    lower.includes("what does furnished mean") ||
+    lower.includes("farqiga u dhexeeya apartment iyo villa") ||
+    lower.includes("security deposit maxay tahay") ||
+    lower.includes("what is a mortgage") ||
     lower.includes("what is the difference between rent and buy") ||
     lower.includes("difference between rent and buy") ||
     lower.includes("how does property valuation work") ||
     lower.includes("what should i check before buying") ||
     lower.includes("how does escrow work") ||
-    lower.includes("what is escrow") ||
-    lower.includes("escrow") ||
-    lower.includes("what is a mortgage") ||
-    lower.includes("mortgage") ||
     lower.includes("waa maxay fiilo") ||
     lower.includes("farqiga u dhexeeya iibka iyo kirada") ||
     lower.includes("sidee u shaqeysaa qiimeynta") ||
@@ -478,8 +1248,34 @@ export function evaluateSearchReadiness(
   if (isEducationalQuestion) {
     return {
       isReady: false,
-      responseType: "GENERAL_CONVERSATION",
+      responseType: "EDUCATION",
       reason: "User asked a general real estate educational question",
+    };
+  }
+
+  // 3b. Trade-off inquiry ("jaban laakiin meel fiican")
+  if (lower.includes("jaban laakiin meel fiican") || lower.includes("fiican oo jaban") || lower.includes("cheap but good")) {
+    return {
+      isReady: false,
+      responseType: "CLARIFICATION",
+      missingSlot: "clarification",
+      clarificationQuestion: activeLanguage === "so"
+        ? "Waan fahmay—waxaad raadineysaa dheelitirnaan u dhaxeysa qiimo jaban iyo goob fiican. Miisaaniyadda ugu badan ee aad awoodi karto bishii intee le'eg ayay tahay si aan kuugu soo xulo meelaha ugu habboon?"
+        : "Understood—balancing an affordable price with a great location is a great strategy. What is the maximum budget you would like to stay under so I can find the best options in convenient neighborhoods?",
+      reason: "Budget vs location trade-off; clarifying maximum budget limit",
+    };
+  }
+
+  // 3c. Vague goal inquiry ("guri fiican")
+  if (lower.match(/\b(guri fiican|wax fiican|good home|good house)\b/i) && !state.slots.city && !state.slots.maxPrice && !state.slots.bedrooms) {
+    return {
+      isReady: false,
+      responseType: "CLARIFICATION",
+      missingSlot: "clarification",
+      clarificationQuestion: activeLanguage === "so"
+        ? "Markaad leedahay fiican, maxaa kuu muhiimsan—qiimo jaban, meel fiican, qolal badan, mise amenities-ka sida parking iyo security?"
+        : "When you say a good home, what is most important to you—budget affordability, prime location, spacious rooms, or amenities like parking and security?",
+      reason: "Vague goal provided; asking user for priority clarification",
     };
   }
 
@@ -499,31 +1295,42 @@ export function evaluateSearchReadiness(
     };
   }
 
-  // 5. In-set Reference resolution (Ordinal, Comparative, Side-by-side)
-  if (
-    lower.match(/\b(kan labaad|the second one|first one|kan hore|saddexaad|third one|ka jaban|cheaper|compare|barbar dhig|قارن)\b/i) &&
-    state.activeResultSet.length > 0
-  ) {
-    // If it's "cheaper" modification, it IS ready for search with adjusted price
-    if (lower.includes("cheaper") || lower.includes("ka jaban") || lower.includes("أرخص")) {
+  // 5. In-set Reference resolution (Ordinal, Comparative, Side-by-side, Pronouns, Attribute follow-ups)
+  if (state.activeResultSet && state.activeResultSet.length > 0) {
+    const prevTarget = state.activeResultSet.find((p) => p.id === state.referencedPropertyId) || state.activeResultSet[0];
+    const resCheck = resolveConversationalReference(userMessage, state.activeResultSet, prevTarget);
+    if (resCheck.type !== "NONE") {
+      // If it's "cheaper" modification with explicit search command, it IS ready for search with adjusted price
+      if ((lower.includes("cheaper") || lower.includes("ka jaban") || lower.includes("أرخص")) &&
+          (lower.includes("raadi") || lower.includes("find") || lower.includes("show") || lower.includes("search"))) {
+        return {
+          isReady: true,
+          responseType: "PROPERTY_RESULTS",
+          reason: "Follow-up query modification for cheaper listings in active context",
+        };
+      }
       return {
-        isReady: true,
-        responseType: "PROPERTY_RESULTS",
-        reason: "Follow-up query modification for cheaper listings in active context",
+        isReady: false,
+        responseType: resCheck.type === "COMPARISON"
+          ? "PROPERTY_COMPARISON"
+          : "PROPERTY_DETAIL",
+        reason: "User referencing an existing property from the active result set",
       };
     }
-    return {
-      isReady: false,
-      responseType: lower.includes("compare") || lower.includes("barbar") ? "PROPERTY_COMPARISON" : "PROPERTY_DETAIL",
-      reason: "User referenced a specific item from active result set",
-    };
   }
 
   // 6. Property Search Readiness Check
   const slots = state.slots;
 
-  // A. If City is missing -> We MUST interview the user for location!
+  // A. If City is missing -> We interview the user for location ONLY if real estate intent exists
   if (!slots.city) {
+    if (!scope.isRealEstate && state.interviewStage === "IDLE") {
+      return {
+        isReady: false,
+        responseType: "OUT_OF_SCOPE",
+        reason: "User has not expressed any real estate intent",
+      };
+    }
     const isRental = slots.purpose === "RENT";
     return {
       isReady: false,
@@ -532,7 +1339,7 @@ export function evaluateSearchReadiness(
       clarificationQuestion:
         activeLanguage === "so"
           ? (isRental
-              ? "Waayahay. Waxaad raadineysaa guryo kiro ah. Magaalo noocee ah ayaad ka raadinaysaa?"
+              ? "Waayahay. Waxaad raadineysaa guryo kiro ah. Magaalo noocee ah ayaad rabtaa inaan ka raadiyo?"
               : "Waad heli kartaa! Magaalo noocee ah ayaad ka raadinaysaa?")
           : activeLanguage === "ar"
           ? (isRental
@@ -547,7 +1354,7 @@ export function evaluateSearchReadiness(
 
   // B. City is known: Check whether enough parameters exist or if an interview step is needed.
   const hasExplicitSearchCommand =
-    /\b(find|search|show me|list|give me|browse|raadi|i tus|ii raadi|keen|أبحث|ابحث|أريد أن أرى|اعرض)\b/i.test(lower) ||
+    /\b(find|search|show me|list|give me|browse|raadi|i tus|ii raadi|keen|wax walba|wax walba ii raadi|dhammaan|all|أبحث|ابحث|أريد أن أرى|اعرض)\b/i.test(lower) ||
     lower.includes("under") || lower.includes("budget") || lower.includes("below") || lower.includes("ka yar");
 
   const hasSpecificType = slots.propertyType && slots.propertyType !== "HOUSE"; // Villa, Apartment, Office, etc.
@@ -562,10 +1369,10 @@ export function evaluateSearchReadiness(
       ? `Waayahay, ${slots.city}. Miisaaniyadda kiradaadu waa intee?`
       : `Waayahay, ${slots.city}. Miisaaniyaddaadu waa intee?`;
     const budgetPromptAr = isRental
-      ? `حسناً، ${slots.city}. كم ميزانيتك التقريبية للإيجار؟`
+      ? `حسناً، ${slots.city}. ما هي ميزانيتك الشهرية للإيجار؟`
       : `حسناً، ${slots.city}. كم هي ميزانيتك التقريبية؟`;
     const budgetPromptEn = isRental
-      ? `Understood, ${slots.city}. What is your rental budget?`
+      ? `Understood, ${slots.city}. What is your target monthly budget?`
       : `Understood, ${slots.city}. What is your target budget?`;
 
     return {
@@ -595,6 +1402,53 @@ export function evaluateSearchReadiness(
           ? `شكراً لك. كم عدد غرف النوم التي ترغب بها؟`
           : `Thank you. How many bedrooms would you prefer?`,
       reason: "Budget is known but bedroom count is missing; progressive interview step",
+    };
+  }
+
+  // If user provided city, budget, and bedrooms, but no district and hasn't commanded search explicitly:
+  const hasDistrict = slots.district !== undefined;
+  if (hasBedrooms && hasPrice && !hasDistrict && !hasExplicitSearchCommand) {
+    return {
+      isReady: false,
+      responseType: "CLARIFICATION",
+      missingSlot: "district",
+      clarificationQuestion:
+        activeLanguage === "so"
+          ? `Waayahay. Ma leedahay xaafad aad doorbidayso mise ${slots.city} oo dhan ayaan ka raadiyaa?`
+          : activeLanguage === "ar"
+          ? `حسناً. هل تفضل حياً معيناً أم أبحث في كافة أنحاء ${slots.city}؟`
+          : activeLanguage === "sw"
+          ? `Sawa. Je, una mtaa unaopendelea au nitafute kote ${slots.city}?`
+          : `Got it. Do you have a preferred neighborhood in mind, or should I search across all of ${slots.city}?`,
+      reason: "City, budget, and bedrooms known; asking user for district preference before searching",
+    };
+  }
+
+  // If budget is still missing and user hasn't commanded explicit search:
+  if (!hasPrice && !hasExplicitSearchCommand) {
+    const locText = slots.district ? `${slots.district}` : slots.city;
+    const typeText = slots.propertyType ? slots.propertyType.toLowerCase() : "guri";
+    const budgetPromptSo = isRental
+      ? `Waayahay, ${typeText}${locText ? ` oo ${locText} ah` : ""}. Miisaaniyadda aad qorshaynayso waa intee bishii?`
+      : `Waayahay, ${typeText}${locText ? ` oo ${locText} ah` : ""}. Miisaaniyadda aad qorshaynayso waa intee?`;
+    const budgetPromptAr = isRental
+      ? `حسناً، ${typeText} في ${locText || ""}. ما هي ميزانيتك الشهرية للإيجار؟`
+      : `حسناً، ${typeText} في ${locText || ""}. ما هي ميزانيتك التقريبية؟`;
+    const budgetPromptEn = isRental
+      ? `Understood, ${typeText} in ${locText || slots.city}. What is your target monthly budget?`
+      : `Understood, ${typeText} in ${locText || slots.city}. What is your target budget?`;
+
+    return {
+      isReady: false,
+      responseType: "CLARIFICATION",
+      missingSlot: "budget",
+      clarificationQuestion:
+        activeLanguage === "so"
+          ? budgetPromptSo
+          : activeLanguage === "ar"
+          ? budgetPromptAr
+          : budgetPromptEn,
+      reason: "Budget is missing; interviewing user for target budget",
     };
   }
 

@@ -13,6 +13,10 @@ export type ConversationTopic =
   | "PROPERTY_COMPARISON"
   | "AVAILABILITY"
   | "BOOKING"
+  | "EDUCATION"
+  | "ADVICE"
+  | "USER_UNCERTAIN"
+  | "RESET"
   | "GENERAL_INQUIRY"
   | "OFF_TOPIC";
 
@@ -36,6 +40,8 @@ export interface ConversationSlotState {
   luxury?: boolean;
   cheap?: boolean;
   sortBy?: "best_match" | "price_asc" | "price_desc" | "newest";
+  tradeOff?: "budget_over_location" | "location_over_budget" | "balanced";
+  goalPriority?: "price" | "location" | "bedrooms" | "amenities" | "uncertain";
 }
 
 export interface ResultItem {
@@ -67,7 +73,7 @@ export interface ReferenceResolution {
   targetRank?: number;
   targetProperty?: ResultItem;
   comparedProperties?: ResultItem[];
-  attributeQueried?: "price" | "bedrooms" | "bathrooms" | "area" | "status" | "location" | "all";
+  attributeQueried?: "price" | "bedrooms" | "bathrooms" | "area" | "status" | "location" | "parking" | "furnished" | "all";
   explanation: string;
 }
 
@@ -79,6 +85,24 @@ export interface SlotUpdateDelta {
   isQueryModification: boolean;
 }
 
+export type ContextAwareIntent =
+  | "REAL_ESTATE_SEARCH"
+  | "REAL_ESTATE_FOLLOW_UP"
+  | "PROPERTY_REFERENCE"
+  | "PROPERTY_DETAILS"
+  | "PROPERTY_COMPARISON"
+  | "PROPERTY_SEARCH_UPDATE"
+  | "PROPERTY_NEGOTIATION"
+  | "PROPERTY_AVAILABILITY"
+  | "CONFIRMATION_REQUEST"
+  | "CLARIFICATION_REQUEST"
+  | "CORRECTION"
+  | "REQUIREMENT_UPDATE"
+  | "CASUAL_CONVERSATION"
+  | "GREETING"
+  | "OUT_OF_SCOPE"
+  | "AMBIGUOUS";
+
 export type ResponseType =
   | "GREETING"
   | "GENERAL_CONVERSATION"
@@ -86,8 +110,19 @@ export type ResponseType =
   | "PROPERTY_RESULTS"
   | "PROPERTY_DETAIL"
   | "PROPERTY_COMPARISON"
+  | "PROPERTY_NEGOTIATION"
+  | "PROPERTY_AVAILABILITY"
   | "VALUATION"
   | "NO_RESULTS"
+  | "ADVICE"
+  | "EDUCATION"
+  | "USER_UNCERTAIN"
+  | "CONFIRMATION"
+  | "CORRECTION"
+  | "AMBIGUOUS"
+  | "RESET"
+  | "OUT_OF_SCOPE"
+  | "MIXED_QUERY"
   | "ERROR";
 
 export type InterviewStage =
@@ -95,12 +130,15 @@ export type InterviewStage =
   | "AWAITING_CITY"
   | "AWAITING_BUDGET"
   | "AWAITING_BEDROOMS"
-  | "AWAITING_TYPE";
+  | "AWAITING_DISTRICT"
+  | "AWAITING_TYPE"
+  | "AWAITING_GOAL_CLARIFICATION"
+  | "AWAITING_TRADE_OFF";
 
 export interface SearchReadinessDecision {
   isReady: boolean;
   responseType: ResponseType;
-  missingSlot?: "city" | "budget" | "bedrooms" | "propertyType";
+  missingSlot?: "city" | "budget" | "bedrooms" | "propertyType" | "district" | "clarification";
   clarificationQuestion?: string;
   reason: string;
 }
@@ -122,17 +160,36 @@ export interface ConversationState {
   turnCount: number;
   lastUserMessage?: string;
   lastAssistantMessage?: string;
+  lastAssistantClaim?: string;
+  lastUserRequest?: string;
+  activeIntent?: ContextAwareIntent;
   updatedAt: string;
 }
 
 export type ExtendedLanguage =
   // Tier 1
-  | "so" | "en" | "ar" | "mixed"
-  // Tier 2 (East African)
-  | "sw" | "am" | "om" | "ti"
-  // Tier 3 (Global)
+  | "so" | "en" | "ar" | "sw" | "mixed"
+  // Tier 2 (East African / Horn)
+  | "am" | "om" | "ti"
+  // Tier 3 (Global & Regional)
   | "fr" | "es" | "de" | "pt" | "it" | "tr" | "hi" | "ur" | "bn" | "id" | "ms" | "zh" | "ja" | "ko" | "ru"
+  | "fa" | "ha"
   | "unknown";
+
+export type LanguageSupportLevel = "NATIVE" | "HIGH" | "PARTIAL" | "FALLBACK_ONLY" | "UNSUPPORTED";
+
+export interface LanguageCapability {
+  code: ExtendedLanguage;
+  name: string;
+  nativeName: string;
+  detectionSupport: LanguageSupportLevel;
+  understandingSupport: LanguageSupportLevel;
+  generationSupport: LanguageSupportLevel;
+  fallbackLanguage: ExtendedLanguage;
+  confidenceThreshold: number;
+  tier: 1 | 2 | 3;
+  notes?: string;
+}
 
 export interface ConversationalResponseContext {
   state: ConversationState;

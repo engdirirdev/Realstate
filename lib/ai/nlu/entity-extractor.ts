@@ -70,7 +70,8 @@ const CITY_DICTIONARY: Record<string, string[]> = {
 // 2. Property Type Mappings (Strictly preserving distinct types - specific types evaluated before generic HOUSE)
 const TYPE_DICTIONARY: Record<string, string[]> = {
   APARTMENT: [
-    "apartment", "apartments", "flat", "flats", "condo", "condominium",
+    "apartment", "apartments", "apartmant", "aprtment", "apartmet", "aparment",
+    "flat", "flats", "condo", "condominium",
     "dabaq", "dabaqyo", "apartment-ka",
     "شقة", "شقق"
   ],
@@ -194,10 +195,10 @@ export function extractEntities(query: string): ExtractedEntities {
   // -------------------------------------------------------------
   // C. BEDROOM EXTRACTION
   // -------------------------------------------------------------
-    // 1. Digits: "3 bedroom", "3-bedroom", "3BR", "3 beds", "3 qol", "3 غرف", "بـ 3 غرف"
-    const bedDigitRegex = /(?:مع\s+|بـ?|ب)?(\d+)\s*(?:-|–|\s+)?\s*(?:bedrooms?|beds?|bed|bds?|br|qol|qolal|غرف نوم|غرف|غرفة)\b/iu;
+    // 1. Digits: "3 bedroom", "3 bedrom", "3-bedroom", "3BR", "3 beds", "3 qol", "3 غرف", "بـ 3 غرف"
+    const bedDigitRegex = /(?:مع\s+|بـ?|ب)?(\d+)\s*(?:-|–|\s+)?\s*(?:bedrooms?|bedroms?|bedrom|beds?|bed|bds?|br|qol|qolal|غرف نوم|غرف|غرفة)\b/iu;
     // 2. English / Somali words (with optional hyphen for "three-bedroom")
-    const bedWordRegex = /(?:([a-zA-Z]+)\s*(?:-|–|\s+)\s*(?:bedrooms?|beds?|qol|qolal)|(?:qol|qolal)\s+([a-zA-Z]+))/iu;
+    const bedWordRegex = /(?:([a-zA-Z]+)\s*(?:-|–|\s+)\s*(?:bedrooms?|bedroms?|bedrom|beds?|qol|qolal)|(?:qol|qolal)\s+([a-zA-Z]+))/iu;
     // 3. Arabic word forms (e.g. "بثلاث غرف نوم", "ثلاث غرف")
     const bedArabicRegex = /(?:مع\s+|بـ?|ب)?(ثلاث|ثلاثة|أربع|اربع|أربعة|اربعة|خمس|خمسة|ست|ستة|غرفتين|غرفة واحدة)\s*(?:غرف نوم|غرف|غرفة)?/u;
 
@@ -477,7 +478,7 @@ export function extractEntities(query: string): ExtractedEntities {
   // G. FURNISHED EXTRACTION
   // -------------------------------------------------------------
   if (
-    /\b(furnished|fully furnished|alaab leh|qalabaysan)\b/i.test(text) ||
+    /\b(furnished|furnshed|fully furnished|alaab leh|alaab|qalabaysan|qalab leh)\b/i.test(text) ||
     /(مفروش|مؤثث)/u.test(text)
   ) {
     result.isFurnished = true;

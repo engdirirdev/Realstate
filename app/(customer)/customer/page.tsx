@@ -25,7 +25,7 @@ import PropertyCard from "@/components/PropertyCard";
 import CustomerHeroSearch from "@/components/customer/CustomerHeroSearch";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Customer Dashboard – SkyHome Real Estate" };
+export const metadata: Metadata = { title: "Customer Dashboard – Kiro-Maal Real Estate" };
 
 export default async function CustomerDashboardPage() {
   const session = await auth();
@@ -127,8 +127,8 @@ export default async function CustomerDashboardPage() {
       ? [
           {
             icon: MessageSquare,
-            iconColor: "text-[#1677FF]",
-            iconBg: "bg-[#EFF6FF]",
+            iconColor: "text-[#C89B3C]",
+            iconBg: "bg-[#F7F3EA]",
             title: `Inquired about ${recentUserInquiries[0].property?.title || "Property"}`,
             time: "1 day ago",
           },
@@ -138,70 +138,78 @@ export default async function CustomerDashboardPage() {
       ? [
           {
             icon: Calendar,
-            iconColor: "text-[#10B981]",
-            iconBg: "bg-[#ECFDF5]",
-            title: `Appointment confirmed for ${recentUserBookings[0].property?.title || "Property"}`,
+            iconColor: "text-[#16A34A]",
+            iconBg: "bg-[#F0FDF4]",
+            title: `Viewing confirmed for ${recentUserBookings[0].property?.title || "Property"}`,
             time: "2 days ago",
           },
         ]
       : []),
     {
       icon: Eye,
-      iconColor: "text-[#8B5CF6]",
-      iconBg: "bg-[#F5F3FF]",
-      title: "Viewed Modern Villa in Mogadishu",
+      iconColor: "text-[#A97918]",
+      iconBg: "bg-[#F7F3EA]",
+      title: "Viewed Modern Luxury Villa in Mogadishu",
       time: "2 hours ago",
     },
     {
       icon: Mail,
-      iconColor: "text-[#06B6D4]",
-      iconBg: "bg-[#ECFEFF]",
-      title: "Message received from Agent",
+      iconColor: "text-[#C89B3C]",
+      iconBg: "bg-[#F7F3EA]",
+      title: "Message received from Kiro-Maal Concierge",
       time: "3 days ago",
     },
   ].slice(0, 5);
 
-  // 4 Customer Stat Cards with vibrant luminous gradients
+  // 4 Kiro-Maal Customer Stat Cards
   const customerStats = [
     {
       title: "MY FAVORITES",
       value: favoritesCount.toString(),
       tagText: "Saved",
-      tagColor: "text-[#F87171]",
-      subText: "Saved Properties",
+      tagColor: "text-[#EF4444]",
+      subText: "Curated Collection",
       icon: Heart,
       href: "/customer/favorites",
-      gradient: "from-[#4A0E18] via-[#7B1728] to-[#B91C1C]",
+      cardBg: "bg-[#07111F] text-white border border-[#C89B3C]/25",
+      iconContainer: "bg-[#C89B3C]/15 border border-[#C89B3C]/30 text-[#D9B45B]",
+      numberColor: "text-[#FCFBF7]",
     },
     {
       title: "MY INQUIRIES",
       value: inquiriesCount.toString(),
       tagText: "Active",
-      tagColor: "text-[#38BDF8]",
-      subText: "Sent Inquiries",
+      tagColor: "text-[#D9B45B]",
+      subText: "Agent Dialogue",
       icon: MessageSquare,
       href: "/customer/inquiries",
-      gradient: "from-[#0B254E] via-[#0E3A75] to-[#125BB5]",
+      cardBg: "bg-[#FCFBF7] text-[#07111F] border border-[#E8E1D4]",
+      iconContainer: "bg-[#F7F3EA] border border-[#E8E1D4] text-[#A97918]",
+      numberColor: "text-[#07111F]",
     },
     {
       title: "APPOINTMENTS",
       value: bookingsCount.toString(),
       tagText: "Upcoming",
-      tagColor: "text-[#38BDF8]",
-      subText: "Tours & Visits",
+      tagColor: "text-[#D9B45B]",
+      subText: "Private Viewings",
       icon: Calendar,
       href: "/customer/bookings",
-      gradient: "from-[#06293E] via-[#0B4F73] to-[#0284C7]",
+      cardBg: "bg-[#0B1728] text-white border border-[#C89B3C]/25",
+      iconContainer: "bg-[#C89B3C]/15 border border-[#C89B3C]/30 text-[#D9B45B]",
+      numberColor: "text-[#FCFBF7]",
     },
     {
       title: "MY MESSAGES",
       value: messagesCount.toString(),
-      tagText: "↑ Live",
-      tagColor: "text-[#34D399]",
-      subText: "Total Notifications",
+      tagText: "Unread Alerts",
+      tagColor: "text-[#16A34A]",
+      subText: "Notifications",
       icon: Mail,
       href: "/customer/notifications",
-      gradient: "from-[#063321] via-[#085337] to-[#10B981]",
+      cardBg: "bg-[#FCFBF7] text-[#07111F] border border-[#E8E1D4]",
+      iconContainer: "bg-[#F7F3EA] border border-[#E8E1D4] text-[#16A34A]",
+      numberColor: "text-[#07111F]",
     },
   ];
 
@@ -215,20 +223,22 @@ export default async function CustomerDashboardPage() {
           <div
             className="absolute inset-0 bg-cover bg-center"
             style={{
-              backgroundImage:
-                "url('https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1600&q=80')",
+              backgroundImage: "url('/images/luxury_villa_banner.jpg')",
             }}
           />
-          {/* Dark Navy / Cyan Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#08203A]/90 via-[#0F2747]/80 to-[#1677FF]/40" />
+          {/* Dark Navy / Gold Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#07111F]/95 via-[#0B1728]/85 to-[#07111F]/70" />
 
           {/* Banner Text */}
           <div className="relative z-10 max-w-xl">
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#C89B3C]/20 border border-[#C89B3C]/40 text-[#D9B45B] text-[11px] font-bold uppercase tracking-wider mb-2">
+              <span>✦ Kiro-Maal VIP Client</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black font-serif text-[#FCFBF7] tracking-tight">
               Welcome back, {userName}!
             </h1>
-            <p className="text-white/85 text-xs sm:text-sm mt-1.5 font-medium">
-              Find your dream property or get AI-powered recommendations.
+            <p className="text-[#CBD5E1] text-xs sm:text-sm mt-1.5 font-medium">
+              Find your next luxury investment or discover AI-personalized recommendations tailored to your standards.
             </p>
           </div>
 
@@ -239,37 +249,37 @@ export default async function CustomerDashboardPage() {
         </div>
 
         {/* AI Assistant Card (1 col) */}
-        <div className="relative rounded-3xl overflow-hidden p-6 bg-gradient-to-br from-[#7C3AED] via-[#6366F1] to-[#1677FF] text-white flex flex-col justify-between shadow-xs">
+        <div className="relative rounded-3xl overflow-hidden p-6 bg-[#07111F] border border-[#C89B3C]/30 text-white flex flex-col justify-between shadow-sm">
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#A7F3D0] flex items-center gap-1">
-                <Sparkles className="h-3.5 w-3.5" /> AI Powered
+              <span className="text-xs font-bold uppercase tracking-wider text-[#D9B45B] flex items-center gap-1">
+                <Sparkles className="h-3.5 w-3.5" /> 24/7 Concierge
               </span>
             </div>
-            <h2 className="text-lg font-extrabold text-white">AI Assistant</h2>
-            <p className="text-xs text-white/85 mt-1 leading-relaxed">
-              Chat with our AI to find the perfect property for you.
+            <h2 className="text-lg font-bold font-serif text-[#FCFBF7]">AI Assistant</h2>
+            <p className="text-xs text-[#94A3B8] mt-1 leading-relaxed">
+              Inquire about any property, get valuations, and schedule private viewings instantly.
             </p>
           </div>
 
           <div className="flex items-end justify-between mt-4">
             <Link
-              href="/chat"
-              className="bg-white hover:bg-white/90 text-[#7C3AED] font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center gap-1.5"
+              href="/ai-assistant"
+              className="bg-gradient-to-r from-[#C89B3C] to-[#D9B45B] hover:brightness-105 text-[#07111F] font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md shadow-[#C89B3C]/20 flex items-center gap-1.5 cursor-pointer"
             >
               <span>Chat Now</span>
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
 
             {/* Cute AI Bot Graphic / Icon */}
-            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center flex-shrink-0">
-              <Bot className="h-8 w-8 text-white animate-bounce" />
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#C89B3C] to-[#A97918] flex items-center justify-center flex-shrink-0 text-[#07111F] shadow-sm">
+              <Bot className="h-6 w-6" />
             </div>
           </div>
         </div>
       </div>
 
-      {/* ─── 4 Vibrant Gradient Customer Stat Cards ─── */}
+      {/* ─── 4 Kiro-Maal Customer Stat Cards ─── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
         {customerStats.map((card) => {
           const Icon = card.icon;
@@ -277,21 +287,21 @@ export default async function CustomerDashboardPage() {
             <Link
               key={card.title}
               href={card.href}
-              className={`relative overflow-hidden rounded-2xl p-5 sm:p-6 bg-gradient-to-r ${card.gradient} text-white shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between min-h-[140px] group border border-white/10`}
+              className={`relative overflow-hidden rounded-3xl p-5 sm:p-6 ${card.cardBg} shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between min-h-[140px] group`}
             >
               {/* Top Row: Title + Frosted Glass Icon Badge */}
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[11px] font-extrabold uppercase tracking-wider text-white/85">
+                <span className="text-[11px] font-bold uppercase tracking-wider opacity-80">
                   {card.title}
                 </span>
-                <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-inner flex-shrink-0 group-hover:scale-105 transition-transform">
+                <div className={`w-10 h-10 rounded-xl ${card.iconContainer} flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform`}>
                   <Icon className="h-5 w-5" />
                 </div>
               </div>
 
               {/* Big Metric Number */}
               <div className="my-3 sm:my-3.5">
-                <div className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-none">
+                <div className={`text-3xl sm:text-4xl font-black font-serif ${card.numberColor} tracking-tight leading-none`}>
                   {card.value}
                 </div>
               </div>
@@ -299,7 +309,7 @@ export default async function CustomerDashboardPage() {
               {/* Bottom Tag / Indicator */}
               <div className="flex items-center gap-1.5 text-xs font-semibold">
                 <span className={`font-bold ${card.tagColor}`}>{card.tagText}</span>
-                <span className="text-white/70 font-medium">{card.subText}</span>
+                <span className="opacity-70 font-medium">{card.subText}</span>
               </div>
             </Link>
           );
@@ -312,12 +322,12 @@ export default async function CustomerDashboardPage() {
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-bold text-[#0F172A]">Recommended Properties For You</h2>
-              <p className="text-xs text-[#64748B]">Personalized matches based on your preferences</p>
+              <h2 className="text-lg font-bold font-serif text-[#07111F]">Recommended Properties For You</h2>
+              <p className="text-xs text-[#6B7280]">AI personalized matches based on your preferences</p>
             </div>
             <Link
               href="/properties"
-              className="text-xs font-bold text-[#1677FF] hover:text-[#0F5ED7] transition-colors"
+              className="text-xs font-bold text-[#C89B3C] hover:text-[#A97918] transition-colors"
             >
               View All →
             </Link>
@@ -331,31 +341,31 @@ export default async function CustomerDashboardPage() {
         </div>
 
         {/* Right Column: Your Recent Activity (1 col) */}
-        <div className="bg-gradient-to-br from-[#071D36] via-[#092546] to-[#0B2C52] rounded-2xl border border-[#133C6D] p-5 sm:p-6 shadow-xl text-white flex flex-col justify-between">
+        <div className="bg-[#FCFBF7] rounded-3xl border border-[#E8E1D4] p-5 sm:p-6 shadow-sm text-[#07111F] flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-base font-bold text-white tracking-tight">Your Recent Activity</h3>
-              <p className="text-xs text-[#94A3B8]">Interactions and search history</p>
+              <h3 className="text-base font-bold font-serif text-[#07111F] tracking-tight">Your Recent Activity</h3>
+              <p className="text-xs text-[#6B7280]">Interactions and viewing history</p>
             </div>
             <Link
               href="/customer/favorites"
-              className="text-xs font-bold text-[#38BDF8] hover:text-white transition-colors"
+              className="text-xs font-bold text-[#C89B3C] hover:text-[#A97918] transition-colors"
             >
               View All →
             </Link>
           </div>
 
-          <div className="space-y-3.5 divide-y divide-[#133C6D]">
+          <div className="space-y-3.5 divide-y divide-[#E8E1D4]">
             {activityList.map((item, idx) => {
               const Icon = item.icon;
               return (
                 <div key={idx} className="pt-3 first:pt-0 flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center flex-shrink-0">
-                    <Icon className="h-4 w-4 text-[#38BDF8]" />
+                  <div className={`w-8 h-8 rounded-xl ${item.iconBg} border border-[#E8E1D4] flex items-center justify-center flex-shrink-0`}>
+                    <Icon className={`h-4 w-4 ${item.iconColor}`} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-white truncate">{item.title}</p>
-                    <p className="text-[11px] text-white/60 mt-0.5">{item.time}</p>
+                    <p className="text-xs font-bold text-[#07111F] truncate">{item.title}</p>
+                    <p className="text-[11px] text-[#6B7280] mt-0.5">{item.time}</p>
                   </div>
                 </div>
               );
@@ -367,42 +377,42 @@ export default async function CustomerDashboardPage() {
       {/* ─── Bottom Section: Price Prediction & Help Callouts ─── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {/* Get Property Price Prediction */}
-        <div className="bg-gradient-to-br from-[#071D36] via-[#092546] to-[#0B2C52] rounded-2xl border border-[#133C6D] p-5 sm:p-6 shadow-xl text-white flex items-center justify-between gap-4">
+        <div className="bg-[#FCFBF7] rounded-3xl border border-[#E8E1D4] p-5 sm:p-6 shadow-sm text-[#07111F] flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center flex-shrink-0 text-[#38BDF8]">
+            <div className="w-12 h-12 rounded-2xl bg-[#F7F3EA] border border-[#E8E1D4] flex items-center justify-center flex-shrink-0 text-[#C89B3C]">
               <TrendingUp className="h-6 w-6" />
             </div>
             <div>
-              <h2 className="text-sm sm:text-base font-bold text-white">Get Property Price Prediction</h2>
-              <p className="text-xs text-[#94A3B8] mt-0.5">
+              <h2 className="text-sm sm:text-base font-bold font-serif text-[#07111F]">Property Price Prediction</h2>
+              <p className="text-xs text-[#6B7280] mt-0.5">
                 Know the future value of any property with our AI model.
               </p>
             </div>
           </div>
           <Link
             href="/price-prediction"
-            className="bg-[#1677FF] hover:bg-[#0F5ED7] text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-md hover:shadow-xl hover:scale-102 whitespace-nowrap"
+            className="bg-gradient-to-r from-[#C89B3C] to-[#D9B45B] hover:brightness-105 text-[#07111F] text-xs font-bold px-5 py-2.5 rounded-xl transition-all shadow-md shadow-[#C89B3C]/20 border border-[#A97918]/30 whitespace-nowrap cursor-pointer"
           >
             Try Now →
           </Link>
         </div>
 
         {/* Need Help */}
-        <div className="bg-gradient-to-br from-[#071D36] via-[#092546] to-[#0B2C52] rounded-2xl border border-[#133C6D] p-5 sm:p-6 shadow-xl text-white flex items-center justify-between gap-4">
+        <div className="bg-[#FCFBF7] rounded-3xl border border-[#E8E1D4] p-5 sm:p-6 shadow-sm text-[#07111F] flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center flex-shrink-0 text-[#34D399]">
+            <div className="w-12 h-12 rounded-2xl bg-[#F7F3EA] border border-[#E8E1D4] flex items-center justify-center flex-shrink-0 text-[#A97918]">
               <Headphones className="h-6 w-6" />
             </div>
             <div>
-              <h2 className="text-sm sm:text-base font-bold text-white">Need Help?</h2>
-              <p className="text-xs text-[#94A3B8] mt-0.5">
-                Our support team is here to assist you 24/7.
+              <h2 className="text-sm sm:text-base font-bold font-serif text-[#07111F]">VIP Concierge &amp; Support</h2>
+              <p className="text-xs text-[#6B7280] mt-0.5">
+                Our luxury property advisors are here to assist you 24/7.
               </p>
             </div>
           </div>
           <Link
             href="/contact"
-            className="bg-[#10B981] hover:bg-[#059669] text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-md hover:shadow-xl hover:scale-102 whitespace-nowrap"
+            className="bg-[#07111F] hover:bg-[#0B1728] text-[#D9B45B] border border-[#C89B3C]/30 text-xs font-bold px-5 py-2.5 rounded-xl transition-all shadow-sm whitespace-nowrap cursor-pointer"
           >
             Contact Us →
           </Link>

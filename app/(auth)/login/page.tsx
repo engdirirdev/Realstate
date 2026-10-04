@@ -1,51 +1,116 @@
 // ================================================================
-// PAGE NAME  : Login Page
-// ROUTE      : /login
-// DESCRIPTION: User authentication — email/password credentials,
-//              JWT session creation via NextAuth
+// PAGE NAME  : Master Unified Auth Page — Kiro-Maal Real Estate
+// ROUTE      : /login and /register
+// PALETTE    : Deep Navy (#07111F), Luxury Gold (#C89B3C), Cream (#F7F3EA)
+// DESCRIPTION: Master reference design system for authentication.
+//              Ultra-compact, all elements 100% visible on any screen.
+//              Never cuts off submit button or links.
+//              All auth & register logic 100% preserved.
 // ================================================================
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Building2, Eye, EyeOff, Loader2, Mail, Lock, ArrowRight, Sparkles, ShieldCheck, Home, Bot, BarChart3 } from "lucide-react";
+import Image from "next/image";
+import {
+  Eye,
+  EyeOff,
+  Loader2,
+  Mail,
+  Lock,
+  User,
+  Phone,
+  ArrowRight,
+  Sparkles,
+  Home,
+  BarChart3,
+  Briefcase,
+  ChevronRight,
+  Zap,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 
-export default function LoginPage() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [form, setForm] = useState({ email: "", password: "" });
+interface AuthPageProps {
+  initialTab?: "login" | "register";
+}
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+function AuthContent({ initialTab = "login" }: AuthPageProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Tab mode: "login" or "register"
+  const [tab, setTab] = useState<"login" | "register">(initialTab);
+
+  // Sync tab with URL query if provided
+  useEffect(() => {
+    const tabParam = searchParams?.get("tab");
+    if (tabParam === "register") {
+      setTab("register");
+    } else if (tabParam === "login") {
+      setTab("login");
+    }
+  }, [searchParams]);
+
+  const switchTab = (newTab: "login" | "register") => {
+    setTab(newTab);
+    if (typeof window !== "undefined") {
+      const url = newTab === "register" ? "/login?tab=register" : "/login";
+      window.history.replaceState(null, "", url);
+    }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Login form state
+  const [loginForm, setLoginForm] = useState({ email: "", password: "" });
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+
+  // Register form state
+  const [registerForm, setRegisterForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+  });
+  const [registerLoading, setRegisterLoading] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+
+  // Handle Login Submit
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.email || !form.password) {
-      toast({ title: "Missing fields", description: "Please fill in all fields.", variant: "destructive" });
+    if (!loginForm.email || !loginForm.password) {
+      toast({
+        title: "Missing fields",
+        description: "Please fill in all fields.",
+        variant: "destructive",
+      });
       return;
     }
-    setLoading(true);
+    setLoginLoading(true);
     try {
       const result = await signIn("credentials", {
-        email: form.email,
-        password: form.password,
+        email: loginForm.email,
+        password: loginForm.password,
         redirect: false,
       });
 
       if (result?.error) {
-        toast({ title: "Login failed", description: "Invalid email or password.", variant: "destructive" });
+        toast({
+          title: "Login failed",
+          description: "Invalid email or password.",
+          variant: "destructive",
+        });
       } else {
-        toast({ title: "Welcome back! 👋", description: "Logged in successfully.", variant: "success" } as any);
-        
-        // Fetch session to determine role-based destination
+        toast({
+          title: "Welcome back! 👋",
+          description: "Logged in successfully.",
+          variant: "success",
+        } as any);
+
         const sessionRes = await fetch("/api/auth/session");
         const sessionData = await sessionRes.json();
         const userRole = sessionData?.user?.role;
@@ -60,159 +125,693 @@ export default function LoginPage() {
         }
       }
     } finally {
-      setLoading(false);
+      setLoginLoading(false);
+    }
+  };
+
+  // Handle Register Submit
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!registerForm.name || !registerForm.email || !registerForm.password) {
+      toast({
+        title: "Missing fields",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (registerForm.password.length < 8) {
+      toast({
+        title: "Weak password",
+        description: "Password must be at least 8 characters.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setRegisterLoading(true);
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(registerForm),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        toast({
+          title: "Registration failed",
+          description: data.error,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Automatically sign in upon registration
+      await signIn("credentials", {
+        email: registerForm.email,
+        password: registerForm.password,
+        redirect: false,
+      });
+
+      toast({
+        title: "Account created! 🎉",
+        description: "Welcome to Kiro-Maal Real Estate.",
+        variant: "success",
+      } as any);
+
+      router.refresh();
+      router.push("/customer");
+    } catch {
+      toast({
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setRegisterLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex bg-[#F8FAFC]">
-      {/* ─── Left panel (Deep Navy Dark Branding) ─── */}
-      <div className="hidden lg:flex lg:w-1/2 bg-[#0F172A] flex-col justify-between p-12 relative overflow-hidden">
-        {/* Background glow accents */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-[#10B981]/10 blur-3xl" />
-          <div className="absolute bottom-10 -left-20 w-80 h-80 rounded-full bg-[#06B6D4]/10 blur-3xl" />
+    <div className="min-h-screen lg:h-screen w-full flex flex-col lg:flex-row relative bg-[#07111F] overflow-x-hidden font-sans">
+      {/* ─────────────────────────────────────────────────────────────
+          GLOBAL SEAMLESS TWILIGHT VILLA BACKDROP
+          Extends across the left & behind the curve so there is NEVER
+          any sharp vertical cutoff line
+          ───────────────────────────────────────────────────────────── */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+        <div className="relative w-full lg:w-[68%] xl:w-[64%] h-full">
+          <Image
+            src="/images/luxury_villa_twilight.jpg"
+            alt="Luxury Villa at Twilight"
+            fill
+            priority
+            className="object-cover object-center"
+          />
+          {/* Deep Navy Gradient Overlays */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#07111F]/95 via-[#0B1728]/85 to-[#07111F]/70" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#040E1B] via-transparent to-[#07111F]/80" />
+          {/* Soft smooth horizontal fade on right edge into dark navy */}
+          <div className="hidden lg:block absolute inset-y-0 right-0 w-64 bg-gradient-to-r from-transparent to-[#07111F]" />
         </div>
+      </div>
 
-        {/* Top Logo */}
-        <div className="relative z-10">
-          <Link href="/" className="inline-flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-[#10B981] flex items-center justify-center shadow-sm">
-              <Building2 className="w-5 h-5 text-white" />
-            </div>
-            <div className="flex flex-col leading-tight">
-              <span className="font-bold text-lg text-white tracking-tight">AI RealEstate</span>
-              <span className="text-[10px] text-[#34D399] font-medium tracking-wide">Smart Property Search</span>
+      {/* ─────────────────────────────────────────────────────────────
+          LEFT PANEL: Dark Luxury Twilight Villa & AI Features Content
+          ───────────────────────────────────────────────────────────── */}
+      <div className="relative w-full lg:w-[48%] xl:w-[49%] min-h-[440px] lg:h-screen flex flex-col justify-between p-4 sm:p-6 lg:p-7 xl:p-8 z-20">
+        {/* ─── Top: Kiro-Maal Dark Logo (Clean Blend with mix-blend-screen) ─── */}
+        <div className="relative z-20 shrink-0">
+          <Link href="/" className="inline-block group">
+            <div className="w-40 h-14 sm:w-48 sm:h-16 relative transition-transform duration-200 group-hover:scale-105 mix-blend-screen">
+              <Image
+                src="/images/kiro_maal_logo_dark.png"
+                alt="Kiro-Maal Real Estate"
+                fill
+                className="object-contain object-left mix-blend-screen"
+                priority
+              />
             </div>
           </Link>
+
+          {/* Badges Stack */}
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#0B1728]/90 border border-[#C89B3C]/40 text-[#D9B45B] text-[10px] font-semibold shadow-xs backdrop-blur-md">
+              <Sparkles className="w-2.5 h-2.5 text-[#C89B3C]" />
+              Smart Property Search
+            </div>
+            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#0B1728]/90 border border-[#C89B3C]/40 text-[#D9B45B] text-[10px] font-semibold shadow-xs backdrop-blur-md">
+              <Sparkles className="w-2.5 h-2.5 text-[#C89B3C]" />
+              Next-Gen Real Estate AI
+              <Sparkles className="w-2.5 h-2.5 text-[#C89B3C]" />
+            </div>
+          </div>
         </div>
 
-        {/* Middle Feature Highlights */}
-        <div className="relative z-10 max-w-md my-auto">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1E293B] border border-[#334155] text-[#34D399] text-xs font-medium mb-6">
-            <Sparkles className="h-3.5 w-3.5" />
-            Next-Gen Real Estate AI
-          </div>
-          <h2 className="text-3xl xl:text-4xl font-bold text-white leading-tight mb-4">
-            Smart Property Search Powered by AI
-          </h2>
-          <p className="text-[#CBD5E1] text-base leading-relaxed mb-8">
-            Get personalized recommendations, predict prices, and chat with our AI assistant to find your perfect property in Somalia.
+        {/* ─── Middle: Headline, Description & 4 Feature Cards (Compacted) ─── */}
+        <div className="relative z-20 my-auto py-2 max-w-xl shrink-0">
+          <h1 className="text-xl sm:text-2xl xl:text-3xl font-extrabold text-white tracking-tight leading-tight">
+            {tab === "login" ? (
+              <>
+                Smart Property Search <br />
+                <span className="bg-gradient-to-r from-[#D9B45B] via-[#C89B3C] to-[#E8B849] bg-clip-text text-transparent">
+                  Powered by AI
+                </span>
+              </>
+            ) : (
+              <>
+                Join Somalia&apos;s #1 <br />
+                <span className="bg-gradient-to-r from-[#D9B45B] via-[#C89B3C] to-[#E8B849] bg-clip-text text-transparent">
+                  Luxury Property Network
+                </span>
+              </>
+            )}
+          </h1>
+
+          <p className="text-slate-300 text-xs sm:text-sm leading-relaxed mt-1.5 mb-2.5 max-w-md font-normal">
+            {tab === "login"
+              ? "Get personalized recommendations, predict prices, and chat with our AI assistant to find your perfect property in Somalia."
+              : "Create your free client account to access verified properties, save favorites, and receive real-time AI valuation alerts."}
           </p>
 
-          <div className="space-y-3.5">
+          {/* 4 Feature Cards */}
+          <div className="space-y-1.5">
             {[
-              { icon: Home, text: "Browse 55+ verified properties across Somalia" },
-              { icon: Sparkles, text: "AI-powered recommendations tailored to your budget" },
-              { icon: BarChart3, text: "ML price prediction with confidence score" },
-              { icon: Bot, text: "24/7 conversational AI assistant for instant answers" },
-            ].map(({ icon: Icon, text }) => (
-              <div key={text} className="flex items-center gap-3.5 bg-[#1E293B]/80 border border-[#334155] rounded-xl px-4 py-3 shadow-sm">
-                <div className="w-8 h-8 rounded-lg bg-[#10B981]/15 text-[#10B981] flex items-center justify-center flex-shrink-0">
-                  <Icon className="h-4 w-4" />
+              {
+                icon: Home,
+                text: "Browse 55+ verified properties across Somalia",
+              },
+              {
+                icon: Sparkles,
+                text: "AI-powered recommendations tailored to your budget",
+              },
+              {
+                icon: BarChart3,
+                text: "ML price prediction with confidence score",
+              },
+              {
+                icon: Briefcase,
+                text: "24/7 conversational AI assistant for instant answers",
+              },
+            ].map((item, idx) => (
+              <div
+                key={idx}
+                className="group flex items-center justify-between gap-3 bg-[#0B1728]/80 hover:bg-[#0E1C2E]/95 backdrop-blur-md border border-[#C89B3C]/30 hover:border-[#C89B3C]/60 rounded-xl px-3 py-1.5 shadow-xs transition-all duration-200 cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-[#C89B3C]/15 border border-[#C89B3C]/40 text-[#D9B45B] flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-[#C89B3C]/25 transition-all">
+                    <item.icon className="w-3 h-3" />
+                  </div>
+                  <span className="text-xs font-medium text-slate-100 group-hover:text-white line-clamp-1">
+                    {item.text}
+                  </span>
                 </div>
-                <span className="text-sm font-medium text-white">{text}</span>
+                <ChevronRight className="w-3 h-3 text-[#D9B45B] group-hover:translate-x-0.5 transition-all shrink-0" />
               </div>
             ))}
           </div>
         </div>
 
-        {/* Bottom Footer Note */}
-        <div className="relative z-10 text-xs text-[#94A3B8]">
-          © {new Date().getFullYear()} AI RealEstate. All rights reserved.
+        {/* ─── Bottom: Copyright ─── */}
+        <div className="relative z-20 flex items-center gap-2 text-[10px] text-slate-400 pt-1 shrink-0">
+          <div className="w-3.5 h-3.5 rounded-full border border-slate-600/80 flex items-center justify-center text-slate-400">
+            <Zap className="w-2 h-2 text-[#D9B45B]" />
+          </div>
+          <span>© 2026 Kiro-Maal Real Estate. All rights reserved.</span>
         </div>
       </div>
 
-      {/* ─── Right panel (Clean Light Form) ─── */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-[#F8FAFC]">
-        <div className="w-full max-w-md">
-          {/* Mobile logo */}
-          <Link href="/" className="flex items-center gap-2.5 mb-8 lg:hidden">
-            <div className="w-9 h-9 rounded-xl bg-[#10B981] flex items-center justify-center">
-              <Building2 className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-bold text-lg text-[#0F172A]">AI RealEstate</span>
-          </Link>
+      {/* ─────────────────────────────────────────────────────────────
+          MASTER ARCHITECTURAL GOLD CURVED SWOOSH & CREAM CANVAS
+          Seamless organic luxury boundary dividing dark villa & cream
+          ───────────────────────────────────────────────────────────── */}
+      <div className="hidden lg:block absolute inset-y-0 right-0 w-[55%] xl:w-[53%] pointer-events-none z-10">
+        <svg
+          className="w-full h-full"
+          viewBox="0 0 600 1000"
+          preserveAspectRatio="none"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            {/* Multi-stop metallic luxury gold gradient */}
+            <linearGradient id="luxuryGoldRibbon" x1="0%" y1="0%" x2="50%" y2="100%">
+              <stop offset="0%" stopColor="#A97918" />
+              <stop offset="15%" stopColor="#E2B755" />
+              <stop offset="35%" stopColor="#FFF2CE" />
+              <stop offset="55%" stopColor="#C89B3C" />
+              <stop offset="80%" stopColor="#F5D37E" />
+              <stop offset="100%" stopColor="#7E5912" />
+            </linearGradient>
 
-          <div className="bg-white rounded-2xl shadow-card border border-[#E2E8F0] p-8 sm:p-10">
-            <div className="mb-6">
-              <h1 className="text-2xl font-bold text-[#0F172A] mb-1 tracking-tight">Welcome back</h1>
-              <p className="text-[#64748B] text-sm">Sign in to your account to access your dashboard</p>
-            </div>
+            {/* Luminous Specular Filament Gradient */}
+            <linearGradient id="goldFilament" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#FFF7D6" stopOpacity="0.9" />
+              <stop offset="50%" stopColor="#FFFFFF" stopOpacity="0.95" />
+              <stop offset="100%" stopColor="#E5C16C" stopOpacity="0.8" />
+            </linearGradient>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="email" className="text-xs font-semibold text-[#0F172A]">Email Address</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={form.email}
-                    onChange={handleChange}
-                    placeholder="you@example.com"
-                    className="pl-10 h-11 bg-white border-[#E2E8F0] text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#10B981] focus:ring-[#10B981]/20 rounded-xl"
-                    required
-                    autoComplete="email"
-                  />
-                </div>
+            {/* Deep Luxury Architectural Drop Shadow onto the villa */}
+            <filter id="ribbonShadow" x="-50%" y="-20%" width="200%" height="140%">
+              <feGaussianBlur stdDeviation="18" result="blur" />
+              <feColorMatrix type="matrix" values="0 0 0 0 0.02   0 0 0 0 0.05   0 0 0 0 0.1   0 0 0 0.8 0"/>
+            </filter>
+
+            {/* Soft Ambient Gold Glow */}
+            <filter id="ribbonGlow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="8" result="glow" />
+              <feComposite in="SourceGraphic" in2="glow" operator="over" />
+            </filter>
+          </defs>
+
+          {/* 1. Deep 3D Shadow cast to the left */}
+          <path
+            d="M 125 0 C 45 260, 48 530, 105 750 C 135 855, 158 935, 175 1000"
+            stroke="#020813"
+            strokeWidth="36"
+            strokeOpacity="0.85"
+            filter="url(#ribbonShadow)"
+          />
+
+          {/* 2. Seamless Cream Surface Fill covering from the curve to the right edge (x=600) */}
+          <path
+            d="M 125 0 C 45 260, 48 530, 105 750 C 135 855, 158 935, 175 1000 L 600 1000 L 600 0 Z"
+            fill="#F7F3EA"
+          />
+
+          {/* 3. Outer Ambient Gold Glow */}
+          <path
+            d="M 125 0 C 45 260, 48 530, 105 750 C 135 855, 158 935, 175 1000"
+            stroke="#C89B3C"
+            strokeWidth="16"
+            strokeOpacity="0.25"
+            filter="url(#ribbonGlow)"
+          />
+
+          {/* 4. Primary 3D Metallic Luxury Gold Ribbon */}
+          <path
+            d="M 125 0 C 45 260, 48 530, 105 750 C 135 855, 158 935, 175 1000"
+            stroke="url(#luxuryGoldRibbon)"
+            strokeWidth="8"
+            strokeLinecap="round"
+          />
+
+          {/* 5. Core Specular Luminous Gold Highlight */}
+          <path
+            d="M 125 0 C 45 260, 48 530, 105 750 C 135 855, 158 935, 175 1000"
+            stroke="url(#goldFilament)"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+          />
+
+          {/* 6. Parallel Architectural Accent Filament */}
+          <path
+            d="M 143 0 C 63 260, 66 530, 123 750 C 153 855, 176 935, 193 1000"
+            stroke="url(#luxuryGoldRibbon)"
+            strokeWidth="1.5"
+            strokeOpacity="0.75"
+          />
+
+          {/* 7. Architectural Geometric Accents (Diamonds along the curve) */}
+          <g transform="translate(62, 380) rotate(45)">
+            <rect x="-6" y="-6" width="12" height="12" fill="url(#luxuryGoldRibbon)" rx="1.5" />
+            <rect x="-2.5" y="-2.5" width="5" height="5" fill="#FFFFFF" rx="0.5" />
+          </g>
+          <g transform="translate(105, 750) rotate(45)">
+            <rect x="-5" y="-5" width="10" height="10" fill="url(#luxuryGoldRibbon)" rx="1.5" />
+            <rect x="-2" y="-2" width="4" height="4" fill="#FFFFFF" rx="0.5" />
+          </g>
+        </svg>
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────────
+          RIGHT PANEL: Warm Cream Luxury Backdrop & Floating Card
+          ───────────────────────────────────────────────────────────── */}
+      <div className="relative w-full lg:w-[52%] xl:w-[51%] min-h-[500px] lg:h-screen flex items-center justify-center p-3 sm:p-5 lg:p-6 z-20 bg-[#F7F3EA] lg:bg-transparent overflow-y-auto scrollbar-hide">
+        {/* Soft Modern Architectural Backdrop with left fade mask */}
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none hidden lg:block [mask-image:linear-gradient(to_right,transparent_20%,black_50%)]">
+          <Image
+            src="/images/bright_luxury_cityscape.jpg"
+            alt="Cityscape"
+            fill
+            className="object-cover object-center opacity-15 blur-[1px]"
+          />
+        </div>
+        {/* Mobile solid background */}
+        <div className="lg:hidden absolute inset-0 bg-[#F7F3EA] -z-10" />
+
+        {/* ─── Centered Unified Glass Card with Advanced Animated Gold Border ─── */}
+        <div className="relative z-20 w-full max-w-[405px] my-auto py-2 group">
+          {/* 1. Outer Ambient Breathing Gold Halo */}
+          <div className="absolute -inset-2 rounded-[32px] bg-gradient-to-r from-[#C89B3C]/20 via-[#E2B755]/35 to-[#C89B3C]/20 blur-xl animate-gold-halo pointer-events-none -z-10" />
+
+          {/* 2. Precision Animated 360° Conic Metallic Gold Laser Border Beam */}
+          <div className="relative rounded-[26px] p-[2.5px] overflow-hidden shadow-[0_20px_50px_-12px_rgba(200,155,60,0.32)] transition-all duration-300">
+            {/* Spinning Conic Gold Light Beam */}
+            <div
+              className="absolute -inset-[150%] animate-gold-beam pointer-events-none"
+              style={{
+                background:
+                  "conic-gradient(from 0deg at 50% 50%, transparent 0deg, transparent 50deg, rgba(169, 121, 24, 0.4) 90deg, rgba(200, 155, 60, 0.95) 130deg, rgba(255, 246, 218, 1) 180deg, rgba(217, 180, 91, 0.95) 220deg, rgba(169, 121, 24, 0.4) 260deg, transparent 310deg, transparent 360deg)",
+              }}
+            />
+
+            {/* Static refined hairline gold casing border */}
+            <div className="absolute inset-0 rounded-[26px] border border-[#C89B3C]/40 pointer-events-none" />
+
+            {/* 3. The Inner Ivory Glass Card Content */}
+            <div className="relative bg-[#FCFBF7]/95 backdrop-blur-xl rounded-[23.5px] p-4 sm:p-5 transition-all">
+              {/* Top Glass Specular Reflection Highlight */}
+              <div className="absolute top-0 inset-x-8 h-[1px] bg-gradient-to-r from-transparent via-[#FFF6D8] to-transparent opacity-90 pointer-events-none" />
+
+              {/* Centered Kiro-Maal Logo Header */}
+              <div className="flex items-center justify-center gap-2.5 mb-2.5">
+              <div className="w-9 h-9 relative shrink-0">
+                <Image
+                  src="/images/kiro_maal_logo.png"
+                  alt="Kiro-Maal Real Estate"
+                  fill
+                  className="object-contain"
+                  priority
+                />
               </div>
+              <div className="leading-tight text-left">
+                <h2 className="font-extrabold text-lg text-[#C89B3C] font-serif leading-none">
+                  Kiro-Maal
+                </h2>
+                <span className="text-[8px] font-bold text-slate-700 tracking-[0.16em] uppercase">
+                  Real Estate
+                </span>
+              </div>
+            </div>
 
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="text-xs font-semibold text-[#0F172A]">Password</Label>
-                  <Link href="#" className="text-xs text-[#10B981] hover:text-[#059669] font-medium">
-                    Forgot password?
-                  </Link>
-                </div>
-                <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
-                  <Input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    value={form.password}
-                    onChange={handleChange}
-                    placeholder="Enter your password"
-                    className="pl-10 pr-10 h-11 bg-white border-[#E2E8F0] text-[#0F172A] placeholder:text-[#94A3B8] focus:border-[#10B981] focus:ring-[#10B981]/20 rounded-xl"
-                    required
-                    autoComplete="current-password"
-                  />
+            {/* ─── Interactive Segmented Pill Switcher ─── */}
+            <div className="flex p-0.5 bg-[#F1ECE1] rounded-xl border border-[#E8E1D4] mb-2.5">
+              <button
+                type="button"
+                onClick={() => switchTab("login")}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 cursor-pointer ${
+                  tab === "login"
+                    ? "bg-[#07111F] text-[#D9B45B] shadow-sm border border-[#C89B3C]/30"
+                    : "text-[#6B7280] hover:text-[#07111F]"
+                }`}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => switchTab("register")}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 cursor-pointer ${
+                  tab === "register"
+                    ? "bg-[#07111F] text-[#D9B45B] shadow-sm border border-[#C89B3C]/30"
+                    : "text-[#6B7280] hover:text-[#07111F]"
+                }`}
+              >
+                Create Account
+              </button>
+            </div>
+
+            {/* ─────────────────────────────────────────────────────────
+                TAB 1: SIGN IN FORM
+                ───────────────────────────────────────────────────────── */}
+            {tab === "login" && (
+              <div>
+                <form onSubmit={handleLoginSubmit} className="space-y-2.5">
+                  {/* Email field */}
+                  <div className="space-y-0.5">
+                    <Label
+                      htmlFor="login-email"
+                      className="text-[11px] font-bold text-[#07111F]"
+                    >
+                      Email Address
+                    </Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#A97918]" />
+                      <Input
+                        id="login-email"
+                        name="email"
+                        type="email"
+                        value={loginForm.email}
+                        onChange={(e) =>
+                          setLoginForm((p) => ({ ...p, email: e.target.value }))
+                        }
+                        placeholder="you@example.com"
+                        className="pl-9 h-9 bg-white border-[#E8E1D4] text-[#07111F] placeholder:text-[#9CA3AF] focus:border-[#C89B3C] focus:ring-2 focus:ring-[#C89B3C]/20 rounded-xl text-xs transition-all"
+                        required
+                        autoComplete="email"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Password field */}
+                  <div className="space-y-0.5">
+                    <div className="flex items-center justify-between">
+                      <Label
+                        htmlFor="login-password"
+                        className="text-[11px] font-bold text-[#07111F]"
+                      >
+                        Password
+                      </Label>
+                      <Link
+                        href="#"
+                        className="text-[10px] text-[#C89B3C] hover:text-[#A97918] font-bold transition-colors"
+                      >
+                        Forgot password?
+                      </Link>
+                    </div>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#A97918]" />
+                      <Input
+                        id="login-password"
+                        name="password"
+                        type={showLoginPassword ? "text" : "password"}
+                        value={loginForm.password}
+                        onChange={(e) =>
+                          setLoginForm((p) => ({
+                            ...p,
+                            password: e.target.value,
+                          }))
+                        }
+                        placeholder="Enter your password"
+                        className="pl-9 pr-9 h-9 bg-white border-[#E8E1D4] text-[#07111F] placeholder:text-[#9CA3AF] focus:border-[#C89B3C] focus:ring-2 focus:ring-[#C89B3C]/20 rounded-xl text-xs transition-all"
+                        required
+                        autoComplete="current-password"
+                      />
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors p-1"
+                        onClick={() =>
+                          setShowLoginPassword(!showLoginPassword)
+                        }
+                        aria-label={
+                          showLoginPassword ? "Hide password" : "Show password"
+                        }
+                      >
+                        {showLoginPassword ? (
+                          <EyeOff className="h-3.5 w-3.5" />
+                        ) : (
+                          <Eye className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Submit Button */}
+                  <Button
+                    type="submit"
+                    className="w-full h-9.5 bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] hover:opacity-95 text-[#07111F] font-bold rounded-xl text-xs gap-1.5 mt-1.5 shadow-md shadow-[#C89B3C]/20 border-0 transition-all cursor-pointer"
+                    disabled={loginLoading}
+                  >
+                    {loginLoading ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Signing in...
+                      </>
+                    ) : (
+                      <>
+                        Sign In <ArrowRight className="h-3.5 w-3.5" />
+                      </>
+                    )}
+                  </Button>
+                </form>
+
+                {/* Switch to Register link */}
+                <p className="text-center text-[11px] text-[#6B7280] mt-2.5">
+                  Don&apos;t have an account?{" "}
                   <button
                     type="button"
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#0F172A]"
-                    onClick={() => setShowPassword(!showPassword)}
+                    onClick={() => switchTab("register")}
+                    className="text-[#C89B3C] font-bold hover:text-[#A97918] hover:underline cursor-pointer"
                   >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    Create one free
                   </button>
-                </div>
+                </p>
               </div>
+            )}
 
-              <Button
-                type="submit"
-                className="w-full h-11 bg-[#10B981] hover:bg-[#059669] text-white font-semibold rounded-xl text-sm gap-2 mt-2 shadow-sm transition-all"
-                disabled={loading}
-              >
-                {loading ? (
-                  <><Loader2 className="h-4 w-4 animate-spin" /> Signing in...</>
-                ) : (
-                  <>Sign In <ArrowRight className="h-4 w-4" /></>
-                )}
-              </Button>
-            </form>
+            {/* ─────────────────────────────────────────────────────────
+                TAB 2: CREATE ACCOUNT FORM (Ultra-Compact & Fully Visible)
+                ───────────────────────────────────────────────────────── */}
+            {tab === "register" && (
+              <div>
+                <form onSubmit={handleRegisterSubmit} className="space-y-2">
+                  {/* Full Name */}
+                  <div className="space-y-0.5">
+                    <Label
+                      htmlFor="register-name"
+                      className="text-[11px] font-bold text-[#07111F]"
+                    >
+                      Full Name <span className="text-[#991B1B]">*</span>
+                    </Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#A97918]" />
+                      <Input
+                        id="register-name"
+                        name="name"
+                        value={registerForm.name}
+                        onChange={(e) =>
+                          setRegisterForm((p) => ({ ...p, name: e.target.value }))
+                        }
+                        placeholder="Ahmed Hassan"
+                        className="pl-9 h-8.5 bg-white border-[#E8E1D4] text-[#07111F] placeholder:text-[#9CA3AF] focus:border-[#C89B3C] focus:ring-2 focus:ring-[#C89B3C]/20 rounded-xl text-xs transition-all"
+                        required
+                      />
+                    </div>
+                  </div>
 
+                  {/* Email & Phone in clean 2-column or stacked */}
+                  <div className="space-y-0.5">
+                    <Label
+                      htmlFor="register-email"
+                      className="text-[11px] font-bold text-[#07111F]"
+                    >
+                      Email Address <span className="text-[#991B1B]">*</span>
+                    </Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#A97918]" />
+                      <Input
+                        id="register-email"
+                        name="email"
+                        type="email"
+                        value={registerForm.email}
+                        onChange={(e) =>
+                          setRegisterForm((p) => ({
+                            ...p,
+                            email: e.target.value,
+                          }))
+                        }
+                        placeholder="you@example.com"
+                        className="pl-9 h-8.5 bg-white border-[#E8E1D4] text-[#07111F] placeholder:text-[#9CA3AF] focus:border-[#C89B3C] focus:ring-2 focus:ring-[#C89B3C]/20 rounded-xl text-xs transition-all"
+                        required
+                        autoComplete="email"
+                      />
+                    </div>
+                  </div>
 
+                  {/* Phone Number */}
+                  <div className="space-y-0.5">
+                    <Label
+                      htmlFor="register-phone"
+                      className="text-[11px] font-bold text-[#07111F]"
+                    >
+                      Phone Number <span className="text-[#6B7280] font-normal text-[10px]">(optional)</span>
+                    </Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#A97918]" />
+                      <Input
+                        id="register-phone"
+                        name="phone"
+                        type="tel"
+                        value={registerForm.phone}
+                        onChange={(e) =>
+                          setRegisterForm((p) => ({
+                            ...p,
+                            phone: e.target.value,
+                          }))
+                        }
+                        placeholder="+252 61 234 5678"
+                        className="pl-9 h-8.5 bg-white border-[#E8E1D4] text-[#07111F] placeholder:text-[#9CA3AF] focus:border-[#C89B3C] focus:ring-2 focus:ring-[#C89B3C]/20 rounded-xl text-xs transition-all"
+                      />
+                    </div>
+                  </div>
 
-            <p className="text-center text-xs text-[#64748B] mt-6">
-              Don&apos;t have an account?{" "}
-              <Link href="/register" className="text-[#10B981] font-semibold hover:text-[#059669]">
-                Create one free
-              </Link>
-            </p>
+                  {/* Password field */}
+                  <div className="space-y-0.5">
+                    <Label
+                      htmlFor="register-password"
+                      className="text-[11px] font-bold text-[#07111F]"
+                    >
+                      Password <span className="text-[#991B1B]">*</span>{" "}
+                      <span className="text-[#6B7280] font-normal text-[10px]">(Min. 8 chars)</span>
+                    </Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#A97918]" />
+                      <Input
+                        id="register-password"
+                        name="password"
+                        type={showRegisterPassword ? "text" : "password"}
+                        value={registerForm.password}
+                        onChange={(e) =>
+                          setRegisterForm((p) => ({
+                            ...p,
+                            password: e.target.value,
+                          }))
+                        }
+                        placeholder="At least 8 characters"
+                        className="pl-9 pr-9 h-8.5 bg-white border-[#E8E1D4] text-[#07111F] placeholder:text-[#9CA3AF] focus:border-[#C89B3C] focus:ring-2 focus:ring-[#C89B3C]/20 rounded-xl text-xs transition-all"
+                        required
+                        autoComplete="new-password"
+                      />
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors p-1"
+                        onClick={() =>
+                          setShowRegisterPassword(!showRegisterPassword)
+                        }
+                        aria-label={
+                          showRegisterPassword
+                            ? "Hide password"
+                            : "Show password"
+                        }
+                      >
+                        {showRegisterPassword ? (
+                          <EyeOff className="h-3.5 w-3.5" />
+                        ) : (
+                          <Eye className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Submit Button */}
+                  <Button
+                    type="submit"
+                    className="w-full h-9.5 bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] hover:opacity-95 text-[#07111F] font-bold rounded-xl text-xs gap-1.5 mt-1 shadow-md shadow-[#C89B3C]/20 border-0 transition-all cursor-pointer"
+                    disabled={registerLoading}
+                  >
+                    {registerLoading ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Creating account...
+                      </>
+                    ) : (
+                      <>
+                        Create Account <ArrowRight className="h-3.5 w-3.5" />
+                      </>
+                    )}
+                  </Button>
+                </form>
+
+                {/* Switch to Login link */}
+                <p className="text-center text-[11px] text-[#6B7280] mt-2">
+                  Already have an account?{" "}
+                  <button
+                    type="button"
+                    onClick={() => switchTab("login")}
+                    className="text-[#C89B3C] font-bold hover:text-[#A97918] hover:underline cursor-pointer"
+                  >
+                    Sign in
+                  </button>
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
     </div>
+  </div>
+);
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#07111F] flex items-center justify-center text-[#D9B45B]">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      }
+    >
+      <AuthContent initialTab="login" />
+    </Suspense>
   );
 }

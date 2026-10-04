@@ -1,8 +1,14 @@
+// ================================================================
+// PAGE NAME  : Customer Portal — My Reviews
+// ROUTE      : /customer/reviews
+// DESCRIPTION: View and manage customer property reviews & ratings
+//              Kiro-Maal Real Estate Master Design System
+// ================================================================
 "use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Star, Trash2, Building2, MapPin, ArrowRight, Loader2 } from "lucide-react";
+import { Star, Trash2, Building2, MapPin, ArrowRight, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { formatPrice } from "@/lib/utils";
@@ -61,31 +67,34 @@ export default function CustomerReviewsPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl bg-[#F8FAFC]">
+    <div className="space-y-6 max-w-4xl bg-[#F7F3EA] min-h-screen p-6 sm:p-8">
       <div>
-        <h1 className="text-2xl font-bold text-[#0F172A] flex items-center gap-2 tracking-tight">
-          <Star className="h-6 w-6 text-[#F59E0B]" /> My Property Reviews &amp; Ratings
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FCFBF7] border border-[#C89B3C]/30 text-[#A97918] text-xs font-semibold uppercase tracking-wider mb-2 shadow-xs">
+          <Sparkles className="h-3.5 w-3.5 text-[#C89B3C]" /> Client Community Feedback
+        </div>
+        <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#07111F] tracking-tight">
+          My Property Ratings &amp; Testimonials
         </h1>
-        <p className="text-[#64748B] text-sm mt-1">
-          Manage all reviews and feedback you have posted on Somali property listings.
+        <p className="text-[#6B7280] text-sm mt-1">
+          Manage your verified reviews and architectural feedback submitted across Kiro-Maal properties.
         </p>
       </div>
 
       {loading ? (
-        <div className="bg-white rounded-2xl border border-[#E2E8F0] p-12 text-center flex flex-col items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-[#10B981] mb-2" />
-          <p className="text-xs text-[#64748B]">Loading your reviews...</p>
+        <div className="bg-[#FCFBF7] rounded-2xl border border-[#E8E1D4] p-12 text-center flex flex-col items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-[#C89B3C] mb-2" />
+          <p className="text-xs text-[#6B7280]">Loading your submitted reviews...</p>
         </div>
       ) : reviews.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-card border border-[#E2E8F0] p-12 text-center space-y-3">
-          <div className="w-12 h-12 rounded-xl bg-[#FEF3C7] text-[#F59E0B] flex items-center justify-center mx-auto">
+        <div className="bg-[#FCFBF7] rounded-2xl shadow-sm border border-[#E8E1D4] p-12 text-center space-y-3">
+          <div className="w-12 h-12 rounded-xl bg-[#07111F] text-[#D9B45B] flex items-center justify-center mx-auto shadow-inner">
             <Star className="h-6 w-6" />
           </div>
-          <h2 className="text-lg font-bold text-[#0F172A]">No Reviews Written Yet</h2>
-          <p className="text-xs text-[#64748B] max-w-sm mx-auto mb-4">
-            Share your experiences on visited properties to help other buyers and tenants in Somalia.
+          <h2 className="text-lg font-serif font-bold text-[#07111F]">No Reviews Written Yet</h2>
+          <p className="text-xs text-[#6B7280] max-w-sm mx-auto mb-4 leading-relaxed">
+            Share your verified experience on toured properties to guide fellow buyers and tenants.
           </p>
-          <Button asChild className="bg-[#10B981] hover:bg-[#059669] text-white rounded-xl text-xs font-semibold">
+          <Button asChild className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] hover:brightness-105 rounded-xl text-xs font-bold border-0 shadow-sm">
             <Link href="/properties">Browse Properties to Review</Link>
           </Button>
         </div>
@@ -94,14 +103,14 @@ export default function CustomerReviewsPage() {
           {reviews.map((r) => (
             <div
               key={r.id}
-              className="bg-white rounded-2xl p-5 shadow-card border border-[#E2E8F0] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+              className="bg-[#FCFBF7] rounded-2xl p-5 shadow-sm border border-[#E8E1D4] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:border-[#C89B3C]/50 transition-all"
             >
               <div className="flex items-start gap-4 flex-1">
-                <div className="w-16 h-16 rounded-xl bg-[#E2E8F0] overflow-hidden flex-shrink-0">
+                <div className="w-16 h-16 rounded-xl bg-[#07111F] overflow-hidden flex-shrink-0 border border-[#E8E1D4]">
                   {r.property.images[0] ? (
                     <img src={r.property.images[0].url} alt={r.property.title} className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-[#94A3B8]">
+                    <div className="w-full h-full flex items-center justify-center text-[#D9B45B]/60">
                       <Building2 className="h-8 w-8" />
                     </div>
                   )}
@@ -111,28 +120,28 @@ export default function CustomerReviewsPage() {
                     {Array.from({ length: 5 }).map((_, i) => (
                       <Star
                         key={i}
-                        className={`h-4 w-4 ${i < r.rating ? "text-[#F59E0B] fill-[#F59E0B]" : "text-[#E2E8F0]"}`}
+                        className={`h-4 w-4 ${i < r.rating ? "text-[#C89B3C] fill-[#C89B3C]" : "text-[#E8E1D4]"}`}
                       />
                     ))}
-                    <span className="text-xs font-bold text-[#0F172A] ml-1.5">{r.rating}/5</span>
+                    <span className="text-xs font-bold text-[#07111F] ml-1.5">{r.rating}/5</span>
                   </div>
                   <Link
                     href={`/properties/${r.property.id}`}
-                    className="font-bold text-[#0F172A] text-sm hover:text-[#10B981] transition-colors block"
+                    className="font-serif font-bold text-[#07111F] text-base hover:text-[#A97918] transition-colors block"
                   >
                     {r.property.title}
                   </Link>
-                  <p className="text-xs text-[#64748B] flex items-center gap-1">
-                    <MapPin className="h-3 w-3 text-[#94A3B8]" /> {r.property.city} • {formatPrice(r.property.price)}
+                  <p className="text-xs text-[#6B7280] flex items-center gap-1">
+                    <MapPin className="h-3 w-3 text-[#C89B3C]" /> {r.property.city} • <span className="font-serif font-bold text-[#07111F]">{formatPrice(r.property.price)}</span>
                   </p>
-                  <p className="text-xs text-[#334155] italic bg-[#F8FAFC] border border-[#E2E8F0] p-2.5 rounded-xl mt-2">
+                  <p className="text-xs text-[#4B5563] italic bg-[#F7F3EA] border border-[#E8E1D4] p-3 rounded-xl mt-2 leading-relaxed">
                     &ldquo;{r.comment}&rdquo;
                   </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-2 self-end sm:self-center">
-                <Button asChild variant="outline" size="sm" className="rounded-xl text-xs font-semibold border-[#E2E8F0]">
+                <Button asChild variant="outline" size="sm" className="rounded-xl text-xs font-bold border-[#E8E1D4] text-[#07111F] hover:bg-[#F7F3EA]">
                   <Link href={`/properties/${r.property.id}`}>
                     View Listing <ArrowRight className="h-3.5 w-3.5 ml-1" />
                   </Link>
@@ -142,7 +151,7 @@ export default function CustomerReviewsPage() {
                   size="sm"
                   onClick={() => handleDelete(r.id)}
                   disabled={deletingId === r.id}
-                  className="rounded-xl text-xs font-semibold text-[#EF4444] hover:bg-[#FEE2E2] border-[#FCA5A5]"
+                  className="rounded-xl text-xs font-semibold text-[#DC2626] hover:bg-red-50 border-[#E8E1D4]"
                 >
                   {deletingId === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                 </Button>

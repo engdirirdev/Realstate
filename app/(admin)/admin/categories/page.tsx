@@ -2,12 +2,13 @@
 // PAGE NAME  : Admin Dashboard — Categories & Property Types
 // ROUTE      : /admin/categories
 // DESCRIPTION: Manage property categories and taxonomy
+//              Kiro-Maal Real Estate Master Design System
 // ROLE       : ADMIN
 // ================================================================
 "use client";
 
 import { useState, useEffect } from "react";
-import { FolderTree, Plus, Trash2, Tag, Loader2 } from "lucide-react";
+import { FolderTree, Plus, Trash2, Tag, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -85,45 +86,56 @@ export default function AdminCategoriesPage() {
   };
 
   return (
-    <div className="space-y-6 bg-[#F8FAFC] min-h-screen p-6">
+    <div className="space-y-6 bg-[#F7F3EA] min-h-screen p-6 sm:p-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#0F172A] flex items-center gap-2 tracking-tight">
-            <FolderTree className="h-6 w-6 text-[#10B981]" /> Manage Categories
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FCFBF7] border border-[#C89B3C]/30 text-[#A97918] text-xs font-semibold uppercase tracking-wider mb-2 shadow-xs">
+            <Sparkles className="w-3.5 h-3.5 text-[#C89B3C]" /> Architecture Taxonomy
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#07111F] flex items-center gap-2.5">
+            <FolderTree className="h-7 w-7 text-[#C89B3C]" /> Manage Property Classifications
           </h1>
-          <p className="text-[#64748B] text-sm mt-1">Organize real estate property classifications and taxonomies.</p>
+          <p className="text-[#6B7280] text-sm mt-1">Organize real estate property classifications, segments, and asset categories.</p>
         </div>
-        <Button onClick={() => setModalOpen(true)} className="bg-[#10B981] hover:bg-[#059669] text-white rounded-xl gap-2 font-semibold">
+        <Button
+          onClick={() => setModalOpen(true)}
+          className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] hover:brightness-105 rounded-xl gap-2 font-bold shadow-sm border-0"
+        >
           <Plus className="h-4 w-4" /> Add Category
         </Button>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-card border border-[#E2E8F0] overflow-hidden">
+      <div className="bg-[#FCFBF7] rounded-2xl shadow-sm border border-[#E8E1D4] overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-[#64748B] flex flex-col items-center justify-center gap-3">
-            <Loader2 className="h-6 w-6 animate-spin text-[#10B981]" />
-            <p className="text-sm font-medium">Loading categories...</p>
+          <div className="p-16 text-center text-[#6B7280] flex flex-col items-center justify-center gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-[#C89B3C]" />
+            <p className="text-sm font-medium">Loading property categories...</p>
           </div>
         ) : (
           <table className="w-full text-sm">
-            <thead className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
+            <thead className="bg-[#F7F3EA] border-b border-[#E8E1D4]">
               <tr>
-                <th className="text-left px-5 py-3.5 font-semibold text-[#64748B]">Category Name</th>
-                <th className="text-left px-4 py-3.5 font-semibold text-[#64748B]">Slug</th>
-                <th className="text-left px-4 py-3.5 font-semibold text-[#64748B]">Description</th>
-                <th className="text-right px-5 py-3.5 font-semibold text-[#64748B]">Action</th>
+                <th className="text-left px-5 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">Category Name</th>
+                <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">Slug Identifier</th>
+                <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">Description</th>
+                <th className="text-right px-5 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E2E8F0]">
-              {categories.map((c) => (
-                <tr key={c.id} className="hover:bg-[#F8FAFC]">
-                  <td className="px-5 py-4 font-bold text-[#0F172A] flex items-center gap-2">
-                    <Tag className="h-4 w-4 text-[#10B981]" /> {c.name}
+            <tbody className="divide-y divide-[#E8E1D4]">
+              {categories.map((cat) => (
+                <tr key={cat.id} className="hover:bg-[#F7F3EA]/50 transition-colors">
+                  <td className="px-5 py-4 font-bold text-[#07111F] flex items-center gap-2">
+                    <Tag className="h-4 w-4 text-[#C89B3C]" /> {cat.name}
                   </td>
-                  <td className="px-4 py-4 text-[#64748B] font-mono text-xs">{c.slug}</td>
-                  <td className="px-4 py-4 text-[#64748B] text-xs">{c.description || "N/A"}</td>
+                  <td className="px-4 py-4 text-[#A97918] font-mono text-xs">{cat.slug}</td>
+                  <td className="px-4 py-4 text-[#6B7280] text-xs">{cat.description || "—"}</td>
                   <td className="px-5 py-4 text-right">
-                    <Button onClick={() => handleDelete(c.id, c.name)} variant="outline" size="sm" className="h-8 border-[#FCA5A5] text-[#DC2626] rounded-lg">
+                    <Button
+                      onClick={() => handleDelete(cat.id, cat.name)}
+                      variant="outline"
+                      size="sm"
+                      className="h-8 border-[#E8E1D4] text-[#DC2626] hover:bg-red-50 hover:border-red-200 rounded-xl"
+                    >
                       <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
                     </Button>
                   </td>
@@ -135,22 +147,37 @@ export default function AdminCategoriesPage() {
       </div>
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-md bg-white rounded-2xl p-6 border border-[#E2E8F0]">
+        <DialogContent className="max-w-md bg-[#FCFBF7] rounded-2xl p-6 border border-[#E8E1D4] shadow-xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#0F172A]">Add Property Category</DialogTitle>
+            <DialogTitle className="text-xl font-serif font-bold text-[#07111F]">Add Property Category</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleCreate} className="space-y-4 mt-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[#0F172A]">Category Name</Label>
-              <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="e.g. Luxury Apartments" required className="rounded-xl" />
+              <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">Category Name</Label>
+              <Input
+                value={form.name}
+                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                placeholder="e.g. Luxury Villas"
+                required
+                className="rounded-xl border-[#E8E1D4] bg-white focus:border-[#C89B3C] focus:ring-1 focus:ring-[#C89B3C]"
+              />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[#0F172A]">Description</Label>
-              <Input value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} placeholder="Optional description..." className="rounded-xl" />
+              <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">Description (Optional)</Label>
+              <Input
+                value={form.description}
+                onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+                placeholder="e.g. Exclusive residential standalone villas"
+                className="rounded-xl border-[#E8E1D4] bg-white focus:border-[#C89B3C] focus:ring-1 focus:ring-[#C89B3C]"
+              />
             </div>
-            <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" onClick={() => setModalOpen(false)} className="rounded-xl">Cancel</Button>
-              <Button type="submit" disabled={submitting} className="bg-[#10B981] hover:bg-[#059669] text-white rounded-xl">
+            <DialogFooter className="pt-2 gap-2">
+              <Button type="button" variant="outline" onClick={() => setModalOpen(false)} className="rounded-xl border-[#E8E1D4] text-[#07111F] hover:bg-[#F7F3EA]">Cancel</Button>
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] font-bold hover:brightness-105 rounded-xl border-0 shadow-sm"
+              >
                 {submitting ? "Saving..." : "Save Category"}
               </Button>
             </DialogFooter>

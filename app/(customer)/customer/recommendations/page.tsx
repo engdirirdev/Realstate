@@ -2,6 +2,7 @@
 // PAGE NAME  : Customer Portal — AI Recommendations
 // ROUTE      : /customer/recommendations
 // DESCRIPTION: AI-scored property recommendations for customer
+//              Kiro-Maal Real Estate Master Design System
 // ================================================================
 "use client";
 
@@ -42,43 +43,46 @@ export default function CustomerRecommendationsPage() {
   };
 
   return (
-    <div className="space-y-6 bg-[#F8FAFC]">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 bg-[#F7F3EA] min-h-screen p-6 sm:p-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#ECFEFF] border border-[#A5F3FC] text-[#0891B2] text-xs font-semibold mb-2">
-            <Sparkles className="h-3.5 w-3.5" /> AI Recommendation Engine
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FCFBF7] border border-[#C89B3C]/30 text-[#A97918] text-xs font-semibold uppercase tracking-wider mb-2 shadow-xs">
+            <Sparkles className="h-3.5 w-3.5 text-[#C89B3C]" /> Kiro-Maal Match Engine
           </div>
-          <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight">AI Property Matches</h1>
-          <p className="text-[#64748B] text-sm mt-1">Properties matched based on your budget, location, and criteria.</p>
+          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#07111F] tracking-tight">AI Tailored Property Matches</h1>
+          <p className="text-[#6B7280] text-sm mt-1">Exclusive properties ranked algorithmically according to your budget and preferred locations.</p>
         </div>
 
         <Button
           onClick={handleRefresh}
           disabled={refreshing}
           variant="outline"
-          className="gap-2 bg-white border-[#E2E8F0] rounded-xl text-xs"
+          className="gap-2 bg-[#FCFBF7] border-[#E8E1D4] text-[#07111F] hover:bg-[#F7F3EA] rounded-xl text-xs font-bold shadow-xs"
         >
-          <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin text-[#10B981]" : ""}`} /> Refresh Matches
+          <RefreshCw className={`h-3.5 w-3.5 text-[#C89B3C] ${refreshing ? "animate-spin" : ""}`} /> Refresh Matches
         </Button>
       </div>
 
       {loading ? (
-        <div className="p-12 bg-white rounded-2xl border border-[#E2E8F0] text-center flex flex-col items-center justify-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-[#10B981]" />
-          <p className="text-sm font-semibold text-[#0F172A]">Calculating AI recommendations...</p>
+        <div className="p-16 bg-[#FCFBF7] rounded-2xl border border-[#E8E1D4] text-center flex flex-col items-center justify-center gap-3 max-w-lg mx-auto shadow-sm">
+          <Loader2 className="h-8 w-8 animate-spin text-[#C89B3C]" />
+          <p className="font-serif font-bold text-[#07111F] text-base">Computing Algorithmic Matches...</p>
+          <p className="text-[#6B7280] text-xs">Analyzing verified listings against your client profile</p>
         </div>
       ) : recommendations.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-card border border-[#E2E8F0] p-12 text-center">
-          <Sparkles className="h-12 w-12 text-[#0891B2] mx-auto mb-3" />
-          <h2 className="text-lg font-bold text-[#0F172A]">No matches found yet</h2>
-          <p className="text-[#64748B] text-sm mt-1 max-w-sm mx-auto mb-6">
-            Set your budget and preferred city in AI Preferences to start generating tailored matches.
+        <div className="bg-[#FCFBF7] rounded-2xl shadow-sm border border-[#E8E1D4] p-12 text-center max-w-lg mx-auto">
+          <div className="w-14 h-14 rounded-2xl bg-[#07111F] flex items-center justify-center mx-auto text-[#D9B45B] mb-4 shadow-inner">
+            <Sparkles className="h-7 w-7 opacity-80" />
+          </div>
+          <h2 className="text-lg font-serif font-bold text-[#07111F]">No matches found yet</h2>
+          <p className="text-[#6B7280] text-xs mt-1.5 max-w-sm mx-auto mb-6 leading-relaxed">
+            Specify your budget range and favored city in Profile Settings to unlock automated recommendations.
           </p>
           <Link
             href="/customer/profile"
-            className="inline-flex items-center gap-2 bg-[#10B981] hover:bg-[#059669] text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm"
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] px-6 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm hover:brightness-105"
           >
-            Set AI Preferences →
+            Configure Matching Criteria →
           </Link>
         </div>
       ) : (
@@ -104,40 +108,40 @@ export default function CustomerRecommendationsPage() {
             const imageUrl = property.images?.[0]?.url;
 
             return (
-              <div key={property.id} className="property-card group flex flex-col justify-between">
+              <div key={property.id} className="bg-[#FCFBF7] rounded-2xl border border-[#E8E1D4] overflow-hidden shadow-sm hover:border-[#C89B3C]/50 hover:shadow-md transition-all group flex flex-col justify-between">
                 <div>
-                  <div className="relative aspect-[16/10] bg-[#E2E8F0] overflow-hidden">
+                  <div className="relative aspect-[16/10] bg-[#07111F] overflow-hidden">
                     {imageUrl ? (
                       <img
                         src={imageUrl}
                         alt={property.title || "Property"}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-[#94A3B8]">
+                      <div className="w-full h-full flex items-center justify-center text-[#D9B45B]/60">
                         <Building2 className="h-10 w-10" />
                       </div>
                     )}
-                    <div className="absolute top-3 right-3 bg-[#ECFEFF] border border-[#A5F3FC] text-[#0891B2] text-xs font-bold px-2.5 py-1 rounded-full shadow-xs">
-                      {matchPct}% Match
+                    <div className="absolute top-3 right-3 bg-[#07111F]/85 backdrop-blur-sm border border-[#C89B3C]/40 text-[#D9B45B] text-xs font-bold px-3 py-1 rounded-full shadow-xs">
+                      ★ {matchPct}% Match
                     </div>
                   </div>
 
                   <div className="p-5">
-                    <p className="text-xl font-bold text-[#059669] mb-1">{formatPrice(property.price || 0)}</p>
-                    <h3 className="font-bold text-[#0F172A] text-base mb-2 line-clamp-1 group-hover:text-[#10B981] transition-colors">
+                    <p className="text-xl font-serif font-bold text-[#07111F] mb-1">{formatPrice(property.price || 0)}</p>
+                    <h3 className="font-serif font-bold text-[#07111F] text-base mb-2 line-clamp-1 group-hover:text-[#A97918] transition-colors">
                       {property.title || "Untitled Property"}
                     </h3>
-                    <p className="text-xs text-[#64748B] flex items-center gap-1 mb-3">
-                      <MapPin className="h-3.5 w-3.5 text-[#94A3B8]" /> {property.city || "Somalia"}
+                    <p className="text-xs text-[#6B7280] flex items-center gap-1.5 mb-3">
+                      <MapPin className="h-3.5 w-3.5 text-[#C89B3C]" /> {property.city || "Somalia"}
                     </p>
 
                     {/* Match Reasons */}
                     {parsedReasons.length > 0 && (
-                      <div className="bg-[#F8FAFC] rounded-xl p-3 border border-[#E2E8F0] space-y-1 mb-4">
+                      <div className="bg-[#F7F3EA] rounded-xl p-3 border border-[#E8E1D4] space-y-1 mb-4">
                         {parsedReasons.slice(0, 2).map((r: string, idx: number) => (
-                          <p key={idx} className="text-[11px] text-[#0891B2] font-medium flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#06B6D4]" /> {r}
+                          <p key={idx} className="text-[11px] text-[#07111F] font-medium flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#C89B3C] flex-shrink-0" /> {r}
                           </p>
                         ))}
                       </div>
@@ -148,7 +152,7 @@ export default function CustomerRecommendationsPage() {
                 <div className="p-5 pt-0">
                   <Link
                     href={`/properties/${property.id}`}
-                    className="w-full inline-flex items-center justify-center gap-2 bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-2.5 rounded-xl text-xs transition-all shadow-xs"
+                    className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] font-bold hover:brightness-105 py-2.5 rounded-xl text-xs transition-all shadow-xs"
                   >
                     View Details <ArrowRight className="h-3.5 w-3.5" />
                   </Link>

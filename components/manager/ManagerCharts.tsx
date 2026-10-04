@@ -37,17 +37,26 @@ export default function ManagerCharts({
   statusDistribution,
   totalProperties,
 }: ManagerChartsProps) {
+  // Map status items to Kiro-Maal palette if needed
+  const kiroStatusDistribution = statusDistribution.map((item, idx) => {
+    const palette = ["#C89B3C", "#D9B45B", "#07111F", "#A97918"];
+    return {
+      ...item,
+      color: palette[idx % palette.length],
+    };
+  });
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* ─── Sales Performance Bar Chart (2 cols) ─── */}
-      <div className="lg:col-span-2 bg-gradient-to-br from-[#071D36] via-[#092546] to-[#0B2C52] rounded-2xl border border-[#133C6D] p-5 sm:p-6 shadow-xl text-white flex flex-col justify-between">
+      <div className="lg:col-span-2 bg-[#FCFBF7] rounded-3xl border border-[#E8E1D4] p-5 sm:p-6 shadow-sm text-[#07111F] flex flex-col justify-between">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">My Sales Performance</h3>
-            <p className="text-xs text-[#94A3B8]">Monthly sales vs rental conversion volumes</p>
+            <h3 className="text-base sm:text-lg font-bold font-serif text-[#07111F] tracking-tight">Sales &amp; Rental Performance</h3>
+            <p className="text-xs text-[#6B7280]">Monthly transaction volumes for your portfolio</p>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold px-2.5 py-1 bg-white/10 border border-white/20 rounded-lg text-white">
+            <span className="text-xs font-bold px-2.5 py-1 bg-[#F7F3EA] border border-[#E8E1D4] rounded-xl text-[#A97918]">
               {new Date().getFullYear()}
             </span>
           </div>
@@ -60,16 +69,16 @@ export default function ManagerCharts({
               margin={{ top: 10, right: 10, left: -15, bottom: 0 }}
               barGap={4}
             >
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#133C6D" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E8E1D4" />
               <XAxis
                 dataKey="month"
-                stroke="#94A3B8"
+                stroke="#6B7280"
                 fontSize={11}
                 tickLine={false}
                 axisLine={false}
               />
               <YAxis
-                stroke="#94A3B8"
+                stroke="#6B7280"
                 fontSize={11}
                 tickLine={false}
                 axisLine={false}
@@ -80,13 +89,13 @@ export default function ManagerCharts({
                   if (active && payload && payload.length) {
                     const data = payload[0].payload as MonthlySalesData;
                     return (
-                      <div className="bg-[#040E1C] text-white px-3 py-2 rounded-xl text-xs shadow-2xl border border-[#1677FF]">
-                        <p className="font-bold text-[#38BDF8]">{data.month}</p>
+                      <div className="bg-[#07111F] text-white px-3.5 py-2.5 rounded-2xl text-xs shadow-2xl border border-[#C89B3C]/50">
+                        <p className="font-bold text-[#D9B45B] font-serif">{data.month}</p>
                         <p className="mt-1 text-white">
-                          <span className="text-[#1677FF] font-bold">● Sales:</span> {data.sales}
+                          <span className="text-[#C89B3C] font-bold">● Sales:</span> {data.sales}
                         </p>
                         <p className="text-white">
-                          <span className="text-[#38BDF8] font-bold">● Rentals:</span> {data.rentals}
+                          <span className="text-[#D9B45B] font-bold">● Rentals:</span> {data.rentals}
                         </p>
                       </div>
                     );
@@ -98,23 +107,23 @@ export default function ManagerCharts({
                 verticalAlign="top"
                 align="right"
                 iconType="circle"
-                wrapperStyle={{ paddingBottom: 12, fontSize: 11, color: "#FFFFFF" }}
+                wrapperStyle={{ paddingBottom: 12, fontSize: 11, color: "#07111F" }}
               />
-              <Bar dataKey="sales" name="Sales" fill="#1677FF" radius={[4, 4, 0, 0]} maxBarSize={16} />
-              <Bar dataKey="rentals" name="Rentals" fill="#38BDF8" radius={[4, 4, 0, 0]} maxBarSize={16} />
+              <Bar dataKey="sales" name="Sales" fill="#C89B3C" radius={[4, 4, 0, 0]} maxBarSize={16} />
+              <Bar dataKey="rentals" name="Rentals" fill="#07111F" radius={[4, 4, 0, 0]} maxBarSize={16} />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
       {/* ─── Property Status Donut Chart (1 col) ─── */}
-      <div className="bg-gradient-to-br from-[#071D36] via-[#092546] to-[#0B2C52] rounded-2xl border border-[#133C6D] p-5 sm:p-6 shadow-xl text-white flex flex-col justify-between">
+      <div className="bg-[#FCFBF7] rounded-3xl border border-[#E8E1D4] p-5 sm:p-6 shadow-sm text-[#07111F] flex flex-col justify-between">
         <div className="flex items-center justify-between mb-2">
           <div>
-            <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">Property Status</h3>
-            <p className="text-xs text-[#94A3B8]">Listing distribution by state</p>
+            <h3 className="text-base sm:text-lg font-bold font-serif text-[#07111F] tracking-tight">Portfolio Status</h3>
+            <p className="text-xs text-[#6B7280]">Listing breakdown by state</p>
           </div>
-          <span className="text-xs font-semibold px-2.5 py-1 bg-white/10 border border-white/20 rounded-lg text-white">
+          <span className="text-xs font-bold px-2.5 py-1 bg-[#F7F3EA] border border-[#E8E1D4] rounded-xl text-[#A97918]">
             Active
           </span>
         </div>
@@ -123,7 +132,7 @@ export default function ManagerCharts({
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={statusDistribution}
+                data={kiroStatusDistribution}
                 cx="50%"
                 cy="50%"
                 innerRadius={55}
@@ -131,7 +140,7 @@ export default function ManagerCharts({
                 paddingAngle={3}
                 dataKey="count"
               >
-                {statusDistribution.map((entry, index) => (
+                {kiroStatusDistribution.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
@@ -140,9 +149,9 @@ export default function ManagerCharts({
                   if (active && payload && payload.length) {
                     const data = payload[0].payload as StatusItemData;
                     return (
-                      <div className="bg-[#040E1C] text-white px-3 py-1.5 rounded-xl text-xs shadow-2xl border border-[#133C6D]">
-                        <span className="font-semibold">{data.name}: </span>
-                        <span className="font-bold text-[#38BDF8]">{data.count} listings</span>
+                      <div className="bg-[#07111F] text-white px-3.5 py-2 rounded-2xl text-xs shadow-2xl border border-[#C89B3C]/50">
+                        <span className="font-semibold text-white/80">{data.name}: </span>
+                        <span className="font-bold text-[#D9B45B]">{data.count} listings</span>
                       </div>
                     );
                   }
@@ -154,25 +163,25 @@ export default function ManagerCharts({
 
           {/* Center total */}
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span className="text-2xl sm:text-3xl font-black text-white leading-none">
+            <span className="text-2xl sm:text-3xl font-black font-serif text-[#07111F] leading-none">
               {totalProperties}
             </span>
-            <span className="text-[11px] font-semibold text-white/70 mt-1">Total</span>
+            <span className="text-[11px] font-semibold text-[#6B7280] mt-1">Total Listings</span>
           </div>
         </div>
 
         {/* Legend */}
-        <div className="space-y-2 pt-2.5 border-t border-[#133C6D]">
-          {statusDistribution.map((item) => (
+        <div className="space-y-2 pt-2.5 border-t border-[#E8E1D4]">
+          {kiroStatusDistribution.map((item) => (
             <div key={item.name} className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
                 <span
                   className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                   style={{ backgroundColor: item.color }}
                 />
-                <span className="text-white/80 font-medium">{item.name}</span>
+                <span className="text-[#07111F] font-medium">{item.name}</span>
               </div>
-              <span className="font-bold text-white">{item.count}</span>
+              <span className="font-bold text-[#07111F]">{item.count}</span>
             </div>
           ))}
         </div>

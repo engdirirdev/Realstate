@@ -1,16 +1,34 @@
+// ================================================================
+// COMPONENT  : AIChatbot
+// BRAND      : Kiro-Maal Real Estate
+// PALETTE    : Deep Navy (#07111F), Luxury Gold (#C89B3C), Cream (#F7F3EA)
+// DESCRIPTION: Master AI Assistant with full grounding engine,
+//              live database query, and gold luxury branding
+// ================================================================
 "use client";
 
 import { useState, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import Image from "next/image";
 import {
-  Bot, X, Send, Loader2, Sparkles, MessageSquare, ChevronDown,
-  Building2, ShieldCheck, User, RefreshCw, AlertCircle, MapPin,
-  BedDouble, Bath, ExternalLink, Heart, Scale, Share2, Calendar, Check
+  Bot,
+  X,
+  Send,
+  Loader2,
+  Sparkles,
+  MessageSquare,
+  MapPin,
+  BedDouble,
+  Bath,
+  ExternalLink,
+  Heart,
+  Share2,
+  AlertCircle,
+  ChevronRight,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 import type { GroundedPropertyResult } from "@/lib/chat-grounding-engine";
 
@@ -23,6 +41,7 @@ interface Message {
 }
 
 export default function AIChatbot() {
+  const pathname = usePathname();
   const { data: session } = useSession();
   const [isOpen, setIsOpen] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -32,8 +51,20 @@ export default function AIChatbot() {
   const [error, setError] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  // Do not render floating chatbot button over authentication forms
+  if (pathname === "/login" || pathname === "/register") {
+    return null;
+  }
+
   const role = session?.user?.role || "PUBLIC";
   const userName = session?.user?.name || "Guest";
+
+  // Listen for global open event
+  useEffect(() => {
+    const handleOpen = () => setIsOpen(true);
+    window.addEventListener("open-ai-chat", handleOpen);
+    return () => window.removeEventListener("open-ai-chat", handleOpen);
+  }, []);
 
   // Role-aware suggestions
   const getSuggestions = () => {
@@ -59,28 +90,32 @@ export default function AIChatbot() {
       ];
     }
     return [
-      "Show me properties in Mogadishu",
       "Find apartments under $50,000",
       "What real estate services do you provide?",
+      "Show me properties in Mogadishu",
     ];
   };
 
   useEffect(() => {
     if (messages.length === 0) {
-      const welcomeText = role === "ADMIN"
-        ? `Hello Admin ${userName}! I can help you monitor pending approvals, platform stats, and revenue.`
-        : role === "USER"
-        ? `Hello Agent ${userName}! Ask me about your property listings, approval statuses, or inquiries.`
-        : role === "CUSTOMER"
-        ? `Welcome ${userName}! I can recommend properties based on your preferences or answer housing questions.`
-        : `Welcome to AI Real Estate! Ask me anything about properties, locations, or price predictions in Somalia.`;
+      const welcomeText =
+        role === "ADMIN"
+          ? `Hello Admin ${userName}! I can help you monitor pending approvals, platform stats, and revenue.`
+          : role === "USER"
+          ? `Hello Agent ${userName}! Ask me about your property listings, approval statuses, or inquiries.`
+          : role === "CUSTOMER"
+          ? `Welcome ${userName}! I can recommend properties based on your preferences or answer housing questions.`
+          : `Welcome to Kiro-Maal Real Estate! Ask me anything about properties, locations, or price predictions in Somalia.`;
 
       setMessages([
         {
           id: "welcome",
           role: "assistant",
           content: welcomeText,
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          timestamp: new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
         },
       ]);
     }
@@ -100,7 +135,10 @@ export default function AIChatbot() {
       id: Date.now().toString(),
       role: "user",
       content: query,
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
     };
 
     setMessages((prev) => [...prev, userMsg]);
@@ -109,8 +147,10 @@ export default function AIChatbot() {
     setError(null);
 
     try {
-      // Send conversation history to preserve multi-turn memory
-      const chatHistory = messages.map((m) => ({ role: m.role, content: m.content }));
+      const chatHistory = messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
 
       const res = await fetch("/api/ai-chat", {
         method: "POST",
@@ -135,7 +175,10 @@ export default function AIChatbot() {
         id: (Date.now() + 1).toString(),
         role: "assistant",
         content: data.reply || "No response received.",
-        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
         properties: data.properties || [],
       };
 
@@ -156,7 +199,12 @@ export default function AIChatbot() {
       });
       const data = await res.json();
       if (data.success) {
-        toast({ title: data.action === "added" ? "Saved to Favorites! ❤️" : "Removed from Favorites" });
+        toast({
+          title:
+            data.action === "added"
+              ? "Saved to Favorites! ❤️"
+              : "Removed from Favorites",
+        });
       } else {
         toast({ title: "Notice", description: "Sign in to save properties." });
       }
@@ -169,295 +217,304 @@ export default function AIChatbot() {
     if (typeof window !== "undefined") {
       const url = `${window.location.origin}/properties/${propId}`;
       navigator.clipboard.writeText(url);
-      toast({ title: "Link Copied! 📋", description: `Copied link for "${propTitle}"` });
+      toast({
+        title: "Link Copied! 📋",
+        description: `Copied link for "${propTitle}"`,
+      });
     }
   };
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end">
-      {/* Floating Trigger Button */}
+    <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end font-sans">
+      {/* ─── Floating Trigger Pill Button (Matches Master Reference) ─── */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="group flex items-center gap-2.5 bg-[#0F172A] hover:bg-[#1E293B] text-white px-4 py-3.5 rounded-full shadow-2xl border border-[#334155] transition-all duration-300 hover:scale-105"
+          className="group flex items-center gap-3 bg-[#0B1523] hover:bg-[#122136] text-white px-5 py-3 rounded-full shadow-2xl border border-[#C89B3C]/50 backdrop-blur-md transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer"
         >
-          <div className="w-8 h-8 rounded-full bg-[#10B981] flex items-center justify-center shadow-sm text-white">
-            <Bot className="h-5 w-5 animate-pulse" />
+          <div className="w-7 h-7 rounded-full bg-[#C89B3C]/20 border border-[#C89B3C]/40 text-[#D9B45B] flex items-center justify-center">
+            <Bot className="w-4 h-4 animate-pulse" />
           </div>
-          <span className="font-semibold text-sm tracking-tight pr-1">Ask AI Assistant</span>
-          <span className="w-2.5 h-2.5 rounded-full bg-[#10B981] ring-4 ring-[#10B981]/20" />
+          <span className="font-bold text-sm tracking-wide pr-1 text-white">
+            Ask AI Assistant
+          </span>
+          <span className="w-2.5 h-2.5 rounded-full bg-[#C89B3C] ring-4 ring-[#C89B3C]/20 animate-pulse" />
         </button>
       )}
 
-      {/* Floating Chat Modal Panel */}
+      {/* ─── Kiro-Maal AI Assistant Modal Window ─── */}
       {isOpen && (
-        <div className="w-[92vw] sm:w-[450px] h-[620px] bg-white rounded-3xl shadow-2xl border border-[#E2E8F0] flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-200">
-          {/* Header */}
-          <div className="bg-[#0F172A] text-white px-5 py-4 flex items-center justify-between border-b border-[#1E293B]">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[#10B981] flex items-center justify-center text-white shadow-sm">
-                <Bot className="h-5 w-5" />
+        <div className="w-[94vw] sm:w-[420px] md:w-[440px] h-[610px] bg-[#FCFBF7] rounded-[32px] shadow-[0_25px_70px_rgba(7,17,31,0.4)] border border-[#C89B3C]/40 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-6 duration-200 relative">
+          {/* ─── Top Header with Deep Navy & Gold Accents ─── */}
+          <div className="relative bg-[#07111F] text-white px-5 py-4 flex items-center justify-between overflow-hidden shrink-0 border-b border-[#C89B3C]/30">
+            {/* Subtle Villa Overlay */}
+            <div className="absolute inset-0 pointer-events-none z-0 opacity-20">
+              <Image
+                src="/images/luxury_villa_twilight.jpg"
+                alt="Twilight Villa"
+                fill
+                className="object-cover object-right"
+              />
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-r from-[#07111F] via-[#0B1728]/95 to-[#07111F]/80" />
+
+            {/* Left Header: Bot Badge & Title */}
+            <div className="relative z-10 flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#C89B3C] to-[#A97918] flex items-center justify-center text-[#07111F] shadow-md shadow-black/40 shrink-0 font-bold">
+                <Bot className="w-6 h-6 text-[#07111F]" />
               </div>
               <div>
-                <h3 className="font-bold text-sm text-white flex items-center gap-1.5 leading-tight">
-                  AI Real Estate Assistant
+                <h3 className="font-bold text-[15px] text-white tracking-tight leading-snug">
+                  Kiro-Maal AI Assistant
                 </h3>
-                <span className="text-[10px] text-[#34D399] font-medium tracking-wide">
-                  {role === "ADMIN" ? "Admin Mode" : role === "USER" ? "Manager Mode" : role === "CUSTOMER" ? "Customer Mode" : "Public Mode"} • Live Database
-                </span>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className="w-2 h-2 rounded-full bg-[#C89B3C] animate-pulse" />
+                  <span className="text-[11px] text-[#D9B45B] font-semibold tracking-wide">
+                    {role === "ADMIN"
+                      ? "Admin Mode"
+                      : role === "USER"
+                      ? "Manager Mode"
+                      : role === "CUSTOMER"
+                      ? "Customer Mode"
+                      : "Public Mode"}{" "}
+                    • Live Database
+                  </span>
+                </div>
               </div>
             </div>
+
+            {/* Right Header: Circular Close Button */}
             <button
               onClick={() => setIsOpen(false)}
-              className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-[#CBD5E1] hover:text-white flex items-center justify-center transition-colors"
+              className="relative z-10 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-white/90 hover:text-white flex items-center justify-center transition-all cursor-pointer backdrop-blur-md"
+              aria-label="Close Assistant"
             >
-              <X className="h-4 w-4" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Messages Area */}
-          <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-[#F8FAFC]">
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={cn("flex gap-2.5", msg.role === "user" ? "ml-auto flex-row-reverse max-w-[85%]" : "mr-auto max-w-[95%]")}
-              >
+          {/* ─── Chat Messages Area ─── */}
+          <div className="relative flex-1 p-4 sm:p-5 overflow-y-auto space-y-4 bg-gradient-to-b from-[#F7F3EA]/90 via-[#FCFBF7] to-[#F7F3EA]/90">
+            {/* Conversation Flow */}
+            <div className="relative z-10 space-y-4">
+              {messages.map((msg) => (
                 <div
+                  key={msg.id}
                   className={cn(
-                    "w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold mt-1 shadow-xs",
-                    msg.role === "user" ? "bg-[#10B981] text-white" : "bg-[#0F172A] text-[#10B981]"
+                    "flex gap-3",
+                    msg.role === "user"
+                      ? "ml-auto flex-row-reverse max-w-[85%]"
+                      : "mr-auto max-w-[95%]"
                   )}
                 >
-                  {msg.role === "user" ? "You" : <Bot className="h-4 w-4" />}
-                </div>
-
-                <div className="space-y-3 flex-1 min-w-0">
-                  <div
-                    className={cn(
-                      "p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed shadow-xs",
-                      msg.role === "user"
-                        ? "bg-[#10B981] text-white rounded-tr-none font-medium"
-                        : "bg-white text-[#0F172A] border border-[#E2E8F0] rounded-tl-none whitespace-pre-wrap"
-                    )}
-                  >
-                    {msg.content}
-                    <span
-                      className={cn(
-                        "block text-[10px] mt-1.5 text-right font-normal",
-                        msg.role === "user" ? "text-white/80" : "text-[#94A3B8]"
-                      )}
-                    >
-                      {msg.timestamp}
-                    </span>
-                  </div>
-
-                  {/* Grounded Real Properties Cards */}
-                  {msg.properties && msg.properties.length > 0 && (
-                    <div className="space-y-3 pt-1">
-                      {msg.properties.map((p) => (
-                        <div
-                          key={p.id}
-                          className="bg-white border border-[#E2E8F0] rounded-2xl p-3.5 shadow-sm space-y-3 hover:border-[#10B981] transition-colors"
-                        >
-                          <div className="flex gap-3">
-                            <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0 border border-[#E2E8F0] relative">
-                              {p.imageUrl ? (
-                                <img src={p.imageUrl} alt={p.title} className="w-full h-full object-cover" />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center text-[10px] text-[#94A3B8]">
-                                  No image
-                                </div>
-                              )}
-                              <span className="absolute top-1 left-1 bg-black/60 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
-                                {p.typeLabel}
-                              </span>
-                            </div>
-
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between gap-1 flex-wrap">
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${p.statusColor}`}>
-                                  {p.statusEmoji}
-                                </span>
-                                <span className="text-[10px] font-bold text-[#8B5CF6] bg-[#8B5CF6]/10 px-1.5 py-0.5 rounded">
-                                  ★ {p.aiMatchScore}% Match
-                                </span>
-                              </div>
-
-                              <h4 className="font-bold text-[#0F172A] text-xs mt-1 truncate">{p.title}</h4>
-                              <p className="text-[10px] text-[#64748B] flex items-center gap-1 mt-0.5 truncate">
-                                <MapPin className="h-3 w-3 text-[#10B981] flex-shrink-0" /> {p.district ? `${p.district}, ` : ""}{p.city}
-                              </p>
-                              <div className="flex items-baseline justify-between mt-1">
-                                <span className="text-sm font-extrabold text-[#059669]">{p.formattedPrice}</span>
-                                <span className="text-[10px] text-[#64748B] font-medium">{p.listingType}</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Complete Step 4 Specifications */}
-                          <div className="grid grid-cols-3 gap-1 py-1.5 px-2 bg-[#F8FAFC] rounded-xl text-[10px] text-[#64748B] border border-[#E2E8F0]">
-                            <span className="flex items-center gap-1 truncate">
-                              <BedDouble className="h-3 w-3 text-[#10B981]" /> {p.bedrooms} Beds
-                            </span>
-                            <span className="flex items-center gap-1 truncate">
-                              <Bath className="h-3 w-3 text-[#3B82F6]" /> {p.bathrooms} Baths
-                            </span>
-                            <span className="truncate">{p.areaSize} m²</span>
-                            <span className="truncate">Living: {p.livingRooms}</span>
-                            <span className="truncate">Park: {p.parkingSpaces}</span>
-                            <span className="truncate">{p.furnished ? "Furnished" : "Unfurnished"}</span>
-                          </div>
-
-                          {/* Amenity Badges (Water, Power, Net, Pool, Security) */}
-                          <div className="flex items-center gap-1.5 flex-wrap text-[9px] text-[#475569]">
-                            {p.swimmingPool && (
-                              <span className="px-1.5 py-0.5 bg-[#EFF6FF] text-[#1D4ED8] rounded-md font-medium border border-[#BFDBFE]">
-                                🏊 Pool
-                              </span>
-                            )}
-                            {p.garden && (
-                              <span className="px-1.5 py-0.5 bg-[#ECFDF5] text-[#047857] rounded-md font-medium border border-[#A7F3D0]">
-                                🌳 Garden
-                              </span>
-                            )}
-                            {p.security && (
-                              <span className="px-1.5 py-0.5 bg-[#F8FAFC] text-[#334155] rounded-md font-medium border border-[#E2E8F0]">
-                                🛡️ Security
-                              </span>
-                            )}
-                            <span className="px-1.5 py-0.5 bg-[#F0FDF4] text-[#15803D] rounded-md font-medium border border-[#BBF7D0]">
-                              ⚡ 24/7 Power &amp; Water
-                            </span>
-                            <span className="px-1.5 py-0.5 bg-[#FEF2F2] text-[#B91C1C] rounded-md font-medium border border-[#FECACA]">
-                              ✓ {p.managerName}
-                            </span>
-                          </div>
-
-                          {/* Interactive Property Actions */}
-                          <div className="grid grid-cols-2 gap-1.5 pt-1">
-                            <Link
-                              href={`/properties/${p.id}`}
-                              className="col-span-2 inline-flex items-center justify-center gap-1 py-1.5 bg-[#10B981] hover:bg-[#059669] text-white rounded-xl text-xs font-semibold shadow-xs"
-                            >
-                              <ExternalLink className="h-3 w-3" /> View Full Details
-                            </Link>
-
-                            <Link
-                              href={`/properties/${p.id}`}
-                              className="inline-flex items-center justify-center gap-1 py-1 bg-white border border-[#E2E8F0] hover:bg-[#F8FAFC] text-[#0F172A] rounded-xl text-[11px] font-medium"
-                            >
-                              <Calendar className="h-3 w-3 text-[#3B82F6]" /> Book Visit
-                            </Link>
-
-                            <Link
-                              href={`/properties/compare?ids=${p.id}`}
-                              className="inline-flex items-center justify-center gap-1 py-1 bg-white border border-[#E2E8F0] hover:bg-[#F8FAFC] text-[#0F172A] rounded-xl text-[11px] font-medium"
-                            >
-                              <Scale className="h-3 w-3 text-[#8B5CF6]" /> Compare
-                            </Link>
-
-                            <button
-                              type="button"
-                              onClick={() => handleFavoriteToggle(p.id)}
-                              className="inline-flex items-center justify-center gap-1 py-1 bg-white border border-[#E2E8F0] hover:bg-[#F8FAFC] text-[#0F172A] rounded-xl text-[11px] font-medium"
-                            >
-                              <Heart className="h-3 w-3 text-[#EF4444]" /> Save
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => handleShareProperty(p.id, p.title)}
-                              className="inline-flex items-center justify-center gap-1 py-1 bg-white border border-[#E2E8F0] hover:bg-[#F8FAFC] text-[#0F172A] rounded-xl text-[11px] font-medium"
-                            >
-                              <Share2 className="h-3 w-3 text-[#06B6D4]" /> Share
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => handleSend(`Tell me more details about "${p.title}" in ${p.city}`)}
-                              className="col-span-2 inline-flex items-center justify-center gap-1 py-1 bg-[#ECFEFF] border border-[#A5F3FC] text-[#0891B2] hover:bg-[#CFFAFE] rounded-xl text-[11px] font-semibold"
-                            >
-                              <Sparkles className="h-3 w-3 text-[#0891B2]" /> Ask AI About This Property
-                            </button>
-                          </div>
-
-                          {/* Similar Comps teaser */}
-                          {p.similarProperties && p.similarProperties.length > 0 && (
-                            <div className="pt-2 border-t border-[#E2E8F0] text-[10px] text-[#64748B]">
-                              <p className="font-semibold text-[#0F172A] mb-1">Similar in {p.city}:</p>
-                              <div className="space-y-1">
-                                {p.similarProperties.map((sim) => (
-                                  <Link
-                                    key={sim.id}
-                                    href={`/properties/${sim.id}`}
-                                    className="flex justify-between items-center hover:text-[#10B981] truncate"
-                                  >
-                                    <span className="truncate">↳ {sim.title}</span>
-                                    <span className="font-bold text-[#059669] flex-shrink-0 ml-1">{sim.formattedPrice}</span>
-                                  </Link>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                  {/* Bot Avatar */}
+                  {msg.role === "assistant" && (
+                    <div className="relative w-8 h-8 rounded-full bg-[#07111F] border-2 border-[#C89B3C] flex items-center justify-center text-[#D9B45B] shadow-xs shrink-0 mt-0.5">
+                      <Bot className="w-4 h-4" />
+                      <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#C89B3C] ring-2 ring-white" />
                     </div>
                   )}
+
+                  {/* Speech Bubble */}
+                  <div className="space-y-3 flex-1 min-w-0">
+                    <div
+                      className={cn(
+                        "p-4 rounded-[22px] text-xs sm:text-sm leading-relaxed shadow-xs transition-all",
+                        msg.role === "user"
+                          ? "bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#B88924] text-[#07111F] rounded-tr-none font-bold"
+                          : "bg-white text-[#07111F] border border-[#E8E1D4] rounded-tl-xs"
+                      )}
+                    >
+                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                      <span
+                        className={cn(
+                          "block text-[10px] mt-1.5 text-right font-normal",
+                          msg.role === "user"
+                            ? "text-[#07111F]/75"
+                            : "text-[#6B7280]"
+                        )}
+                      >
+                        {msg.timestamp}
+                      </span>
+                    </div>
+
+                    {/* Grounded Real Properties Cards */}
+                    {msg.properties && msg.properties.length > 0 && (
+                      <div className="space-y-3 pt-1">
+                        {msg.properties.map((p) => (
+                          <div
+                            key={p.id}
+                            className="bg-white border border-[#E8E1D4] rounded-2xl p-3.5 shadow-xs space-y-3 hover:border-[#C89B3C] transition-colors"
+                          >
+                            <div className="flex gap-3">
+                              <div className="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 shrink-0 border border-[#E8E1D4] relative">
+                                {p.imageUrl ? (
+                                  <img
+                                    src={p.imageUrl}
+                                    alt={p.title}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400">
+                                    No image
+                                  </div>
+                                )}
+                                <span className="absolute top-1 left-1 bg-[#07111F]/80 text-[#D9B45B] text-[9px] font-bold px-1.5 py-0.5 rounded">
+                                  {p.typeLabel}
+                                </span>
+                              </div>
+
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-1 flex-wrap">
+                                  <span
+                                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${p.statusColor}`}
+                                  >
+                                    {p.statusEmoji}
+                                  </span>
+                                  <span className="text-[10px] font-bold text-[#8C6D23] bg-[#FBF7EE] px-1.5 py-0.5 rounded border border-[#E8DCC2]">
+                                    ★ {p.aiMatchScore}% Match
+                                  </span>
+                                </div>
+
+                                <h4 className="font-bold text-[#07111F] text-xs mt-1 truncate">
+                                  {p.title}
+                                </h4>
+                                <p className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5 truncate">
+                                  <MapPin className="h-3 w-3 text-[#C89B3C] shrink-0" />{" "}
+                                  {p.district ? `${p.district}, ` : ""}
+                                  {p.city}
+                                </p>
+                                <div className="flex items-baseline justify-between mt-1">
+                                  <span className="text-sm font-black text-[#07111F]">
+                                    {p.formattedPrice}
+                                  </span>
+                                  <span className="text-[10px] text-slate-500 font-medium">
+                                    {p.listingType}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Property Specifications */}
+                            <div className="grid grid-cols-3 gap-1 py-1.5 px-2 bg-[#F7F3EA] rounded-xl text-[10px] text-slate-700 border border-[#E8E1D4]">
+                              <span className="flex items-center gap-1 truncate">
+                                <BedDouble className="h-3 w-3 text-[#C89B3C]" />{" "}
+                                {p.bedrooms} Beds
+                              </span>
+                              <span className="flex items-center gap-1 truncate">
+                                <Bath className="h-3 w-3 text-[#C89B3C]" />{" "}
+                                {p.bathrooms} Baths
+                              </span>
+                              <span className="truncate">{p.areaSize} m²</span>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="grid grid-cols-2 gap-1.5 pt-1">
+                              <Link
+                                href={`/properties/${p.id}`}
+                                className="col-span-2 inline-flex items-center justify-center gap-1 py-1.5 bg-[#C89B3C] hover:bg-[#B88924] text-[#07111F] rounded-xl text-xs font-bold shadow-xs transition-colors"
+                              >
+                                <ExternalLink className="h-3 w-3" /> View Details
+                              </Link>
+                              <button
+                                type="button"
+                                onClick={() => handleFavoriteToggle(p.id)}
+                                className="inline-flex items-center justify-center gap-1 py-1 bg-white border border-[#E8E1D4] hover:bg-[#F7F3EA] text-slate-700 rounded-xl text-[11px] font-medium"
+                              >
+                                <Heart className="h-3 w-3 text-rose-500" /> Save
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleShareProperty(p.id, p.title)}
+                                className="inline-flex items-center justify-center gap-1 py-1 bg-white border border-[#E8E1D4] hover:bg-[#F7F3EA] text-slate-700 rounded-xl text-[11px] font-medium"
+                              >
+                                <Share2 className="h-3 w-3 text-[#C89B3C]" /> Share
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
 
-            {loading && (
-              <div className="flex items-center gap-2 text-xs text-[#0891B2] bg-[#ECFEFF] border border-[#A5F3FC] px-3.5 py-2.5 rounded-xl w-max">
-                <Loader2 className="h-4 w-4 animate-spin" /> AI Assistant is searching database...
-              </div>
-            )}
+              {loading && (
+                <div className="flex items-center gap-2 text-xs text-[#07111F] bg-[#FBF7EE] border border-[#E8DCC2] px-3.5 py-2.5 rounded-2xl w-max shadow-2xs animate-pulse">
+                  <Loader2 className="h-4 w-4 animate-spin text-[#C89B3C]" /> AI
+                  Assistant is searching database...
+                </div>
+              )}
 
-            {error && (
-              <div className="flex items-center gap-2 text-xs text-[#DC2626] bg-[#FEE2E2] border border-[#FCA5A5] p-3 rounded-xl">
-                <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-            <div ref={chatEndRef} />
+              {error && (
+                <div className="flex items-center gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-200 p-3 rounded-2xl">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-rose-500" />
+                  <span>{error}</span>
+                </div>
+              )}
+              <div ref={chatEndRef} />
+            </div>
           </div>
 
-          {/* Quick Suggestions */}
-          <div className="px-3 py-2 bg-white border-t border-[#E2E8F0] overflow-x-auto whitespace-nowrap flex gap-2">
+          {/* ─── Quick Suggested Action Pills ─── */}
+          <div className="relative z-10 px-4 pt-2 pb-1.5 bg-[#F7F3EA] flex items-center gap-2 overflow-x-auto scrollbar-hide">
             {getSuggestions().map((sug, i) => (
               <button
                 key={i}
                 onClick={() => handleSend(sug)}
                 disabled={loading}
-                className="text-[11px] bg-[#F1F5F9] hover:bg-[#10B981] hover:text-white text-[#334155] px-2.5 py-1 rounded-full border border-[#E2E8F0] transition-colors flex-shrink-0"
+                className="group inline-flex items-center gap-1.5 text-xs text-slate-700 font-semibold bg-white hover:bg-[#FBF7EE] border border-[#E8E1D4] hover:border-[#C89B3C] px-3.5 py-1.5 rounded-full shadow-2xs whitespace-nowrap shrink-0 transition-all duration-150 active:scale-95 cursor-pointer"
               >
-                {sug}
+                <Sparkles className="w-3.5 h-3.5 text-[#C89B3C] group-hover:scale-110 transition-transform" />
+                <span>{sug}</span>
+                <ChevronRight className="w-3 h-3 text-slate-400 group-hover:text-[#C89B3C] group-hover:translate-x-0.5 transition-all" />
               </button>
             ))}
           </div>
 
-          {/* Input Bar */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSend();
-            }}
-            className="p-3 bg-white border-t border-[#E2E8F0] flex items-center gap-2"
-          >
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask AI about properties, prices..."
-              className="h-10 text-xs sm:text-sm border-[#E2E8F0] rounded-xl focus:border-[#10B981] focus:ring-[#10B981]/20 bg-[#F8FAFC]"
-            />
-            <Button
-              type="submit"
-              disabled={loading || !input.trim()}
-              className="h-10 w-10 p-0 bg-[#10B981] hover:bg-[#059669] text-white rounded-xl flex-shrink-0"
+          {/* ─── Bottom Input Bar with Curved Glass Container ─── */}
+          <div className="relative z-10 p-3 bg-gradient-to-t from-[#EDE7DC] to-[#F7F3EA] border-t border-[#E8E1D4]">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSend();
+              }}
+              className="bg-white rounded-2xl border border-[#E8E1D4] p-1.5 flex items-center gap-2 shadow-sm transition-all focus-within:border-[#C89B3C] focus-within:ring-2 focus-within:ring-[#C89B3C]/20"
             >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            </Button>
-          </form>
+              {/* Message icon inside input on left */}
+              <div className="pl-2.5 text-slate-400 shrink-0">
+                <MessageSquare className="w-4 h-4 text-slate-400" />
+              </div>
+
+              {/* Input text field */}
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask AI about properties, prices..."
+                className="w-full bg-transparent border-0 outline-none text-xs sm:text-sm text-[#07111F] placeholder:text-slate-400 py-1.5 px-1 focus:ring-0"
+              />
+
+              {/* Send Button: Luxury Gold Squircle with Paper Airplane */}
+              <button
+                type="submit"
+                disabled={loading || !input.trim()}
+                className={cn(
+                  "w-10 h-10 rounded-xl flex items-center justify-center text-[#07111F] font-bold shrink-0 transition-all duration-200",
+                  loading || !input.trim()
+                    ? "bg-slate-200 text-slate-400 cursor-not-allowed"
+                    : "bg-gradient-to-br from-[#C89B3C] via-[#D9B45B] to-[#B88924] shadow-md shadow-[#C89B3C]/25 hover:scale-105 active:scale-95 cursor-pointer"
+                )}
+                aria-label="Send message"
+              >
+                {loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-[#07111F]" />
+                ) : (
+                  <Send className="w-4 h-4 -rotate-12 -translate-x-[1px] -translate-y-[1px]" />
+                )}
+              </button>
+            </form>
+          </div>
         </div>
       )}
     </div>

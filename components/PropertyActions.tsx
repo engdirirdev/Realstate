@@ -156,7 +156,7 @@ export default function PropertyActions({ propertyId, propertyTitle, propertyPri
       <div className="space-y-3">
         <Button
           onClick={() => setBookingModalOpen(true)}
-          className="w-full bg-[#10B981] text-white hover:bg-[#059669] rounded-xl font-semibold gap-2 shadow-sm"
+          className="w-full bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] hover:opacity-95 text-[#07111F] rounded-xl font-bold gap-2 shadow-md shadow-[#C89B3C]/15 border-0"
           size="lg"
         >
           <Calendar className="h-4 w-4" /> Book / Reserve Property
@@ -165,62 +165,62 @@ export default function PropertyActions({ propertyId, propertyTitle, propertyPri
         <Button
           onClick={() => setInquiryModalOpen(true)}
           variant="outline"
-          className="w-full bg-white border border-[#E2E8F0] text-[#0F172A] hover:bg-[#F8FAFC] rounded-xl font-semibold gap-2"
+          className="w-full bg-[#FCFBF7] border border-[#E8E1D4] text-[#07111F] hover:bg-[#F7F3EA] rounded-xl font-semibold gap-2"
           size="lg"
         >
-          <Mail className="h-4 w-4 text-[#10B981]" /> Send Property Enquiry
+          <Mail className="h-4 w-4 text-[#C89B3C]" /> Send Property Enquiry
         </Button>
 
         <div className="flex gap-2 pt-1">
           <Button
             onClick={handleToggleFavorite}
             variant="outline"
-            className="flex-1 gap-2 text-xs bg-white border border-[#E2E8F0] text-[#0F172A] hover:bg-[#F8FAFC] rounded-xl font-medium"
+            className="flex-1 gap-2 text-xs bg-[#FCFBF7] border border-[#E8E1D4] text-[#07111F] hover:bg-[#F7F3EA] rounded-xl font-medium"
           >
-            <Heart className="h-4 w-4 text-[#DC2626]" /> Save Favorite
+            <Heart className="h-4 w-4 text-[#C89B3C] fill-[#C89B3C]" /> Save Favorite
           </Button>
         </div>
       </div>
 
       {/* ─── Modal 1: Send Inquiry ─── */}
       <Dialog open={inquiryModalOpen} onOpenChange={setInquiryModalOpen}>
-        <DialogContent className="max-w-md bg-white rounded-2xl p-6 shadow-xl border border-[#E2E8F0]">
+        <DialogContent className="max-w-md bg-[#FCFBF7] rounded-2xl p-6 shadow-xl border border-[#E8E1D4]">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#0F172A] flex items-center gap-2">
-              <Mail className="h-5 w-5 text-[#10B981]" /> Contact Property Manager
+            <DialogTitle className="text-xl font-bold font-serif text-[#07111F] flex items-center gap-2">
+              <Mail className="h-5 w-5 text-[#C89B3C]" /> Contact Property Manager
             </DialogTitle>
-            <DialogDescription className="text-xs text-[#64748B]">
+            <DialogDescription className="text-xs text-[#6B7280]">
               Inquire about &ldquo;{propertyTitle}&rdquo; directly with the listed property manager.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSendInquiry} className="space-y-4 mt-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[#0F172A]">Subject</Label>
+              <Label className="text-xs font-semibold text-[#07111F]">Subject</Label>
               <Input
                 value={inquirySubject}
                 onChange={(e) => setInquirySubject(e.target.value)}
-                className="h-10 border-[#E2E8F0] rounded-xl text-sm"
+                className="h-10 border-[#E8E1D4] rounded-xl text-sm bg-white"
                 required
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[#0F172A]">Message / Question</Label>
+              <Label className="text-xs font-semibold text-[#07111F]">Message / Question</Label>
               <Textarea
                 value={inquiryMsg}
                 onChange={(e) => setInquiryMsg(e.target.value)}
                 placeholder="Ask about availability, deposit, viewing schedules, or utilities..."
-                className="min-h-[100px] border-[#E2E8F0] rounded-xl text-sm"
+                className="min-h-[100px] border-[#E8E1D4] rounded-xl text-sm bg-white"
                 required
               />
             </div>
 
             <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" onClick={() => setInquiryModalOpen(false)} className="rounded-xl">
+              <Button type="button" variant="outline" onClick={() => setInquiryModalOpen(false)} className="rounded-xl border-[#E8E1D4] text-[#07111F]">
                 Cancel
               </Button>
-              <Button type="submit" disabled={submittingInquiry} className="bg-[#10B981] hover:bg-[#059669] text-white rounded-xl gap-2 font-semibold">
+              <Button type="submit" disabled={submittingInquiry} className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] hover:opacity-95 text-[#07111F] rounded-xl gap-2 font-bold border-0">
                 {submittingInquiry ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 Send Inquiry
               </Button>
@@ -231,43 +231,43 @@ export default function PropertyActions({ propertyId, propertyTitle, propertyPri
 
       {/* ─── Modal 2: Book / Reserve Property ─── */}
       <Dialog open={bookingModalOpen} onOpenChange={setBookingModalOpen}>
-        <DialogContent className="max-w-md bg-white rounded-2xl p-6 shadow-xl border border-[#E2E8F0]">
+        <DialogContent className="max-w-md bg-[#FCFBF7] rounded-2xl p-6 shadow-xl border border-[#E8E1D4]">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#0F172A] flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-[#10B981]" /> Reserve Property
+            <DialogTitle className="text-xl font-bold font-serif text-[#07111F] flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-[#C89B3C]" /> Reserve Property
             </DialogTitle>
-            <DialogDescription className="text-xs text-[#64748B]">
+            <DialogDescription className="text-xs text-[#6B7280]">
               Reserve &ldquo;{propertyTitle}&rdquo; for {formatPrice(propertyPrice)}.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleCreateBooking} className="space-y-4 mt-2">
-            <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-4 rounded-xl space-y-2">
+            <div className="bg-[#F7F3EA] border border-[#E8E1D4] p-4 rounded-xl space-y-2">
               <div className="flex justify-between text-xs">
-                <span className="text-[#64748B]">Property Listing:</span>
-                <span className="font-semibold text-[#0F172A] truncate max-w-[200px]">{propertyTitle}</span>
+                <span className="text-[#6B7280]">Property Listing:</span>
+                <span className="font-semibold text-[#07111F] truncate max-w-[200px]">{propertyTitle}</span>
               </div>
-              <div className="flex justify-between text-xs border-t border-[#E2E8F0] pt-2">
-                <span className="text-[#64748B]">Total Amount:</span>
-                <span className="font-bold text-[#059669] text-base">{formatPrice(propertyPrice)}</span>
+              <div className="flex justify-between text-xs border-t border-[#E8E1D4] pt-2">
+                <span className="text-[#6B7280]">Total Amount:</span>
+                <span className="font-bold text-[#C89B3C] text-base font-serif">{formatPrice(propertyPrice)}</span>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[#0F172A]">Special Requests / Inspection Date</Label>
+              <Label className="text-xs font-semibold text-[#07111F]">Special Requests / Inspection Date</Label>
               <Textarea
                 value={bookingNotes}
                 onChange={(e) => setBookingNotes(e.target.value)}
                 placeholder="Specify preferred move-in date or inspection time..."
-                className="min-h-[80px] border-[#E2E8F0] rounded-xl text-sm"
+                className="min-h-[80px] border-[#E8E1D4] rounded-xl text-sm bg-white"
               />
             </div>
 
             <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" onClick={() => setBookingModalOpen(false)} className="rounded-xl">
+              <Button type="button" variant="outline" onClick={() => setBookingModalOpen(false)} className="rounded-xl border-[#E8E1D4] text-[#07111F]">
                 Cancel
               </Button>
-              <Button type="submit" disabled={submittingBooking} className="bg-[#10B981] hover:bg-[#059669] text-white rounded-xl gap-2 font-semibold">
+              <Button type="submit" disabled={submittingBooking} className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] hover:opacity-95 text-[#07111F] rounded-xl gap-2 font-bold border-0">
                 {submittingBooking ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
                 Proceed to Payment
               </Button>
@@ -278,40 +278,40 @@ export default function PropertyActions({ propertyId, propertyTitle, propertyPri
 
       {/* ─── Modal 3: Demo / Sandbox Payment ─── */}
       <Dialog open={paymentModalOpen} onOpenChange={setPaymentModalOpen}>
-        <DialogContent className="max-w-md bg-white rounded-2xl p-6 shadow-xl border border-[#E2E8F0]">
+        <DialogContent className="max-w-md bg-[#FCFBF7] rounded-2xl p-6 shadow-xl border border-[#E8E1D4]">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#0F172A] flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-[#10B981]" /> Demo / Sandbox Payment
+            <DialogTitle className="text-xl font-bold font-serif text-[#07111F] flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-[#C89B3C]" /> Demo / Sandbox Payment
             </DialogTitle>
-            <DialogDescription className="text-xs text-[#64748B]">
+            <DialogDescription className="text-xs text-[#6B7280]">
               Simulate instant payment processing for this property reservation.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 my-2">
-            <div className="bg-[#ECFDF5] border border-[#A7F3D0] p-4 rounded-xl space-y-2">
-              <div className="flex items-center gap-2 text-xs font-bold text-[#065F46]">
-                <ShieldCheck className="h-4 w-4 text-[#10B981]" /> Sandbox Environment Active
+            <div className="bg-[#07111F] border border-[#C89B3C]/30 p-4 rounded-xl space-y-2 text-white">
+              <div className="flex items-center gap-2 text-xs font-bold text-[#D9B45B]">
+                <ShieldCheck className="h-4 w-4 text-[#C89B3C]" /> Sandbox Environment Active
               </div>
-              <p className="text-xs text-[#047857]">
+              <p className="text-xs text-[#94A3B8]">
                 No actual credit card charge will occur. Clicking Pay Now generates an official receipt and updates your booking to Confirmed.
               </p>
-              <div className="pt-2 border-t border-[#A7F3D0]/60 flex justify-between text-xs font-bold text-[#065F46]">
+              <div className="pt-2 border-t border-[#C89B3C]/20 flex justify-between text-xs font-bold text-white">
                 <span>Total Due:</span>
-                <span className="text-sm">{formatPrice(propertyPrice)} USD</span>
+                <span className="text-sm font-serif text-[#D9B45B]">{formatPrice(propertyPrice)} USD</span>
               </div>
             </div>
           </div>
 
           <DialogFooter className="pt-2">
-            <Button type="button" variant="outline" onClick={() => setPaymentModalOpen(false)} className="rounded-xl">
+            <Button type="button" variant="outline" onClick={() => setPaymentModalOpen(false)} className="rounded-xl border-[#E8E1D4] text-[#07111F]">
               Cancel
             </Button>
             <Button
               type="button"
               onClick={handleProcessPayment}
               disabled={processingPayment}
-              className="bg-[#10B981] hover:bg-[#059669] text-white rounded-xl gap-2 font-semibold shadow-sm"
+              className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] hover:opacity-95 text-[#07111F] rounded-xl gap-2 font-bold shadow-md shadow-[#C89B3C]/15 border-0"
             >
               {processingPayment ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
               Pay {formatPrice(propertyPrice)} Now

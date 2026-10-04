@@ -5,6 +5,7 @@
 //              users, AI predictions, recommendations), bar charts
 //              for city & type distribution, property status
 //              breakdown, recent AI price predictions log
+//              Kiro-Maal Real Estate Master Design System
 // ROLE       : ADMIN only
 // ================================================================
 import { auth } from "@/auth";
@@ -14,7 +15,7 @@ import { BarChart3, TrendingUp, Building2, Users, Bot, Brain, Download, Sparkles
 import type { Metadata } from "next";
 import Link from "next/link";
 
-export const metadata: Metadata = { title: "Analytics – Admin" };
+export const metadata: Metadata = { title: "Analytics – Admin | Kiro-Maal Real Estate" };
 
 export default async function AdminAnalyticsPage() {
   const session = await auth();
@@ -52,24 +53,27 @@ export default async function AdminAnalyticsPage() {
   const maxTypeCount = Math.max(...byType.map((t) => t._count.type), 1);
 
   const typeColors: Record<string, string> = {
-    HOUSE: "bg-[#10B981]",
-    APARTMENT: "bg-[#06B6D4]",
-    VILLA: "bg-[#0F172A]",
-    OFFICE: "bg-[#64748B]",
-    LAND: "bg-[#94A3B8]",
-    COMMERCIAL: "bg-red-500",
-    STUDIO: "bg-pink-500",
-    TOWNHOUSE: "bg-yellow-500",
+    HOUSE: "bg-[#C89B3C]",
+    APARTMENT: "bg-[#D9B45B]",
+    VILLA: "bg-[#07111F]",
+    OFFICE: "bg-[#0B1728]",
+    LAND: "bg-[#A97918]",
+    COMMERCIAL: "bg-[#B45309]",
+    STUDIO: "bg-[#4B5563]",
+    TOWNHOUSE: "bg-[#6B7280]",
   };
 
   return (
-    <div className="space-y-8 bg-[#F8FAFC] min-h-screen p-6">
+    <div className="space-y-8 bg-[#F7F3EA] min-h-screen p-6 sm:p-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold text-[#0F172A] flex items-center gap-2">
-            <BarChart3 className="h-6 w-6 text-[#10B981]" /> Platform Analytics & Reports
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FCFBF7] border border-[#C89B3C]/30 text-[#A97918] text-xs font-semibold uppercase tracking-wider mb-2 shadow-xs">
+            <Sparkles className="w-3.5 h-3.5 text-[#C89B3C]" /> Executive Intelligence
+          </div>
+          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#07111F] flex items-center gap-2.5">
+            <BarChart3 className="h-7 w-7 text-[#C89B3C]" /> Platform Analytics &amp; Reports
           </h1>
-          <p className="text-[#64748B] text-sm mt-1">Live data, AI intelligence models, and exportable data records</p>
+          <p className="text-[#6B7280] text-sm mt-1">Live data, AI intelligence models, and exportable data records</p>
         </div>
 
         {/* CSV Export Quick Actions */}
@@ -77,66 +81,66 @@ export default async function AdminAnalyticsPage() {
           <a
             href="/api/admin/export?type=properties"
             download
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white border border-[#E2E8F0] text-[#0F172A] hover:bg-[#F8FAFC] shadow-sm transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-[#FCFBF7] border border-[#E8E1D4] text-[#07111F] hover:bg-white shadow-xs transition-colors"
           >
-            <Download className="h-3.5 w-3.5 text-[#10B981]" /> Export Listings (CSV)
+            <Download className="h-3.5 w-3.5 text-[#C89B3C]" /> Export Listings (CSV)
           </a>
           <a
             href="/api/admin/export?type=payments"
             download
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white border border-[#E2E8F0] text-[#0F172A] hover:bg-[#F8FAFC] shadow-sm transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-[#FCFBF7] border border-[#E8E1D4] text-[#07111F] hover:bg-white shadow-xs transition-colors"
           >
-            <Download className="h-3.5 w-3.5 text-[#8B5CF6]" /> Export Payments (CSV)
+            <Download className="h-3.5 w-3.5 text-[#C89B3C]" /> Export Settlements (CSV)
           </a>
           <a
             href="/api/admin/export?type=users"
             download
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white border border-[#E2E8F0] text-[#0F172A] hover:bg-[#F8FAFC] shadow-sm transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-[#FCFBF7] border border-[#E8E1D4] text-[#07111F] hover:bg-white shadow-xs transition-colors"
           >
-            <Download className="h-3.5 w-3.5 text-[#3B82F6]" /> Export Users (CSV)
+            <Download className="h-3.5 w-3.5 text-[#C89B3C]" /> Export Users (CSV)
           </a>
         </div>
       </div>
 
       {/* AI Performance & Accuracy Widget */}
-      <div className="bg-gradient-to-r from-[#8B5CF6]/10 via-[#10B981]/10 to-[#06B6D4]/10 border border-[#E2E8F0] rounded-2xl p-6">
+      <div className="bg-[#07111F] border border-[#C89B3C]/30 rounded-2xl p-6 shadow-md text-white">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[#8B5CF6] flex items-center justify-center text-white">
+            <div className="w-10 h-10 rounded-xl bg-[#0B1728] border border-[#C89B3C]/40 flex items-center justify-center text-[#D9B45B] shadow-inner">
               <Sparkles className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="font-bold text-[#0F172A] text-base">AI Model Health & Accuracy</h2>
-              <p className="text-xs text-[#64748B]">Price regression model v2.4 + Somali Neighborhood Index</p>
+              <h2 className="font-serif font-bold text-white text-base">Kiro-Maal AI Model Health &amp; Accuracy</h2>
+              <p className="text-xs text-[#E8E1D4]/80">Price regression model v2.4 + Somali Neighborhood Valuation Matrix</p>
             </div>
           </div>
-          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-[#D1FAE5] text-[#065F46] border border-[#A7F3D0]">
-            <CheckCircle2 className="h-3.5 w-3.5" /> High Precision
+          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-[#0B1728] text-[#D9B45B] border border-[#C89B3C]/40">
+            <CheckCircle2 className="h-3.5 w-3.5 text-[#D9B45B]" /> High Precision Mode
           </span>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-xl p-4 border border-[#E2E8F0]">
-            <p className="text-xs text-[#64748B] font-medium">Average Confidence</p>
-            <p className="text-2xl font-bold text-[#8B5CF6] mt-1">
+          <div className="bg-[#0B1728] rounded-xl p-4 border border-[#C89B3C]/20">
+            <p className="text-xs text-[#E8E1D4]/70 font-medium">Mean Confidence Index</p>
+            <p className="font-serif text-2xl font-bold text-[#D9B45B] mt-1">
               {Math.round(avgConfidence._avg.confidence || 92)}%
             </p>
-            <p className="text-[11px] text-[#94A3B8] mt-0.5">Across {totalPredictions} valuations</p>
+            <p className="text-[11px] text-[#E8E1D4]/50 mt-0.5">Across {totalPredictions} valuations</p>
           </div>
-          <div className="bg-white rounded-xl p-4 border border-[#E2E8F0]">
-            <p className="text-xs text-[#64748B] font-medium">Model MAE Error</p>
-            <p className="text-2xl font-bold text-[#10B981] mt-1">± 4.2%</p>
-            <p className="text-[11px] text-[#94A3B8] mt-0.5">Within market standard deviation</p>
+          <div className="bg-[#0B1728] rounded-xl p-4 border border-[#C89B3C]/20">
+            <p className="text-xs text-[#E8E1D4]/70 font-medium">Regression MAE Error</p>
+            <p className="font-serif text-2xl font-bold text-[#D9B45B] mt-1">± 4.2%</p>
+            <p className="text-[11px] text-[#E8E1D4]/50 mt-0.5">Within market tolerance</p>
           </div>
-          <div className="bg-white rounded-xl p-4 border border-[#E2E8F0]">
-            <p className="text-xs text-[#64748B] font-medium">Recommendation Pipeline</p>
-            <p className="text-2xl font-bold text-[#06B6D4] mt-1">{totalRecommendations}</p>
-            <p className="text-[11px] text-[#94A3B8] mt-0.5">Matched customer affinities</p>
+          <div className="bg-[#0B1728] rounded-xl p-4 border border-[#C89B3C]/20">
+            <p className="text-xs text-[#E8E1D4]/70 font-medium">Recommendations Matched</p>
+            <p className="font-serif text-2xl font-bold text-white mt-1">{totalRecommendations}</p>
+            <p className="text-[11px] text-[#E8E1D4]/50 mt-0.5">Matched client preferences</p>
           </div>
-          <div className="bg-white rounded-xl p-4 border border-[#E2E8F0]">
-            <p className="text-xs text-[#64748B] font-medium">Duplicate & Fraud Scans</p>
-            <p className="text-2xl font-bold text-[#3B82F6] mt-1">Active</p>
-            <p className="text-[11px] text-[#94A3B8] mt-0.5">Automatic on-blur detection</p>
+          <div className="bg-[#0B1728] rounded-xl p-4 border border-[#C89B3C]/20">
+            <p className="text-xs text-[#E8E1D4]/70 font-medium">Duplicate Verification</p>
+            <p className="font-serif text-2xl font-bold text-[#D9B45B] mt-1">Enforced</p>
+            <p className="text-[11px] text-[#E8E1D4]/50 mt-0.5">Active validation scans</p>
           </div>
         </div>
       </div>
@@ -144,37 +148,37 @@ export default async function AdminAnalyticsPage() {
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Total Properties", value: totalProperties, icon: Building2, color: "text-[#10B981] bg-[#10B981]/10" },
-          { label: "Active Users", value: totalUsers, icon: Users, color: "text-[#06B6D4] bg-[#06B6D4]/10" },
-          { label: "AI Predictions", value: totalPredictions, icon: Brain, color: "text-[#0891B2] bg-[#ECFEFF]" },
-          { label: "Recommendations", value: totalRecommendations, icon: Bot, color: "text-[#10B981] bg-[#10B981]/10" },
-        ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="bg-white rounded-2xl shadow-card border border-[#E2E8F0] p-5">
-            <div className={`w-10 h-10 rounded-xl ${color} flex items-center justify-center mb-3`}>
+          { label: "Total Properties", value: totalProperties, icon: Building2 },
+          { label: "Active Property Managers", value: totalUsers, icon: Users },
+          { label: "AI Price Appraisals", value: totalPredictions, icon: Brain },
+          { label: "Client Matches Generated", value: totalRecommendations, icon: Bot },
+        ].map(({ label, value, icon: Icon }) => (
+          <div key={label} className="bg-[#FCFBF7] rounded-2xl shadow-sm border border-[#E8E1D4] p-5 hover:border-[#C89B3C]/50 transition-all">
+            <div className="w-10 h-10 rounded-xl bg-[#07111F] text-[#D9B45B] border border-[#C89B3C]/30 flex items-center justify-center mb-3 shadow-inner">
               <Icon className="h-5 w-5" />
             </div>
-            <p className="text-3xl font-bold text-[#0F172A]">{value}</p>
-            <p className="text-sm text-[#64748B] mt-0.5">{label}</p>
+            <p className="font-serif text-3xl font-bold text-[#07111F]">{value}</p>
+            <p className="text-xs font-semibold text-[#6B7280] mt-1 uppercase tracking-wide">{label}</p>
           </div>
         ))}
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Properties by City */}
-        <div className="bg-white rounded-2xl shadow-card border border-[#E2E8F0] p-6">
-          <h2 className="font-semibold text-[#0F172A] mb-5 flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-[#10B981]" /> Properties by City
+        <div className="bg-[#FCFBF7] rounded-2xl shadow-sm border border-[#E8E1D4] p-6">
+          <h2 className="font-serif font-bold text-[#07111F] mb-5 flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-[#C89B3C]" /> Geographic Distribution by City
           </h2>
-          <div className="space-y-3">
+          <div className="space-y-3.5">
             {byCity.map((c) => (
               <div key={c.city}>
-                <div className="flex items-center justify-between text-sm mb-1">
-                  <span className="font-medium text-[#0F172A]">{c.city}</span>
-                  <span className="text-[#94A3B8]">{c._count.city}</span>
+                <div className="flex items-center justify-between text-sm mb-1 font-medium">
+                  <span className="text-[#07111F]">{c.city}</span>
+                  <span className="text-[#A97918] font-bold">{c._count.city} listings</span>
                 </div>
-                <div className="w-full bg-[#E2E8F0] rounded-full h-2">
+                <div className="w-full bg-[#E8E1D4] rounded-full h-2 overflow-hidden">
                   <div
-                    className="bg-gradient-to-r from-[#10B981] to-[#06B6D4] h-2 rounded-full transition-all duration-700"
+                    className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] h-2 rounded-full transition-all duration-700"
                     style={{ width: `${(c._count.city / maxCityCount) * 100}%` }}
                   />
                 </div>
@@ -184,22 +188,22 @@ export default async function AdminAnalyticsPage() {
         </div>
 
         {/* Properties by Type */}
-        <div className="bg-white rounded-2xl shadow-card border border-[#E2E8F0] p-6">
-          <h2 className="font-semibold text-[#0F172A] mb-5 flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-[#10B981]" /> Properties by Type
+        <div className="bg-[#FCFBF7] rounded-2xl shadow-sm border border-[#E8E1D4] p-6">
+          <h2 className="font-serif font-bold text-[#07111F] mb-5 flex items-center gap-2">
+            <Building2 className="h-5 w-5 text-[#C89B3C]" /> Distribution by Property Type
           </h2>
-          <div className="space-y-3">
+          <div className="space-y-3.5">
             {byType.map((t) => (
               <div key={t.type}>
-                <div className="flex items-center justify-between text-sm mb-1">
-                  <span className="font-medium text-[#0F172A] capitalize">
+                <div className="flex items-center justify-between text-sm mb-1 font-medium">
+                  <span className="text-[#07111F] capitalize">
                     {t.type.charAt(0) + t.type.slice(1).toLowerCase()}
                   </span>
-                  <span className="text-[#94A3B8]">{t._count.type}</span>
+                  <span className="text-[#A97918] font-bold">{t._count.type}</span>
                 </div>
-                <div className="w-full bg-[#E2E8F0] rounded-full h-2">
+                <div className="w-full bg-[#E8E1D4] rounded-full h-2 overflow-hidden">
                   <div
-                    className={`${typeColors[t.type] || "bg-[#94A3B8]"} h-2 rounded-full transition-all duration-700`}
+                    className={`${typeColors[t.type] || "bg-[#07111F]"} h-2 rounded-full transition-all duration-700`}
                     style={{ width: `${(t._count.type / maxTypeCount) * 100}%` }}
                   />
                 </div>
@@ -209,21 +213,21 @@ export default async function AdminAnalyticsPage() {
         </div>
 
         {/* Property Status breakdown */}
-        <div className="bg-white rounded-2xl shadow-card border border-[#E2E8F0] p-6">
-          <h2 className="font-semibold text-[#0F172A] mb-5">Property Status Breakdown</h2>
+        <div className="bg-[#FCFBF7] rounded-2xl shadow-sm border border-[#E8E1D4] p-6">
+          <h2 className="font-serif font-bold text-[#07111F] mb-5">Listing Status Portfolio Breakdown</h2>
           <div className="flex flex-wrap gap-3">
             {byStatus.map((s) => {
               const colors: Record<string, string> = {
-                APPROVED: "bg-[#D1FAE5] text-[#065F46] border-transparent",
-                PENDING: "bg-[#FEF9C3] text-[#92400E] border-transparent",
-                REJECTED: "bg-[#FEE2E2] text-[#991B1B] border-transparent",
-                SOLD: "bg-[#DBEAFE] text-[#1E40AF] border-transparent",
-                UNAVAILABLE: "bg-[#F8FAFC] text-[#64748B] border-[#E2E8F0]",
+                APPROVED: "bg-[#07111F] text-[#D9B45B] border border-[#C89B3C]/40",
+                PENDING: "bg-amber-50 text-amber-800 border border-amber-200",
+                REJECTED: "bg-red-50 text-red-700 border border-red-200",
+                SOLD: "bg-stone-100 text-stone-700 border border-stone-300",
+                UNAVAILABLE: "bg-[#F7F3EA] text-[#6B7280] border border-[#E8E1D4]",
               };
               return (
-                <div key={s.status} className={`px-4 py-3 rounded-xl border text-center min-w-[100px] ${colors[s.status] || "bg-[#F8FAFC] text-[#64748B] border-[#E2E8F0]"}`}>
-                  <p className="text-2xl font-bold">{s._count.status}</p>
-                  <p className="text-xs font-medium mt-0.5">{s.status}</p>
+                <div key={s.status} className={`px-4 py-3 rounded-xl border text-center min-w-[100px] ${colors[s.status] || "bg-[#F7F3EA] text-[#6B7280] border border-[#E8E1D4]"}`}>
+                  <p className="font-serif text-2xl font-bold">{s._count.status}</p>
+                  <p className="text-xs font-bold uppercase tracking-wider mt-0.5">{s.status}</p>
                 </div>
               );
             })}
@@ -231,25 +235,25 @@ export default async function AdminAnalyticsPage() {
         </div>
 
         {/* Recent AI Predictions */}
-        <div className="bg-white rounded-2xl shadow-card border border-[#E2E8F0] p-6">
-          <h2 className="font-semibold text-[#0F172A] mb-5 flex items-center gap-2">
-            <Brain className="h-5 w-5 text-[#06B6D4]" /> Recent AI Predictions
+        <div className="bg-[#FCFBF7] rounded-2xl shadow-sm border border-[#E8E1D4] p-6">
+          <h2 className="font-serif font-bold text-[#07111F] mb-5 flex items-center gap-2">
+            <Brain className="h-5 w-5 text-[#C89B3C]" /> Recent Algorithmic Appraisals
           </h2>
           <div className="space-y-3">
             {recentPredictions.length === 0 ? (
-              <p className="text-[#94A3B8] text-sm">No predictions yet.</p>
+              <p className="text-[#9CA3AF] text-sm">No predictions yet.</p>
             ) : (
               recentPredictions.map((pred) => (
-                <div key={pred.id} className="flex items-center justify-between text-sm border-b border-[#E2E8F0] pb-2 last:border-0">
+                <div key={pred.id} className="flex items-center justify-between text-sm border-b border-[#E8E1D4] pb-2.5 last:border-0">
                   <div>
-                    <p className="font-medium text-[#0F172A]">{pred.location} · {pred.propertyType}</p>
-                    <p className="text-xs text-[#94A3B8]">{pred.user.name}</p>
+                    <p className="font-semibold text-[#07111F] text-xs sm:text-sm">{pred.location} · <span className="text-[#A97918]">{pred.propertyType}</span></p>
+                    <p className="text-[11px] text-[#6B7280]">{pred.user.name}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-[#10B981]">
+                    <p className="font-serif font-bold text-[#07111F]">
                       ${pred.predictedPrice.toLocaleString()}
                     </p>
-                    <p className="text-xs text-[#94A3B8]">{pred.confidence}% conf.</p>
+                    <p className="text-[11px] text-[#A97918] font-semibold">{pred.confidence}% conf.</p>
                   </div>
                 </div>
               ))

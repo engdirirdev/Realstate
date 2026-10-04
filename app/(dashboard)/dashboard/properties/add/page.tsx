@@ -142,17 +142,20 @@ export default function ManagerAddPropertyPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-3xl bg-[#F8FAFC]">
+    <div className="space-y-6 max-w-3xl bg-[#F7F3EA]">
       <div className="flex items-center gap-3">
         <button
           onClick={() => router.back()}
-          className="w-9 h-9 rounded-xl bg-white border border-[#E2E8F0] flex items-center justify-center hover:bg-[#F8FAFC]"
+          className="w-9 h-9 rounded-xl bg-[#FCFBF7] border border-[#E8E1D4] flex items-center justify-center hover:bg-[#F7F3EA] text-[#07111F] transition-colors cursor-pointer"
         >
-          <ArrowLeft className="h-4 w-4 text-[#0F172A]" />
+          <ArrowLeft className="h-4 w-4 text-[#07111F]" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight">Add New Property Listing</h1>
-          <p className="text-[#64748B] text-sm mt-0.5">List a property with AI assistance, media tour, and admin review.</p>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#C89B3C]/15 border border-[#C89B3C]/30 text-[#A97918] text-[11px] font-bold uppercase tracking-wider mb-1">
+            <span>✦ Property Management</span>
+          </div>
+          <h1 className="text-2xl font-black font-serif text-[#07111F] tracking-tight">Add New Property Listing</h1>
+          <p className="text-[#6B7280] text-sm mt-0.5">List a luxury property with AI assistance, media tour, and admin review.</p>
         </div>
       </div>
 
@@ -168,33 +171,33 @@ export default function ManagerAddPropertyPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl shadow-card border border-[#E2E8F0] p-6 sm:p-8 space-y-6">
+      <div className="bg-[#FCFBF7] rounded-3xl shadow-sm border border-[#E8E1D4] p-6 sm:p-8 space-y-6">
         <div className="space-y-4">
-          <h2 className="text-base font-bold text-[#0F172A] border-b border-[#E2E8F0] pb-3 flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-[#10B981]" /> Basic Details
+          <h2 className="text-base font-bold font-serif text-[#07111F] border-b border-[#E8E1D4] pb-3 flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-[#C89B3C]" /> Basic Details
           </h2>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-[#0F172A]">Property Title <span className="text-red-500">*</span></Label>
+            <Label className="text-xs font-bold text-[#07111F]">Property Title <span className="text-[#C89B3C]">*</span></Label>
             <Input
               name="title"
               value={form.title}
               onChange={handleChange}
               onBlur={handleDuplicateCheck}
               placeholder="e.g. Modern 3-Bedroom Villa in Hodan"
-              className="h-10 border-[#E2E8F0] rounded-xl text-sm"
+              className="h-10 border-[#E8E1D4] bg-[#FCFBF7] rounded-xl text-sm focus:border-[#C89B3C]"
               required
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[#0F172A]">Property Type <span className="text-red-500">*</span></Label>
+              <Label className="text-xs font-bold text-[#07111F]">Property Type <span className="text-[#C89B3C]">*</span></Label>
               <Select value={form.type} onValueChange={(val) => setForm((p) => ({ ...p, type: val }))}>
-                <SelectTrigger className="h-10 border-[#E2E8F0] rounded-xl bg-white text-[#0F172A]">
+                <SelectTrigger className="h-10 border-[#E8E1D4] rounded-xl bg-[#FCFBF7] text-[#07111F]">
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
-                <SelectContent className="bg-white border-[#E2E8F0]">
+                <SelectContent className="bg-[#FCFBF7] border-[#E8E1D4]">
                   {["HOUSE", "APARTMENT", "VILLA", "OFFICE", "LAND", "COMMERCIAL", "TOWNHOUSE", "STUDIO"].map((t) => (
                     <SelectItem key={t} value={t}>{t}</SelectItem>
                   ))}
@@ -203,12 +206,12 @@ export default function ManagerAddPropertyPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[#0F172A]">City <span className="text-red-500">*</span></Label>
+              <Label className="text-xs font-bold text-[#07111F]">City <span className="text-[#C89B3C]">*</span></Label>
               <Select value={form.city} onValueChange={(val) => setForm((p) => ({ ...p, city: val }))}>
-                <SelectTrigger className="h-10 border-[#E2E8F0] rounded-xl bg-white text-[#0F172A]">
+                <SelectTrigger className="h-10 border-[#E8E1D4] rounded-xl bg-[#FCFBF7] text-[#07111F]">
                   <SelectValue placeholder="Select city" />
                 </SelectTrigger>
-                <SelectContent className="bg-white border-[#E2E8F0]">
+                <SelectContent className="bg-[#FCFBF7] border-[#E8E1D4]">
                   {["Mogadishu", "Hargeisa", "Bosaso", "Kismayo", "Garowe", "Baydhabo", "Berbera"].map((c) => (
                     <SelectItem key={c} value={c}>{c}</SelectItem>
                   ))}
@@ -219,18 +222,18 @@ export default function ManagerAddPropertyPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[#0F172A]">District / Neighborhood</Label>
+              <Label className="text-xs font-bold text-[#07111F]">District / Neighborhood</Label>
               <Input
                 name="location"
                 value={form.location}
                 onChange={handleChange}
                 placeholder="e.g. Hodan District"
-                className="h-10 border-[#E2E8F0] rounded-xl text-sm"
+                className="h-10 border-[#E8E1D4] bg-[#FCFBF7] rounded-xl text-sm focus:border-[#C89B3C]"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[#0F172A]">Price (USD) <span className="text-red-500">*</span></Label>
+              <Label className="text-xs font-bold text-[#07111F]">Price (USD) <span className="text-[#C89B3C]">*</span></Label>
               <Input
                 name="price"
                 type="number"
@@ -238,7 +241,7 @@ export default function ManagerAddPropertyPage() {
                 onChange={handleChange}
                 onBlur={handleDuplicateCheck}
                 placeholder="75000"
-                className="h-10 border-[#E2E8F0] rounded-xl text-sm"
+                className="h-10 border-[#E8E1D4] bg-[#FCFBF7] rounded-xl text-sm focus:border-[#C89B3C]"
                 required
               />
             </div>
@@ -246,14 +249,14 @@ export default function ManagerAddPropertyPage() {
 
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label className="text-xs font-semibold text-[#0F172A]">Description <span className="text-red-500">*</span></Label>
+              <Label className="text-xs font-bold text-[#07111F]">Description <span className="text-[#C89B3C]">*</span></Label>
               <button
                 type="button"
                 onClick={handleGenerateAiDescription}
                 disabled={generatingDesc}
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#8B5CF6] hover:text-[#7C3AED] bg-[#8B5CF6]/10 px-2.5 py-1 rounded-lg transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#A97918] hover:text-[#C89B3C] bg-[#F7F3EA] border border-[#E8E1D4] px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
               >
-                {generatingDesc ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "✨ AI Generate Description"}
+                {generatingDesc ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "✦ AI Generate Description"}
               </button>
             </div>
             <Textarea
@@ -261,7 +264,7 @@ export default function ManagerAddPropertyPage() {
               value={form.description}
               onChange={handleChange}
               placeholder="Provide a detailed description of the property, features, access, and neighborhood..."
-              className="min-h-[110px] border-[#E2E8F0] rounded-xl text-sm"
+              className="min-h-[110px] border-[#E8E1D4] bg-[#FCFBF7] rounded-xl text-sm focus:border-[#C89B3C]"
               required
             />
           </div>
@@ -331,9 +334,9 @@ export default function ManagerAddPropertyPage() {
                 type="checkbox"
                 checked={form.isFurnished}
                 onChange={(e) => setForm((p) => ({ ...p, isFurnished: e.target.checked }))}
-                className="h-4 w-4 text-[#10B981] rounded border-[#E2E8F0] focus:ring-[#10B981]"
+                className="h-4 w-4 text-[#C89B3C] rounded border-[#E8E1D4] focus:ring-[#C89B3C] accent-[#C89B3C]"
               />
-              <Label htmlFor="furnished" className="text-xs font-semibold text-[#0F172A] cursor-pointer">
+              <Label htmlFor="furnished" className="text-xs font-semibold text-[#07111F] cursor-pointer">
                 Furnished Property (Includes basic / luxury furniture)
               </Label>
             </div>
@@ -342,50 +345,50 @@ export default function ManagerAddPropertyPage() {
 
         {/* Media, Tours & Floor Plans */}
         <div className="space-y-4 pt-2">
-          <h2 className="text-base font-bold text-[#0F172A] border-b border-[#E2E8F0] pb-3 flex items-center gap-2">
-            <ImageIcon className="h-4 w-4 text-[#10B981]" /> Media, Video Tour &amp; Floor Plans
+          <h2 className="text-base font-bold text-[#07111F] border-b border-[#E8E1D4] pb-3 flex items-center gap-2">
+            <ImageIcon className="h-4 w-4 text-[#C89B3C]" /> Media, Video Tour &amp; Floor Plans
           </h2>
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[#0F172A]">Primary Image URL <span className="text-red-500">*</span></Label>
+              <Label className="text-xs font-semibold text-[#07111F]">Primary Image URL <span className="text-red-500">*</span></Label>
               <Input
                 name="imageUrl"
                 value={form.imageUrl}
                 onChange={handleChange}
                 placeholder="https://images.unsplash.com/..."
-                className="h-10 border-[#E2E8F0] rounded-xl text-sm"
+                className="h-10 border-[#E8E1D4] rounded-xl text-sm bg-[#FCFBF7]"
                 required
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[#0F172A]">Video Tour Link (YouTube / Vimeo embed)</Label>
+              <Label className="text-xs font-semibold text-[#07111F]">Video Tour Link (YouTube / Vimeo embed)</Label>
               <Input
                 name="videoUrl"
                 value={form.videoUrl}
                 onChange={handleChange}
                 placeholder="https://www.youtube.com/watch?v=..."
-                className="h-10 border-[#E2E8F0] rounded-xl text-sm"
+                className="h-10 border-[#E8E1D4] rounded-xl text-sm bg-[#FCFBF7]"
               />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-[#0F172A]">Floor Plan Image / PDF URL</Label>
+                <Label className="text-xs font-semibold text-[#07111F]">Floor Plan Image / PDF URL</Label>
                 <Input
                   name="floorPlanUrl"
                   value={form.floorPlanUrl}
                   onChange={handleChange}
                   placeholder="https://.../floorplan.jpg"
-                  className="h-10 border-[#E2E8F0] rounded-xl text-sm"
+                  className="h-10 border-[#E8E1D4] rounded-xl text-sm bg-[#FCFBF7]"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-[#0F172A]">360° Virtual Tour URL</Label>
+                <Label className="text-xs font-semibold text-[#07111F]">360° Virtual Tour URL</Label>
                 <Input
                   name="virtualTourUrl"
                   value={form.virtualTourUrl}
                   onChange={handleChange}
                   placeholder="https://matterport.com/... or 360 viewer"
-                  className="h-10 border-[#E2E8F0] rounded-xl text-sm"
+                  className="h-10 border-[#E8E1D4] rounded-xl text-sm bg-[#FCFBF7]"
                 />
               </div>
             </div>
@@ -393,15 +396,15 @@ export default function ManagerAddPropertyPage() {
         </div>
 
         {/* Action Buttons */}
-        <div className="pt-4 border-t border-[#E2E8F0] flex flex-col sm:flex-row items-center justify-end gap-3">
+        <div className="pt-4 border-t border-[#E8E1D4] flex flex-col sm:flex-row items-center justify-end gap-3">
           <Button
             type="button"
             variant="outline"
             disabled={!!submitting}
             onClick={() => handleSubmit(false)}
-            className="w-full sm:w-auto rounded-xl border-[#E2E8F0] text-[#0F172A] hover:bg-[#F8FAFC] gap-2"
+            className="w-full sm:w-auto rounded-xl border-[#E8E1D4] text-[#07111F] hover:bg-[#F7F3EA] gap-2 bg-[#FCFBF7]"
           >
-            {submitting === "DRAFT" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 text-[#64748B]" />}
+            {submitting === "DRAFT" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 text-[#6B7280]" />}
             Save as Draft
           </Button>
 
@@ -409,7 +412,7 @@ export default function ManagerAddPropertyPage() {
             type="button"
             disabled={!!submitting}
             onClick={() => handleSubmit(true)}
-            className="w-full sm:w-auto rounded-xl bg-[#10B981] hover:bg-[#059669] text-white gap-2 shadow-sm"
+            className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] hover:opacity-95 text-[#07111F] font-bold gap-2 shadow-md shadow-[#C89B3C]/10 border-0"
           >
             {submitting === "PENDING" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             Submit for Admin Review

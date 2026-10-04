@@ -7,7 +7,7 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { signIn, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Building2, Eye, EyeOff, Loader2, Mail, Lock, ArrowRight, Sparkles, ShieldCheck, Home, Bot, BarChart3 } from "lucide-react";
@@ -34,6 +34,9 @@ export default function LoginPage() {
     }
     setLoading(true);
     try {
+      // Clear any existing session to ensure a clean login
+      await signOut({ redirect: false }).catch(() => {});
+
       const result = await signIn("credentials", {
         email: form.email,
         password: form.password,
@@ -52,11 +55,40 @@ export default function LoginPage() {
 
         router.refresh();
         if (userRole === "ADMIN") {
-          router.push("/admin");
+          window.location.href = "/admin";
         } else if (userRole === "CUSTOMER") {
-          router.push("/customer");
+          window.location.href = "/customer";
         } else {
-          router.push("/dashboard");
+          window.location.href = "/dashboard";
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleQuickLogin = async (email: string, pass: string, targetRole: string) => {
+    setLoading(true);
+    try {
+      // Clear any existing session to guarantee proper role switch
+      await signOut({ redirect: false }).catch(() => {});
+
+      const result = await signIn("credentials", {
+        email,
+        password: pass,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        toast({ title: "Login failed", description: "Could not log in with demo account.", variant: "destructive" });
+      } else {
+        toast({ title: `Logged in as ${targetRole}! 👋`, description: "Redirecting...", variant: "success" } as any);
+        if (targetRole === "Admin") {
+          window.location.href = "/admin";
+        } else if (targetRole === "Customer") {
+          window.location.href = "/customer";
+        } else {
+          window.location.href = "/dashboard";
         }
       }
     } finally {
@@ -202,14 +234,55 @@ export default function LoginPage() {
               </Button>
             </form>
 
+            {/* Quick Demo Role Logins */}
+            <div className="mt-6 pt-5 border-t border-[#E2E8F0] space-y-3">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[#64748B] text-center">
+                Quick Role Login (Click to Switch &amp; Test)
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin("admin@realestate.so", "Admin@123456", "Admin")}
+                  disabled={loading}
+                  className="px-2 py-2 rounded-xl text-xs font-bold bg-[#EFF6FF] hover:bg-[#1677FF] text-[#1677FF] hover:text-white border border-[#BFDBFE] transition-all flex flex-col items-center gap-0.5 cursor-pointer disabled:opacity-50 text-center"
+                >
+                  <span>👑 Admin</span>
+                  <span className="text-[9px] opacity-75 font-normal">Super Admin</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin("manager@realestate.so", "Manager@123456", "Manager")}
+                  disabled={loading}
+                  className="px-2 py-2 rounded-xl text-xs font-bold bg-[#ECFDF5] hover:bg-[#10B981] text-[#059669] hover:text-white border border-[#A7F3D0] transition-all flex flex-col items-center gap-0.5 cursor-pointer disabled:opacity-50 text-center"
+                >
+                  <span>🏢 Manager</span>
+                  <span className="text-[9px] opacity-75 font-normal">Agent / Listings</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin("customer@realestate.so", "Customer@123456", "Customer")}
+                  disabled={loading}
+                  className="px-2 py-2 rounded-xl text-xs font-bold bg-[#F5F3FF] hover:bg-[#8B5CF6] text-[#7C3AED] hover:text-white border border-[#DDD6FE] transition-all flex flex-col items-center gap-0.5 cursor-pointer disabled:opacity-50 text-center"
+                >
+                  <span>👤 Customer</span>
+                  <span className="text-[9px] opacity-75 font-normal">Buyer / Client</span>
+                </button>
+              </div>
+            </div>
 
 
-            <p className="text-center text-xs text-[#64748B] mt-6">
-              Don&apos;t have an account?{" "}
-              <Link href="/register" className="text-[#10B981] font-semibold hover:text-[#059669]">
-                Create one free
-              </Link>
-            </p>
+
+            <div className="mt-6 pt-5 border-t border-[#E2E8F0] text-center">
+              <p className="text-xs text-[#64748B]">
+                Don&apos;t have an account?{" "}
+                <Link
+                  href="/register"
+                  className="text-[#1677FF] font-bold hover:text-[#0F5ED7] hover:underline inline-flex items-center gap-1 transition-colors"
+                >
+                  Create New Account →
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
       </div>

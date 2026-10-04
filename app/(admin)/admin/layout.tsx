@@ -5,6 +5,7 @@ import { LogOut, Shield } from "lucide-react";
 import AdminSidebarNav from "./AdminSidebarNav";
 import AdminHeader from "@/components/admin/AdminHeader";
 import BrandLogo from "@/components/layout/BrandLogo";
+import SidebarSignOutButton from "@/components/layout/SidebarSignOutButton";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -47,13 +48,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </div>
           </div>
 
-          <Link
-            href="/api/auth/signout"
-            className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-[#F87171] hover:bg-[#EF4444]/20 hover:text-white transition-all w-full"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            <span>Sign Out</span>
-          </Link>
+          <SidebarSignOutButton />
         </div>
       </aside>
 

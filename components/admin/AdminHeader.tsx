@@ -47,7 +47,6 @@ export default function AdminHeader({
       <div className="flex items-center gap-3 sm:gap-4">
         <Link
           href="/"
-          target="_blank"
           className="hidden md:inline-flex items-center gap-1.5 text-xs font-bold text-[#475569] hover:text-[#1677FF] bg-[#FAF7F2] hover:bg-white border border-[#E2DDD1] px-3.5 py-2 rounded-xl transition-colors"
         >
           <ExternalLink className="h-3.5 w-3.5" />

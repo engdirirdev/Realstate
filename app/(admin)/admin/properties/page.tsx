@@ -14,6 +14,7 @@ import Link from "next/link";
 import { Building2, CheckCircle2, XCircle, Clock, Eye, Filter, Sparkles } from "lucide-react";
 import { formatPrice, getPropertyTypeLabel } from "@/lib/utils";
 import AdminPropertyReviewModal from "@/components/AdminPropertyReviewModal";
+import AdminAddPropertyModal from "@/components/admin/AdminAddPropertyModal";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Manage Properties – Admin | Kiro-Maal Real Estate" };
@@ -56,6 +57,8 @@ export default async function AdminPropertiesPage({
           </h1>
           <p className="text-[#6B7280] text-sm mt-1">Review, approve, and oversee all real estate listings across Somalia</p>
         </div>
+
+        <AdminAddPropertyModal />
       </div>
 
       {/* Status tabs */}

@@ -56,7 +56,12 @@ export default function AIChatbot() {
 
   // Listen for global open event
   useEffect(() => {
-    const handleOpen = () => setIsOpen(true);
+    const handleOpen = (e?: any) => {
+      setIsOpen(true);
+      if (e?.detail?.message) {
+        setInput(e.detail.message);
+      }
+    };
     window.addEventListener("open-ai-chat", handleOpen);
     return () => window.removeEventListener("open-ai-chat", handleOpen);
   }, []);

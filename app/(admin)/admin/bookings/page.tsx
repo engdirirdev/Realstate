@@ -146,48 +146,72 @@ export default function AdminBookingsPage() {
                     </td>
 
                     <td className="px-4 py-4">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5 ${
                         b.status === "CONFIRMED"
                           ? "bg-[#07111F] text-[#D9B45B] border border-[#C89B3C]/40"
                           : b.status === "PENDING"
-                          ? "bg-amber-50 text-amber-800 border border-amber-200"
+                          ? "bg-amber-500/15 text-amber-800 border border-amber-500/30"
                           : b.status === "COMPLETED"
-                          ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                          : "bg-red-50 text-red-700 border border-red-200"
+                          ? "bg-emerald-500/20 text-emerald-800 border border-emerald-500/40"
+                          : "bg-red-500/15 text-red-700 border border-red-500/30"
                       }`}>
+                        {b.status === "COMPLETED" && "✓ "}
                         {b.status}
                       </span>
                     </td>
 
                     <td className="px-5 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        {b.status !== "CONFIRMED" && (
-                          <Button
-                            onClick={() => handleUpdateStatus(b.id, "CONFIRMED")}
-                            size="sm"
-                            className="h-8 text-xs bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] font-bold rounded-xl border-0 shadow-xs"
-                          >
-                            Confirm
-                          </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        {b.status === "PENDING" && (
+                          <>
+                            <Button
+                              onClick={() => handleUpdateStatus(b.id, "CONFIRMED")}
+                              size="sm"
+                              className="h-8 px-3 text-xs bg-gradient-to-r from-[#C89B3C] via-[#E8B849] to-[#D9A336] text-[#07111F] hover:brightness-105 font-bold rounded-xl border-0 shadow-xs cursor-pointer"
+                            >
+                              Confirm
+                            </Button>
+                            <Button
+                              onClick={() => handleUpdateStatus(b.id, "CANCELLED")}
+                              size="sm"
+                              variant="outline"
+                              className="h-8 px-3 text-xs text-red-600 bg-red-50/50 hover:bg-red-100/80 border border-red-200 rounded-xl font-semibold cursor-pointer"
+                            >
+                              Cancel
+                            </Button>
+                          </>
                         )}
-                        {b.status !== "COMPLETED" && b.status === "CONFIRMED" && (
-                          <Button
-                            onClick={() => handleUpdateStatus(b.id, "COMPLETED")}
-                            size="sm"
-                            className="h-8 text-xs bg-[#07111F] hover:bg-[#0B1728] text-[#D9B45B] border border-[#C89B3C]/40 rounded-xl font-bold"
-                          >
-                            Complete
-                          </Button>
+
+                        {b.status === "CONFIRMED" && (
+                          <>
+                            <Button
+                              onClick={() => handleUpdateStatus(b.id, "COMPLETED")}
+                              size="sm"
+                              className="h-8 px-3.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+                            >
+                              Complete
+                            </Button>
+                            <Button
+                              onClick={() => handleUpdateStatus(b.id, "CANCELLED")}
+                              size="sm"
+                              variant="outline"
+                              className="h-8 px-3 text-xs text-red-600 bg-red-50/50 hover:bg-red-100/80 border border-red-200 rounded-xl font-semibold cursor-pointer"
+                            >
+                              Cancel
+                            </Button>
+                          </>
                         )}
-                        {b.status !== "CANCELLED" && (
-                          <Button
-                            onClick={() => handleUpdateStatus(b.id, "CANCELLED")}
-                            size="sm"
-                            variant="outline"
-                            className="h-8 text-xs text-[#DC2626] border-[#E8E1D4] hover:bg-red-50 hover:border-red-200 rounded-xl font-medium"
-                          >
-                            Cancel
-                          </Button>
+
+                        {b.status === "COMPLETED" && (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-500/15 text-emerald-800 text-xs font-bold border border-emerald-500/30 cursor-default select-none">
+                            ✓ Completed
+                          </span>
+                        )}
+
+                        {b.status === "CANCELLED" && (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-red-500/15 text-red-700 text-xs font-bold border border-red-500/30 cursor-default select-none">
+                            ✕ Cancelled
+                          </span>
                         )}
                       </div>
                     </td>

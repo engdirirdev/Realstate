@@ -213,32 +213,41 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create a new session if no valid existing session was provided
-    if (!activeSessionId) {
-      const newSession = await prisma.chatSession.create({
-        data: {
-          userId: userId, // null for anonymous guests, or authenticated userId
-          title: message.slice(0, 45).trim() || "New Conversation",
-        },
-      });
-      activeSessionId = newSession.id;
+    // Create a new persistent session only for authenticated users with a userId
+    if (userId && !activeSessionId) {
+      try {
+        const newSession = await prisma.chatSession.create({
+          data: {
+            userId: userId,
+            title: message.slice(0, 45).trim() || "New Conversation",
+          },
+        });
+        activeSessionId = newSession.id;
+      } catch (sessionErr: any) {
+        // Safe logging without crashing Next.js console serializer
+        console.warn("Could not persist ChatSession:", sessionErr?.message || "Unknown error");
+      }
     }
 
-    // Persist USER message
-    await prisma.chatMessage.create({
-      data: {
-        sessionId: activeSessionId,
-        role: "user",
-        content: message.trim(),
-      },
-    }).catch((err) => console.error("Failed to persist user chat message:", err));
+    // Persist USER message if session is active
+    if (activeSessionId) {
+      await prisma.chatMessage.create({
+        data: {
+          sessionId: activeSessionId,
+          role: "user",
+          content: message.trim(),
+        },
+      }).catch((err) => console.error("Failed to persist user chat message:", err));
+    }
 
     // 5. Fetch authentic historical session messages for sliding window multi-turn memory
-    const dbMessages = await prisma.chatMessage.findMany({
-      where: { sessionId: activeSessionId },
-      orderBy: { createdAt: "asc" },
-      take: 20,
-    });
+    const dbMessages = activeSessionId
+      ? await prisma.chatMessage.findMany({
+          where: { sessionId: activeSessionId },
+          orderBy: { createdAt: "asc" },
+          take: 20,
+        })
+      : [];
 
     // 6. Process conversational turn with full context continuity, entity memory, and multilingual support
     const historyToUse = dbMessages.length > 1
@@ -260,7 +269,7 @@ export async function POST(request: NextRequest) {
         }));
 
     const turnResult = await processConversationalTurn({
-      sessionId: activeSessionId,
+      sessionId: activeSessionId ?? (typeof requestedSessionId === "string" && requestedSessionId ? requestedSessionId : `guest-${Date.now()}`),
       message: message.trim(),
       history: historyToUse,
       userName,
@@ -286,8 +295,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 7. Persist ASSISTANT message with full conversation state in metadata
-    await prisma.chatMessage.create({
+    // 7. Persist ASSISTANT message with full conversation state in metadata (authenticated sessions only)
+    if (activeSessionId) await prisma.chatMessage.create({
       data: {
         sessionId: activeSessionId,
         role: "assistant",
@@ -329,8 +338,8 @@ export async function POST(request: NextRequest) {
       activeSearchCriteria: turnResult.activeSearchCriteria,
       referencedPropertyIds: turnResult.referencedPropertyIds,
     });
-  } catch (error) {
-    console.error("AI chat error:", error);
+  } catch (error: any) {
+    console.error("AI chat error:", error?.message || String(error));
     return NextResponse.json(
       { error: "Internal server error", reply: "Sorry, something went wrong while searching the database." },
       { status: 500 }

@@ -15,7 +15,8 @@ import {
   Bot,
   User,
   CreditCard,
-  Settings,
+  Bookmark,
+  Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +40,7 @@ const customerNavGroups: NavGroup[] = [
     items: [
       { href: "/properties", label: "Browse Properties", icon: Building2 },
       { href: "/customer/favorites", label: "Saved Favorites", icon: Heart },
+      { href: "/customer/saved-searches", label: "Saved Searches", icon: Bookmark },
       { href: "/properties/compare", label: "Compare Properties", icon: Sliders },
     ],
   },
@@ -48,6 +50,7 @@ const customerNavGroups: NavGroup[] = [
       { href: "/customer/bookings", label: "My Appointments", icon: Calendar },
       { href: "/customer/inquiries", label: "My Inquiries", icon: MessageSquare },
       { href: "/customer/notifications", label: "Messages & Alerts", icon: Mail },
+      { href: "/customer/reviews", label: "My Reviews", icon: Star },
     ],
   },
   {
@@ -61,9 +64,8 @@ const customerNavGroups: NavGroup[] = [
   {
     title: "ACCOUNT",
     items: [
-      { href: "/customer/profile", label: "My Profile", icon: User },
+      { href: "/customer/profile", label: "My Profile & Settings", icon: User },
       { href: "/customer/payments", label: "Payments", icon: CreditCard },
-      { href: "/customer/profile", label: "Settings", icon: Settings },
     ],
   },
 ];
@@ -81,6 +83,24 @@ export default function CustomerSidebarNav() {
             </p>
           )}
           {group.items.map(({ href, label, icon: Icon }) => {
+            if (href === "/ai-assistant") {
+              return (
+                <button
+                  key={label + href}
+                  type="button"
+                  onClick={() => {
+                    if (typeof window !== "undefined") {
+                      window.dispatchEvent(new Event("open-ai-chat"));
+                    }
+                  }}
+                  className="w-full text-left group flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 text-white/80 hover:text-white hover:bg-white/5 active:bg-white/10 cursor-pointer"
+                >
+                  <Icon className="h-4 w-4 flex-shrink-0 transition-transform duration-200 text-[#D9B45B] group-hover:text-[#F3D78A] group-hover:scale-110" />
+                  <span className="truncate">{label}</span>
+                </button>
+              );
+            }
+
             const isActive = pathname === href || (label === "Dashboard" && pathname === "/customer");
             return (
               <Link

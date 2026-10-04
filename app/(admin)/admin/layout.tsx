@@ -2,14 +2,10 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import Link from "next/link";
 import Image from "next/image";
-import { LogOut, Settings } from "lucide-react";
+import { Settings } from "lucide-react";
 import AdminSidebarNav from "./AdminSidebarNav";
 import AdminHeader from "@/components/admin/AdminHeader";
-<<<<<<< HEAD
-=======
-import BrandLogo from "@/components/layout/BrandLogo";
 import SidebarSignOutButton from "@/components/layout/SidebarSignOutButton";
->>>>>>> 772e50c8fa5f6db9761a497c04520b18a979dfb3
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminLayout({
@@ -84,17 +80,7 @@ export default async function AdminLayout({
             </Link>
           </div>
 
-<<<<<<< HEAD
-          <Link
-            href="/api/auth/signout"
-            className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-rose-400 hover:bg-white/5 transition-all w-full"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            <span>Sign Out</span>
-          </Link>
-=======
           <SidebarSignOutButton />
->>>>>>> 772e50c8fa5f6db9761a497c04520b18a979dfb3
         </div>
       </aside>
 

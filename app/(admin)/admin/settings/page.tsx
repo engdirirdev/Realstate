@@ -2,12 +2,13 @@
 // PAGE NAME  : Admin Dashboard — System Settings
 // ROUTE      : /admin/settings
 // DESCRIPTION: Platform configuration and system parameters
+//              Kiro-Maal Real Estate Master Design System
 // ROLE       : ADMIN
 // ================================================================
 "use client";
 
 import { useState, useEffect } from "react";
-import { Settings, Save, ShieldCheck, Mail, Globe, Cpu, Loader2 } from "lucide-react";
+import { Settings, Save, ShieldCheck, Mail, Globe, Cpu, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,8 +19,8 @@ export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
-    site_name: "AI RealEstate Somalia",
-    contact_email: "support@realestate.so",
+    site_name: "Kiro-Maal Real Estate",
+    contact_email: "support@kiromaal.com",
     currency: "USD",
     auto_approve_properties: false,
     enable_ai_chat: true,
@@ -77,64 +78,67 @@ export default function AdminSettingsPage() {
   };
 
   return (
-    <div className="space-y-6 bg-[#F8FAFC] min-h-screen p-6">
+    <div className="space-y-6 bg-[#F7F3EA] min-h-screen p-6 sm:p-8">
       <div>
-        <h1 className="text-2xl font-bold text-[#0F172A] flex items-center gap-2 tracking-tight">
-          <Settings className="h-6 w-6 text-[#10B981]" /> System Settings
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FCFBF7] border border-[#C89B3C]/30 text-[#A97918] text-xs font-semibold uppercase tracking-wider mb-2 shadow-xs">
+          <Sparkles className="w-3.5 h-3.5 text-[#C89B3C]" /> Core Configuration
+        </div>
+        <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#07111F] flex items-center gap-2.5">
+          <Settings className="h-7 w-7 text-[#C89B3C]" /> System Architecture &amp; Governance
         </h1>
-        <p className="text-[#64748B] text-sm mt-1">Configure global application parameters, AI settings, and security policies.</p>
+        <p className="text-[#6B7280] text-sm mt-1">Configure global platform parameters, AI model endpoints, and validation controls.</p>
       </div>
 
       {loading ? (
-        <div className="p-12 text-center text-[#64748B] flex flex-col items-center justify-center gap-3">
-          <Loader2 className="h-6 w-6 animate-spin text-[#10B981]" />
-          <p className="text-sm font-medium">Loading settings...</p>
+        <div className="p-16 text-center text-[#6B7280] flex flex-col items-center justify-center gap-3 max-w-lg mx-auto bg-[#FCFBF7] rounded-2xl border border-[#E8E1D4]">
+          <Loader2 className="h-8 w-8 animate-spin text-[#C89B3C]" />
+          <p className="text-sm font-medium">Loading system configurations...</p>
         </div>
       ) : (
         <form onSubmit={handleSave} className="space-y-6 max-w-2xl">
-          <div className="bg-white p-6 rounded-2xl shadow-card border border-[#E2E8F0] space-y-4">
-            <h2 className="text-base font-bold text-[#0F172A] flex items-center gap-2 border-b border-[#E2E8F0] pb-3">
-              <Globe className="h-4 w-4 text-[#10B981]" /> General Settings
+          <div className="bg-[#FCFBF7] p-6 rounded-2xl shadow-sm border border-[#E8E1D4] space-y-4">
+            <h2 className="text-base font-serif font-bold text-[#07111F] flex items-center gap-2 border-b border-[#E8E1D4] pb-3">
+              <Globe className="h-4 w-4 text-[#C89B3C]" /> General Brand Parameters
             </h2>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[#0F172A]">Platform Name</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">Platform Brand Name</Label>
               <Input
                 value={form.site_name}
                 onChange={(e) => setForm((p) => ({ ...p, site_name: e.target.value }))}
-                className="rounded-xl"
+                className="rounded-xl border-[#E8E1D4] bg-white focus:border-[#C89B3C] focus:ring-1 focus:ring-[#C89B3C]"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[#0F172A]">Support Contact Email</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">Concierge Email</Label>
               <Input
                 type="email"
                 value={form.contact_email}
                 onChange={(e) => setForm((p) => ({ ...p, contact_email: e.target.value }))}
-                className="rounded-xl"
+                className="rounded-xl border-[#E8E1D4] bg-white focus:border-[#C89B3C] focus:ring-1 focus:ring-[#C89B3C]"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[#0F172A]">Default Platform Currency</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">Default Settlement Currency</Label>
               <Input
                 value={form.currency}
                 onChange={(e) => setForm((p) => ({ ...p, currency: e.target.value }))}
-                className="rounded-xl font-mono"
+                className="rounded-xl font-mono border-[#E8E1D4] bg-white focus:border-[#C89B3C] focus:ring-1 focus:ring-[#C89B3C]"
               />
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-2xl shadow-card border border-[#E2E8F0] space-y-4">
-            <h2 className="text-base font-bold text-[#0F172A] flex items-center gap-2 border-b border-[#E2E8F0] pb-3">
-              <ShieldCheck className="h-4 w-4 text-[#10B981]" /> Approval &amp; AI Security Controls
+          <div className="bg-[#FCFBF7] p-6 rounded-2xl shadow-sm border border-[#E8E1D4] space-y-4">
+            <h2 className="text-base font-serif font-bold text-[#07111F] flex items-center gap-2 border-b border-[#E8E1D4] pb-3">
+              <ShieldCheck className="h-4 w-4 text-[#C89B3C]" /> Approval &amp; AI Security Controls
             </h2>
 
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-bold text-[#0F172A]">Auto-Approve Property Listings</p>
-                <p className="text-xs text-[#64748B]">Bypasses Admin approval workflow when Managers create listings.</p>
+                <p className="text-sm font-semibold text-[#07111F]">Auto-Publish Property Listings</p>
+                <p className="text-xs text-[#6B7280]">Bypasses administrative review workflow when Managers submit properties.</p>
               </div>
               <Switch
                 checked={form.auto_approve_properties}
@@ -142,10 +146,10 @@ export default function AdminSettingsPage() {
               />
             </div>
 
-            <div className="flex items-center justify-between pt-3 border-t border-[#E2E8F0]">
+            <div className="flex items-center justify-between pt-3 border-t border-[#E8E1D4]">
               <div>
-                <p className="text-sm font-bold text-[#0F172A]">Enable Universal AI Floating Chatbot</p>
-                <p className="text-xs text-[#64748B]">Shows AI Real Estate Assistant across all client portals.</p>
+                <p className="text-sm font-semibold text-[#07111F]">Enable Global Floating AI Concierge</p>
+                <p className="text-xs text-[#6B7280]">Displays Kiro-Maal AI Floating Assistant pill across all public and client views.</p>
               </div>
               <Switch
                 checked={form.enable_ai_chat}
@@ -154,7 +158,11 @@ export default function AdminSettingsPage() {
             </div>
           </div>
 
-          <Button type="submit" disabled={saving} className="bg-[#10B981] hover:bg-[#059669] text-white rounded-xl gap-2 font-semibold px-6">
+          <Button
+            type="submit"
+            disabled={saving}
+            className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] hover:brightness-105 rounded-xl gap-2 font-bold px-6 shadow-sm border-0"
+          >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Save Configuration
           </Button>

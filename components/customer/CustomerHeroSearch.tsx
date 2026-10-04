@@ -22,16 +22,16 @@ export default function CustomerHeroSearch() {
   };
 
   return (
-    <form onSubmit={handleSearch} className="bg-white/95 backdrop-blur-md p-2 rounded-2xl shadow-xl border border-white/30 flex flex-col md:flex-row items-center gap-2 max-w-2xl">
+    <form onSubmit={handleSearch} className="bg-[#FCFBF7]/95 backdrop-blur-md p-2.5 rounded-2xl shadow-xl border border-[#E8E1D4] flex flex-col md:flex-row items-center gap-2 max-w-2xl">
       {/* Deal Type Switch */}
-      <div className="flex bg-[#F5F8FC] p-1 rounded-xl w-full md:w-auto">
+      <div className="flex bg-[#F7F3EA] p-1 rounded-xl w-full md:w-auto">
         <button
           type="button"
           onClick={() => setDealType("BUY")}
-          className={`flex-1 md:flex-initial px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+          className={`flex-1 md:flex-initial px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             dealType === "BUY"
-              ? "bg-[#1677FF] text-white shadow-xs"
-              : "text-[#64748B] hover:text-[#0F172A]"
+              ? "bg-gradient-to-r from-[#C89B3C] to-[#D9B45B] text-[#07111F] shadow-xs"
+              : "text-[#6B7280] hover:text-[#07111F]"
           }`}
         >
           Buy
@@ -39,10 +39,10 @@ export default function CustomerHeroSearch() {
         <button
           type="button"
           onClick={() => setDealType("RENT")}
-          className={`flex-1 md:flex-initial px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+          className={`flex-1 md:flex-initial px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             dealType === "RENT"
-              ? "bg-[#1677FF] text-white shadow-xs"
-              : "text-[#64748B] hover:text-[#0F172A]"
+              ? "bg-gradient-to-r from-[#C89B3C] to-[#D9B45B] text-[#07111F] shadow-xs"
+              : "text-[#6B7280] hover:text-[#07111F]"
           }`}
         >
           Rent
@@ -50,12 +50,12 @@ export default function CustomerHeroSearch() {
       </div>
 
       {/* Location */}
-      <div className="w-full md:flex-1 px-2 border-y md:border-y-0 md:border-l border-[#DCE6F2] py-1 md:py-0">
-        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">Location</label>
+      <div className="w-full md:flex-1 px-2 border-y md:border-y-0 md:border-l border-[#E8E1D4] py-1 md:py-0">
+        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#A97918]">Location</label>
         <select
           value={city}
           onChange={(e) => setCity(e.target.value)}
-          className="w-full bg-transparent text-xs font-semibold text-[#0F172A] focus:outline-hidden cursor-pointer"
+          className="w-full bg-transparent text-xs font-bold text-[#07111F] focus:outline-hidden cursor-pointer"
         >
           <option value="">Select location</option>
           <option value="Mogadishu">Mogadishu</option>
@@ -67,12 +67,12 @@ export default function CustomerHeroSearch() {
       </div>
 
       {/* Property Type */}
-      <div className="w-full md:flex-1 px-2 border-y md:border-y-0 md:border-l border-[#DCE6F2] py-1 md:py-0">
-        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">Property Type</label>
+      <div className="w-full md:flex-1 px-2 border-y md:border-y-0 md:border-l border-[#E8E1D4] py-1 md:py-0">
+        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#A97918]">Property Type</label>
         <select
           value={propertyType}
           onChange={(e) => setPropertyType(e.target.value)}
-          className="w-full bg-transparent text-xs font-semibold text-[#0F172A] focus:outline-hidden cursor-pointer"
+          className="w-full bg-transparent text-xs font-bold text-[#07111F] focus:outline-hidden cursor-pointer"
         >
           <option value="">All Types</option>
           <option value="HOUSE">House</option>
@@ -84,12 +84,12 @@ export default function CustomerHeroSearch() {
       </div>
 
       {/* Price Range */}
-      <div className="w-full md:flex-1 px-2 border-y md:border-y-0 md:border-l border-[#DCE6F2] py-1 md:py-0">
-        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">Price Range</label>
+      <div className="w-full md:flex-1 px-2 border-y md:border-y-0 md:border-l border-[#E8E1D4] py-1 md:py-0">
+        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#A97918]">Price Range</label>
         <select
           value={priceRange}
           onChange={(e) => setPriceRange(e.target.value)}
-          className="w-full bg-transparent text-xs font-semibold text-[#0F172A] focus:outline-hidden cursor-pointer"
+          className="w-full bg-transparent text-xs font-bold text-[#07111F] focus:outline-hidden cursor-pointer"
         >
           <option value="">Any Price</option>
           <option value="50000">Under $50k</option>
@@ -102,7 +102,7 @@ export default function CustomerHeroSearch() {
       {/* Submit Button */}
       <button
         type="submit"
-        className="w-full md:w-auto bg-[#1677FF] hover:bg-[#0F5ED7] text-white px-5 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs flex-shrink-0"
+        className="w-full md:w-auto bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] hover:brightness-105 text-[#07111F] px-5 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-[#C89B3C]/20 border border-[#A97918]/30 flex-shrink-0 cursor-pointer"
       >
         <Search className="h-4 w-4" />
         <span>Search</span>

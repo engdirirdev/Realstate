@@ -2,16 +2,17 @@
 // PAGE NAME  : Customer Portal — My Bookings
 // ROUTE      : /customer/bookings
 // DESCRIPTION: View customer property reservations and pay pending
+//              Kiro-Maal Real Estate Master Design System
 // ================================================================
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { Calendar, Building2, MapPin, CreditCard, CheckCircle2, Clock, XCircle, ArrowRight } from "lucide-react";
+import { Calendar, Building2, MapPin, CreditCard, CheckCircle2, Sparkles } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "My Bookings – Customer Portal" };
+export const metadata: Metadata = { title: "My Bookings – Customer Portal | Kiro-Maal Real Estate" };
 
 export default async function CustomerBookingsPage() {
   const session = await auth();
@@ -29,82 +30,111 @@ export default async function CustomerBookingsPage() {
   });
 
   return (
-    <div className="space-y-6 bg-[#F8FAFC]">
+    <div className="space-y-6 max-w-5xl">
       <div>
-        <h1 className="text-2xl font-bold text-[#0F172A] flex items-center gap-2 tracking-tight">
-          <Calendar className="h-6 w-6 text-[#10B981]" /> My Property Reservations
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FCFBF7] border border-[#C89B3C]/30 text-[#A97918] text-xs font-semibold uppercase tracking-wider mb-2 shadow-xs">
+          <Sparkles className="w-3.5 h-3.5 text-[#C89B3C]" /> Reservations &amp; Acquisition
+        </div>
+        <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#07111F] flex items-center gap-2.5">
+          <Calendar className="h-7 w-7 text-[#C89B3C]" /> My Property Reservations
         </h1>
-        <p className="text-[#64748B] text-sm mt-1">{bookings.length} reservations created</p>
+        <p className="text-[#6B7280] text-sm mt-1">{bookings.length} reservations created and tracked in escrow</p>
       </div>
 
       {bookings.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-card border border-[#E2E8F0] p-12 text-center">
-          <Calendar className="h-12 w-12 text-[#94A3B8] mx-auto mb-3" />
-          <h2 className="text-lg font-bold text-[#0F172A]">No bookings or reservations yet</h2>
-          <p className="text-[#64748B] text-sm mt-1 max-w-sm mx-auto mb-6">
-            Find your dream home and click &ldquo;Book / Reserve Property&rdquo; to reserve it.
+        <div className="bg-[#FCFBF7] rounded-2xl shadow-sm border border-[#E8E1D4] p-12 text-center max-w-lg mx-auto">
+          <div className="w-14 h-14 rounded-2xl bg-[#07111F] flex items-center justify-center mx-auto text-[#D9B45B] mb-4 shadow-inner">
+            <Calendar className="h-7 w-7 opacity-80" />
+          </div>
+          <h2 className="text-lg font-serif font-bold text-[#07111F]">No bookings or reservations yet</h2>
+          <p className="text-[#6B7280] text-xs mt-1.5 max-w-sm mx-auto mb-6 leading-relaxed">
+            Find your ideal luxury property and select &ldquo;Book Visit / Reserve&rdquo; to initiate your transaction portfolio.
           </p>
           <Link
             href="/properties"
-            className="inline-flex items-center gap-2 bg-[#10B981] hover:bg-[#059669] text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm"
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] px-6 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm hover:brightness-105"
           >
-            <Building2 className="h-4 w-4" /> Explore Properties
+            <Building2 className="h-4 w-4" /> Explore Exclusive Estates
           </Link>
         </div>
       ) : (
         <div className="space-y-4">
           {bookings.map((b) => (
-            <div key={b.id} className="bg-white rounded-2xl p-6 shadow-card border border-[#E2E8F0] space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E2E8F0] pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-[#E2E8F0] overflow-hidden flex-shrink-0">
+            <div key={b.id} className="bg-[#FCFBF7] rounded-2xl p-5 sm:p-6 shadow-sm border border-[#E8E1D4] space-y-4 hover:border-[#C89B3C]/50 transition-all overflow-hidden">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E8E1D4] pb-4">
+                <div className="flex items-center gap-4 min-w-0 flex-1">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-[#07111F] overflow-hidden shrink-0 border border-[#E8E1D4] relative">
                     {b.property.images[0] ? (
-                      <img src={b.property.images[0].url} alt={b.property.title} className="w-full h-full object-cover" />
+                      <img
+                        src={b.property.images[0].url}
+                        alt={b.property.title}
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-[#94A3B8]">
-                        <Building2 className="h-6 w-6" />
+                      <div className="w-full h-full flex items-center justify-center text-[#D9B45B]/60">
+                        <Building2 className="h-7 w-7" />
                       </div>
                     )}
                   </div>
-                  <div>
-                    <Link href={`/properties/${b.property.id}`} className="font-bold text-[#0F172A] text-base hover:text-[#10B981] transition-colors">
+                  <div className="min-w-0 flex-1">
+                    <Link
+                      href={`/properties/${b.property.id}`}
+                      className="font-serif font-bold text-[#07111F] text-base sm:text-lg hover:text-[#A97918] transition-colors truncate block"
+                    >
                       {b.property.title}
                     </Link>
-                    <p className="text-xs text-[#64748B] flex items-center gap-1 mt-0.5">
-                      <MapPin className="h-3 w-3 text-[#94A3B8]" /> {b.property.city} • <span className="font-bold text-[#059669]">{formatPrice(b.totalPrice)}</span>
+                    <p className="text-xs sm:text-sm text-[#6B7280] flex flex-wrap items-center gap-2 mt-1">
+                      <span className="flex items-center gap-1">
+                        <MapPin className="h-3.5 w-3.5 text-[#C89B3C] shrink-0" /> {b.property.city}
+                      </span>
+                      <span>•</span>
+                      <span className="font-serif font-bold text-[#07111F] text-sm sm:text-base">
+                        {formatPrice(b.totalPrice)}
+                      </span>
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    b.status === "CONFIRMED"
-                      ? "bg-[#D1FAE5] text-[#065F46] border border-[#A7F3D0]"
-                      : b.status === "PENDING"
-                      ? "bg-[#FEF9C3] text-[#92400E] border border-[#FDE68A]"
-                      : "bg-[#FEE2E2] text-[#991B1B] border border-[#FCA5A5]"
-                  }`}>
+                <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+                  <span
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider ${
+                      b.status === "CONFIRMED"
+                        ? "bg-[#07111F] text-[#D9B45B] border border-[#C89B3C]/40 shadow-xs"
+                        : b.status === "PENDING"
+                        ? "bg-amber-50 text-amber-800 border border-amber-200"
+                        : "bg-red-50 text-red-700 border border-red-200"
+                    }`}
+                  >
                     {b.status}
                   </span>
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#64748B]">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#6B7280]">
                 <div>
-                  <p>Booked on: <span className="font-semibold text-[#0F172A]">{new Date(b.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span></p>
-                  {b.notes && <p className="mt-1 text-[#334155]">Notes: &ldquo;{b.notes}&rdquo;</p>}
+                  <p>
+                    Booked on:{" "}
+                    <span className="font-semibold text-[#07111F]">
+                      {new Date(b.createdAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </span>
+                  </p>
+                  {b.notes && <p className="mt-1 text-[#4B5563]">Notes: &ldquo;{b.notes}&rdquo;</p>}
                 </div>
 
                 {b.payments.length > 0 ? (
-                  <div className="flex items-center gap-1.5 font-bold text-[#059669]">
-                    <CheckCircle2 className="h-4 w-4" /> Paid ({b.payments[0].transactionRef})
+                  <div className="inline-flex items-center gap-1.5 font-bold text-[#07111F] bg-[#F7F3EA] px-3.5 py-1.5 rounded-xl border border-[#E8E1D4] shrink-0">
+                    <CheckCircle2 className="h-4 w-4 text-[#C89B3C]" /> Settlement Completed ({b.payments[0].transactionRef})
                   </div>
                 ) : (
                   <Link
                     href="/customer/payments"
-                    className="inline-flex items-center gap-1.5 bg-[#10B981] text-white hover:bg-[#059669] px-4 py-2 rounded-xl text-xs font-semibold shadow-xs"
+                    className="inline-flex items-center gap-1.5 bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] hover:brightness-105 px-4 py-2 rounded-xl text-xs font-bold shadow-xs transition-all shrink-0"
                   >
-                    <CreditCard className="h-3.5 w-3.5" /> Pay {formatPrice(b.totalPrice)} Now
+                    <CreditCard className="h-3.5 w-3.5" /> Settle {formatPrice(b.totalPrice)} Now
                   </Link>
                 )}
               </div>

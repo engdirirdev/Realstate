@@ -5,6 +5,7 @@
 //              [Users / Managers] [Customers], Search by name/email,
 //              Role & Status filters, 👁 View Dashboard button, and
 //              🗑️ Delete User / Delete Customer action button
+//              Kiro-Maal Real Estate Master Design System
 // ROLE       : ADMIN only
 // ================================================================
 "use client";
@@ -13,7 +14,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Users, Search, Filter, Mail, Phone, Calendar, Shield, UserPlus,
-  Eye, CheckCircle2, AlertTriangle, ShieldCheck, Loader2, UserX, UserCheck, Trash2
+  Eye, CheckCircle2, AlertTriangle, ShieldCheck, Loader2, UserX, UserCheck, Trash2, Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -162,21 +163,24 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <div className="space-y-6 bg-[#F8FAFC] min-h-screen p-6">
+    <div className="space-y-6 bg-[#F7F3EA] min-h-screen p-6 sm:p-8">
       {/* Header with Create Button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#0F172A] flex items-center gap-2 tracking-tight">
-            <Users className="h-6 w-6 text-[#10B981]" /> Manage Users &amp; Accounts
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FCFBF7] border border-[#C89B3C]/30 text-[#A97918] text-xs font-semibold uppercase tracking-wider mb-2 shadow-xs">
+            <Sparkles className="w-3.5 h-3.5 text-[#C89B3C]" /> Identity &amp; Access Governance
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#07111F] flex items-center gap-2.5">
+            <Users className="h-7 w-7 text-[#C89B3C]" /> User Accounts &amp; Access Directory
           </h1>
-          <p className="text-[#64748B] text-sm mt-1">
-            Search, filter by role, activate/suspend accounts, inspect dashboards, or delete users and customers.
+          <p className="text-[#6B7280] text-sm mt-1">
+            Search, filter by role, manage privileges, inspect account activity, or manage registrations.
           </p>
         </div>
 
         <Button
           onClick={() => setModalOpen(true)}
-          className="bg-[#10B981] hover:bg-[#059669] text-white gap-2 shadow-sm rounded-xl font-semibold self-start sm:self-auto"
+          className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] hover:brightness-105 gap-2 shadow-sm rounded-xl font-bold self-start sm:self-auto border-0"
         >
           <UserPlus className="h-4 w-4" /> Create New Account
         </Button>
@@ -189,42 +193,45 @@ export default function AdminUsersPage() {
           { key: "ADMIN", label: "Admins" },
           { key: "USER", label: "Users / Managers" },
           { key: "CUSTOMER", label: "Customers" },
-        ].map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key as any)}
-            className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-xs border ${
-              activeTab === tab.key
-                ? "bg-[#0F172A] text-white border-[#0F172A]"
-                : "bg-white text-[#64748B] border-[#E2E8F0] hover:bg-[#F1F5F9] hover:text-[#0F172A]"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+        ].map((tab) => {
+          const isActive = activeTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key as any)}
+              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold uppercase tracking-wider transition-all shadow-xs border ${
+                isActive
+                  ? "bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] border-transparent"
+                  : "bg-[#FCFBF7] text-[#6B7280] border-[#E8E1D4] hover:bg-[#F7F3EA] hover:text-[#07111F]"
+              }`}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* ── Search & Filter Controls ── */}
-      <div className="bg-white p-4 rounded-2xl shadow-card border border-[#E2E8F0] flex flex-col md:flex-row items-center justify-between gap-4">
+      <div className="bg-[#FCFBF7] p-4 rounded-2xl shadow-sm border border-[#E8E1D4] flex flex-col md:flex-row items-center justify-between gap-4">
         {/* Search Bar */}
         <div className="relative w-full md:w-80">
-          <Search className="absolute left-3.5 top-3 h-4 w-4 text-[#94A3B8]" />
+          <Search className="absolute left-3.5 top-3 h-4 w-4 text-[#C89B3C]" />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by name, email, or phone..."
-            className="pl-10 h-10 border-[#E2E8F0] rounded-xl text-xs sm:text-sm bg-[#F8FAFC]"
+            className="pl-10 h-10 border-[#E8E1D4] rounded-xl text-xs sm:text-sm bg-white text-[#07111F] focus:border-[#C89B3C] focus:ring-1 focus:ring-[#C89B3C]"
           />
         </div>
 
         {/* Status Filter */}
         <div className="flex items-center gap-2 w-full md:w-auto">
-          <span className="text-xs font-semibold text-[#64748B]">Account Status:</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-[#6B7280]">Account Status:</span>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-10 border-[#E2E8F0] rounded-xl bg-white text-xs text-[#0F172A] w-[160px]">
+            <SelectTrigger className="h-10 border-[#E8E1D4] rounded-xl bg-white text-xs font-semibold text-[#07111F] w-[160px] focus:ring-1 focus:ring-[#C89B3C]">
               <SelectValue placeholder="Status Filter" />
             </SelectTrigger>
-            <SelectContent className="bg-white border-[#E2E8F0]">
+            <SelectContent className="bg-[#FCFBF7] border-[#E8E1D4]">
               <SelectItem value="ALL">All Statuses</SelectItem>
               <SelectItem value="ACTIVE">Active Accounts</SelectItem>
               <SelectItem value="INACTIVE">Suspended Accounts</SelectItem>
@@ -234,95 +241,95 @@ export default function AdminUsersPage() {
       </div>
 
       {/* ── Users Table ── */}
-      <div className="bg-white rounded-2xl shadow-card border border-[#E2E8F0] overflow-hidden">
+      <div className="bg-[#FCFBF7] rounded-2xl shadow-sm border border-[#E8E1D4] overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-[#64748B] flex flex-col items-center justify-center gap-3">
-            <Loader2 className="h-6 w-6 animate-spin text-[#10B981]" />
+          <div className="p-12 text-center text-[#6B7280] flex flex-col items-center justify-center gap-3">
+            <Loader2 className="h-6 w-6 animate-spin text-[#C89B3C]" />
             <p className="text-sm font-medium">Loading user accounts...</p>
           </div>
         ) : users.length === 0 ? (
-          <div className="p-12 text-center text-[#94A3B8]">
-            <Users className="h-10 w-10 mx-auto mb-2 opacity-30" />
-            <p className="font-semibold text-[#0F172A]">No user accounts found matching criteria.</p>
-            <p className="text-xs text-[#64748B] mt-1">Try adjusting your search query or role filter.</p>
+          <div className="p-12 text-center text-[#9CA3AF]">
+            <Users className="h-10 w-10 mx-auto mb-2 text-[#C89B3C]/40" />
+            <p className="font-semibold text-[#07111F]">No user accounts found matching criteria.</p>
+            <p className="text-xs text-[#6B7280] mt-1">Try adjusting your search query or role filter.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
+              <thead className="bg-[#F7F3EA] border-b border-[#E8E1D4]">
                 <tr>
-                  <th className="text-left px-5 py-3.5 font-semibold text-[#64748B]">User Account</th>
-                  <th className="text-left px-4 py-3.5 font-semibold text-[#64748B]">Contact Info</th>
-                  <th className="text-left px-4 py-3.5 font-semibold text-[#64748B]">Role</th>
-                  <th className="text-left px-4 py-3.5 font-semibold text-[#64748B]">Activity Summary</th>
-                  <th className="text-left px-4 py-3.5 font-semibold text-[#64748B]">Joined Date</th>
-                  <th className="text-left px-4 py-3.5 font-semibold text-[#64748B]">Account Status</th>
-                  <th className="text-right px-5 py-3.5 font-semibold text-[#64748B]">Admin Actions</th>
+                  <th className="text-left px-5 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">User Account</th>
+                  <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">Contact Info</th>
+                  <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">Role</th>
+                  <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">Activity Summary</th>
+                  <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">Joined Date</th>
+                  <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">Account Status</th>
+                  <th className="text-right px-5 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">Admin Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E2E8F0]">
+              <tbody className="divide-y divide-[#E8E1D4]">
                 {users.map((user) => (
-                  <tr key={user.id} className="hover:bg-[#F8FAFC] transition-colors">
+                  <tr key={user.id} className="hover:bg-[#F7F3EA]/50 transition-colors">
                     {/* Avatar & Name */}
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-xs ${
+                        <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-xs shadow-inner ${
                           user.role === "ADMIN"
-                            ? "bg-[#0F172A] text-[#10B981]"
+                            ? "bg-[#07111F] text-[#D9B45B] border border-[#C89B3C]/40"
                             : user.role === "USER"
-                            ? "bg-[#10B981] text-white"
-                            : "bg-[#ECFEFF] text-[#0891B2]"
+                            ? "bg-gradient-to-r from-[#C89B3C] to-[#D9B45B] text-[#07111F]"
+                            : "bg-[#F7F3EA] text-[#07111F] border border-[#E8E1D4]"
                         }`}>
                           {user.name?.charAt(0).toUpperCase() || "?"}
                         </div>
                         <div>
-                          <p className="font-bold text-[#0F172A]">{user.name || "Unnamed User"}</p>
-                          <p className="text-[10px] text-[#94A3B8] font-mono">ID: {user.id.slice(0, 10)}...</p>
+                          <p className="font-semibold text-[#07111F]">{user.name || "Unnamed User"}</p>
+                          <p className="text-[10px] text-[#6B7280] font-mono">ID: {user.id.slice(0, 10)}...</p>
                         </div>
                       </div>
                     </td>
 
                     {/* Email & Phone */}
                     <td className="px-4 py-4">
-                      <p className="text-[#0F172A] flex items-center gap-1.5 text-xs font-medium">
-                        <Mail className="h-3.5 w-3.5 text-[#64748B]" /> {user.email}
+                      <p className="text-[#07111F] flex items-center gap-1.5 text-xs font-medium">
+                        <Mail className="h-3.5 w-3.5 text-[#C89B3C]" /> {user.email}
                       </p>
                       {user.phone && (
-                        <p className="text-[#64748B] flex items-center gap-1.5 text-xs mt-0.5">
-                          <Phone className="h-3.5 w-3.5" /> {user.phone}
+                        <p className="text-[#6B7280] flex items-center gap-1.5 text-xs mt-0.5">
+                          <Phone className="h-3.5 w-3.5 text-[#C89B3C]" /> {user.phone}
                         </p>
                       )}
                     </td>
 
                     {/* Role Badge */}
                     <td className="px-4 py-4">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
                         user.role === "ADMIN"
-                          ? "bg-[#0F172A] text-[#34D399]"
+                          ? "bg-[#07111F] text-[#D9B45B] border border-[#C89B3C]/30"
                           : user.role === "USER"
-                          ? "bg-[#D1FAE5] text-[#065F46] border border-[#A7F3D0]"
-                          : "bg-[#F1F5F9] text-[#334155]"
+                          ? "bg-[#FCFBF7] text-[#A97918] border border-[#C89B3C]/40"
+                          : "bg-[#F7F3EA] text-[#6B7280] border border-[#E8E1D4]"
                       }`}>
-                        {user.role === "ADMIN" && <ShieldCheck className="h-3.5 w-3.5 text-[#10B981]" />}
+                        {user.role === "ADMIN" && <ShieldCheck className="h-3.5 w-3.5 text-[#D9B45B]" />}
                         {user.role === "USER" ? "USER / MANAGER" : user.role}
                       </span>
                     </td>
 
                     {/* Activity Summary */}
-                    <td className="px-4 py-4 text-xs font-medium text-[#64748B]">
+                    <td className="px-4 py-4 text-xs font-medium text-[#6B7280]">
                       {user.role === "USER" ? (
-                        <span className="font-bold text-[#10B981]">🏢 {user._count.managedProperties} Properties Listed</span>
+                        <span className="font-bold text-[#07111F]">🏢 {user._count.managedProperties} Properties Listed</span>
                       ) : user.role === "CUSTOMER" ? (
                         <div className="space-y-0.5">
                           <span>❤️ {user._count.favorites} Favorites</span> • <span>💳 {user._count.customerBookings} Bookings</span>
                         </div>
                       ) : (
-                        <span className="font-bold text-[#0F172A]">🛡️ Administrator</span>
+                        <span className="font-bold text-[#A97918]">🛡️ Platform Administrator</span>
                       )}
                     </td>
 
                     {/* Join Date */}
-                    <td className="px-4 py-4 text-[#64748B] text-xs">
+                    <td className="px-4 py-4 text-[#6B7280] text-xs">
                       {new Date(user.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                     </td>
 
@@ -330,10 +337,10 @@ export default function AdminUsersPage() {
                     <td className="px-4 py-4">
                       <button
                         onClick={() => handleToggleActive(user.id, user.isActive)}
-                        className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors ${
+                        className={`px-2.5 py-1 rounded-full text-xs font-bold border transition-colors ${
                           user.isActive
-                            ? "bg-[#D1FAE5] text-[#065F46] border-[#A7F3D0]"
-                            : "bg-[#FEE2E2] text-[#991B1B] border-[#FCA5A5]"
+                            ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                            : "bg-red-50 text-red-700 border-red-200"
                         }`}
                       >
                         {user.isActive ? "Active" : "Suspended"}
@@ -345,15 +352,15 @@ export default function AdminUsersPage() {
                       <div className="flex items-center justify-end gap-2">
                         <Link
                           href={`/admin/users/${user.id}`}
-                          className="inline-flex items-center gap-1.5 bg-[#0F172A] hover:bg-[#1E293B] text-white text-xs font-semibold px-3 py-2 rounded-xl transition-all shadow-xs"
+                          className="inline-flex items-center gap-1.5 bg-[#07111F] hover:bg-[#0B1728] text-white text-xs font-semibold px-3 py-2 rounded-xl transition-all shadow-xs border border-[#C89B3C]/30"
                         >
-                          <Eye className="h-3.5 w-3.5 text-[#10B981]" /> View
+                          <Eye className="h-3.5 w-3.5 text-[#D9B45B]" /> View
                         </Link>
                         <Button
                           onClick={() => handleOpenDelete(user)}
                           variant="outline"
                           size="sm"
-                          className="h-9 w-9 p-0 border-[#FCA5A5] text-[#DC2626] hover:bg-[#FEE2E2] hover:text-[#991B1B] rounded-xl flex items-center justify-center"
+                          className="h-9 w-9 p-0 border-[#E8E1D4] text-[#DC2626] bg-[#FCFBF7] hover:bg-red-50 hover:border-red-200 rounded-xl flex items-center justify-center transition-colors"
                           title="Delete User Account"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -370,24 +377,24 @@ export default function AdminUsersPage() {
 
       {/* ─── Modal 1: Create Account ─── */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-md bg-white rounded-2xl p-6 shadow-xl border border-[#E2E8F0]">
+        <DialogContent className="max-w-md bg-[#FCFBF7] rounded-2xl p-6 shadow-xl border border-[#E8E1D4]">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#0F172A] flex items-center gap-2">
-              <UserPlus className="h-5 w-5 text-[#10B981]" /> Create New Account
+            <DialogTitle className="text-xl font-serif font-bold text-[#07111F] flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-[#C89B3C]" /> Create New Account
             </DialogTitle>
-            <DialogDescription className="text-xs text-[#64748B]">
-              Add a new account directly from Admin control panel.
+            <DialogDescription className="text-xs text-[#6B7280]">
+              Register an account directly with assigned role and credentials.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleCreateUser} className="space-y-4 mt-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[#0F172A]">Account Role</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">Account Role</Label>
               <Select value={form.role} onValueChange={(val) => setForm((p) => ({ ...p, role: val as any }))}>
-                <SelectTrigger className="h-10 border-[#E2E8F0] rounded-xl bg-white text-[#0F172A]">
+                <SelectTrigger className="h-10 border-[#E8E1D4] rounded-xl bg-white text-[#07111F] text-xs">
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
-                <SelectContent className="bg-white border-[#E2E8F0]">
+                <SelectContent className="bg-[#FCFBF7] border-[#E8E1D4]">
                   <SelectItem value="CUSTOMER">CUSTOMER (End Buyer / Renter)</SelectItem>
                   <SelectItem value="USER">USER / MANAGER (Property Agent)</SelectItem>
                   <SelectItem value="ADMIN">ADMIN (System Administrator)</SelectItem>
@@ -396,55 +403,59 @@ export default function AdminUsersPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[#0F172A]">Full Name</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">Full Name</Label>
               <Input
                 value={form.name}
                 onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
                 placeholder="e.g. Mohamed Ali"
-                className="h-10 border-[#E2E8F0] rounded-xl text-sm"
+                className="h-10 border-[#E8E1D4] bg-white rounded-xl text-sm focus:border-[#C89B3C] focus:ring-1 focus:ring-[#C89B3C]"
                 required
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[#0F172A]">Email Address</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">Email Address</Label>
               <Input
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-                placeholder="user@realestate.so"
-                className="h-10 border-[#E2E8F0] rounded-xl text-sm"
+                placeholder="user@kiromaal.com"
+                className="h-10 border-[#E8E1D4] bg-white rounded-xl text-sm focus:border-[#C89B3C] focus:ring-1 focus:ring-[#C89B3C]"
                 required
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[#0F172A]">Phone Number</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">Phone Number</Label>
               <Input
                 value={form.phone}
                 onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
                 placeholder="+252 61 000 0000"
-                className="h-10 border-[#E2E8F0] rounded-xl text-sm"
+                className="h-10 border-[#E8E1D4] bg-white rounded-xl text-sm focus:border-[#C89B3C] focus:ring-1 focus:ring-[#C89B3C]"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[#0F172A]">Password</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">Password</Label>
               <Input
                 type="password"
                 value={form.password}
                 onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
                 placeholder="••••••••"
-                className="h-10 border-[#E2E8F0] rounded-xl text-sm"
+                className="h-10 border-[#E8E1D4] bg-white rounded-xl text-sm focus:border-[#C89B3C] focus:ring-1 focus:ring-[#C89B3C]"
                 required
               />
             </div>
 
-            <DialogFooter className="pt-3">
-              <Button type="button" variant="outline" onClick={() => setModalOpen(false)} className="rounded-xl">
+            <DialogFooter className="pt-3 gap-2">
+              <Button type="button" variant="outline" onClick={() => setModalOpen(false)} className="rounded-xl border-[#E8E1D4] text-[#07111F] hover:bg-[#F7F3EA]">
                 Cancel
               </Button>
-              <Button type="submit" disabled={submitting} className="bg-[#10B981] hover:bg-[#059669] text-white rounded-xl">
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] font-bold hover:brightness-105 rounded-xl border-0 shadow-sm"
+              >
                 {submitting ? "Creating..." : "Create Account"}
               </Button>
             </DialogFooter>
@@ -454,28 +465,28 @@ export default function AdminUsersPage() {
 
       {/* ─── Modal 2: Delete User Confirmation ─── */}
       <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
-        <DialogContent className="max-w-md bg-white rounded-2xl p-6 shadow-xl border border-[#E2E8F0]">
+        <DialogContent className="max-w-md bg-[#FCFBF7] rounded-2xl p-6 shadow-xl border border-[#E8E1D4]">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#991B1B] flex items-center gap-2">
+            <DialogTitle className="text-xl font-serif font-bold text-[#07111F] flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-[#DC2626]" /> Confirm Delete Account
             </DialogTitle>
-            <DialogDescription className="text-xs text-[#64748B]">
-              Are you sure you want to permanently delete account for <span className="font-bold text-[#0F172A]">{userToDelete?.name || userToDelete?.email}</span>?
+            <DialogDescription className="text-xs text-[#6B7280]">
+              Are you sure you want to permanently delete account for <span className="font-bold text-[#07111F]">{userToDelete?.name || userToDelete?.email}</span>?
             </DialogDescription>
           </DialogHeader>
 
-          <div className="bg-[#FEE2E2] p-4 rounded-xl border border-[#FCA5A5] text-xs text-[#991B1B] my-2">
+          <div className="bg-red-50 p-4 rounded-xl border border-red-200 text-xs text-red-700 my-2">
             ⚠️ Warning: Deleting this account will permanently remove all associated user data from the database. This action cannot be undone.
           </div>
 
-          <DialogFooter className="pt-2">
-            <Button variant="outline" onClick={() => setDeleteModalOpen(false)} className="rounded-xl">
+          <DialogFooter className="pt-2 gap-2">
+            <Button variant="outline" onClick={() => setDeleteModalOpen(false)} className="rounded-xl border-[#E8E1D4] text-[#07111F] hover:bg-[#F7F3EA]">
               Cancel
             </Button>
             <Button
               onClick={handleConfirmDelete}
               disabled={deleting}
-              className="bg-[#DC2626] hover:bg-[#B91C1C] text-white rounded-xl gap-2 font-semibold"
+              className="bg-[#DC2626] hover:bg-[#B91C1C] text-white rounded-xl gap-2 font-semibold border-0"
             >
               {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               Delete Account Permanently

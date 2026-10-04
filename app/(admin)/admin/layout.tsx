@@ -28,24 +28,18 @@ export default async function AdminLayout({
     <div className="min-h-screen bg-[#F5EFEB] flex font-sans">
       {/* ─── Sidebar (Dark Navy #0B1523 Matching Reference) ─── */}
       <aside className="hidden lg:flex w-64 flex-col bg-[#0B1523] border-r border-[#1B2738] fixed inset-y-0 left-0 z-30 shadow-2xl">
-        {/* Top Kiro-Maal Logo Brand Header */}
-        <div className="py-6 px-4 flex flex-col items-center justify-center text-center border-b border-[#1B2738]">
-          <Link href="/admin" className="flex flex-col items-center group">
-            <div className="w-16 h-16 relative mb-1.5 transition-transform group-hover:scale-105">
+        {/* Top Kiro-Maal Logo Brand Header (Seamless Deep Navy with Gold Emblem) */}
+        <div className="pt-5 pb-3 px-4 flex flex-col items-center justify-center text-center border-b border-[#1B2738]/80 bg-[#0B1523]">
+          <Link href="/admin" className="flex flex-col items-center group w-full">
+            <div className="w-full h-32 relative transition-transform duration-200 group-hover:scale-[1.02]">
               <Image
-                src="/images/kiro_maal_logo.png"
+                src="/images/kiro_maal_logo_dark.png"
                 alt="Kiro-Maal Real Estate"
                 fill
                 className="object-contain"
                 priority
               />
             </div>
-            <span className="font-extrabold text-lg text-[#E8B849] tracking-tight font-serif">
-              Kiro-Maal
-            </span>
-            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.16em]">
-              Real Estate
-            </span>
           </Link>
         </div>
 

@@ -4,11 +4,12 @@
 // DESCRIPTION: ML-powered property price estimator — user inputs
 //              city, type, bedrooms, area and gets predicted price
 //              with confidence interval and market insights
+//              Kiro-Maal Real Estate Master Design System
 // ================================================================
 "use client";
 
 import { useState } from "react";
-import { BarChart3, Brain, Loader2, TrendingUp, AlertCircle, CheckCircle2, Info } from "lucide-react";
+import { BarChart3, Brain, Loader2, TrendingUp, AlertCircle, CheckCircle2, Info, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatPrice, getPropertyTypeLabel } from "@/lib/utils";
 
@@ -68,85 +69,122 @@ export default function PricePredictionPage() {
     }
   };
 
-  const confidenceColor = result
-    ? result.confidence >= 75 ? "text-[#10B981]" : result.confidence >= 50 ? "text-yellow-600" : "text-red-600"
-    : "";
-
   return (
-    <div className="section-container py-12 bg-[#F8FAFC] min-h-screen">
-      <div className="max-w-4xl mx-auto">
+    <div className="py-12 bg-[#F7F3EA] min-h-screen">
+      <div className="section-container max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 bg-[#ECFEFF] text-[#0891B2] px-4 py-2 rounded-full text-sm font-medium mb-3">
-            <Brain className="h-4 w-4" /> Machine Learning Model
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#07111F] border border-[#C89B3C]/30 text-[#D9B45B] text-xs font-semibold uppercase tracking-wider mb-3 shadow-sm">
+            <Sparkles className="h-3.5 w-3.5 text-[#C89B3C]" /> Kiro-Maal Valuation Model
           </div>
-          <h1 className="font-display text-3xl font-bold text-[#0F172A]">AI Price Prediction</h1>
-          <p className="text-[#64748B] mt-2">
-            Enter property details to get an estimated market price using our TensorFlow.js ML model
+          <h1 className="font-serif text-3xl sm:text-4xl font-bold text-[#07111F]">AI Property Valuation Index</h1>
+          <p className="text-[#6B7280] text-sm sm:text-base mt-2 max-w-xl mx-auto">
+            Input architectural parameters to receive real-time estimated market prices powered by our Somalia machine learning engine.
           </p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-8">
           {/* Form */}
-          <div className="bg-white rounded-2xl shadow-card border border-[#E2E8F0] p-6 space-y-5">
-            <h2 className="font-semibold text-[#0F172A] flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-[#10B981]" /> Property Details
+          <div className="bg-[#FCFBF7] rounded-2xl shadow-sm border border-[#E8E1D4] p-6 space-y-5">
+            <h2 className="font-serif font-bold text-[#07111F] text-lg flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-[#C89B3C]" /> Property Specifications
             </h2>
 
             <div>
-              <label className="block text-sm font-medium text-[#0F172A] mb-1.5">City *</label>
-              <select name="city" value={form.city} onChange={handleChange} className="w-full px-4 py-2 rounded-xl border border-[#E2E8F0] bg-white focus:outline-none focus:ring-2 focus:ring-[#10B981]">
-                <option value="">Select city...</option>
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#07111F] mb-1.5">City *</label>
+              <select
+                name="city"
+                value={form.city}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-sm focus:outline-none focus:ring-1 focus:ring-[#C89B3C] focus:border-[#C89B3C] transition-colors"
+              >
+                <option value="">Select market city...</option>
                 {CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[#0F172A] mb-1.5">Property Type</label>
-              <select name="type" value={form.type} onChange={handleChange} className="w-full px-4 py-2 rounded-xl border border-[#E2E8F0] bg-white focus:outline-none focus:ring-2 focus:ring-[#10B981]">
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#07111F] mb-1.5">Property Type</label>
+              <select
+                name="type"
+                value={form.type}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-sm focus:outline-none focus:ring-1 focus:ring-[#C89B3C] focus:border-[#C89B3C] transition-colors"
+              >
                 {TYPES.map((t) => <option key={t} value={t}>{getPropertyTypeLabel(t)}</option>)}
               </select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-[#0F172A] mb-1.5">Bedrooms</label>
-                <input name="bedrooms" type="number" min={0} max={10} value={form.bedrooms} onChange={handleChange} className="w-full px-4 py-2 rounded-xl border border-[#E2E8F0] focus:outline-none focus:ring-2 focus:ring-[#10B981]" />
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#07111F] mb-1.5">Bedrooms</label>
+                <input
+                  name="bedrooms"
+                  type="number"
+                  min={0}
+                  max={10}
+                  value={form.bedrooms}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2.5 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-sm focus:outline-none focus:ring-1 focus:ring-[#C89B3C] focus:border-[#C89B3C]"
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[#0F172A] mb-1.5">Bathrooms</label>
-                <input name="bathrooms" type="number" min={0} max={10} value={form.bathrooms} onChange={handleChange} className="w-full px-4 py-2 rounded-xl border border-[#E2E8F0] focus:outline-none focus:ring-2 focus:ring-[#10B981]" />
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#07111F] mb-1.5">Bathrooms</label>
+                <input
+                  name="bathrooms"
+                  type="number"
+                  min={0}
+                  max={10}
+                  value={form.bathrooms}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2.5 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-sm focus:outline-none focus:ring-1 focus:ring-[#C89B3C] focus:border-[#C89B3C]"
+                />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[#0F172A] mb-1.5">Area (m²)</label>
-              <input name="area" type="number" min={10} max={5000} value={form.area} onChange={handleChange} className="w-full px-4 py-2 rounded-xl border border-[#E2E8F0] focus:outline-none focus:ring-2 focus:ring-[#10B981]" />
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#07111F] mb-1.5">Floor Area (m²)</label>
+              <input
+                name="area"
+                type="number"
+                min={10}
+                max={5000}
+                value={form.area}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-sm focus:outline-none focus:ring-1 focus:ring-[#C89B3C] focus:border-[#C89B3C]"
+              />
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 pt-1">
               <input
                 id="isFurnished"
                 name="isFurnished"
                 type="checkbox"
                 checked={form.isFurnished}
                 onChange={handleChange}
-                className="w-4 h-4 accent-[#10B981]"
+                className="w-4 h-4 accent-[#C89B3C] rounded cursor-pointer"
               />
-              <label htmlFor="isFurnished" className="text-sm text-[#0F172A]">Property is furnished (+15% value)</label>
+              <label htmlFor="isFurnished" className="text-sm font-medium text-[#07111F] cursor-pointer">
+                Furnished luxury interior (+15% valuation)
+              </label>
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 px-4 py-3 rounded-xl">
+              <div className="flex items-center gap-2 text-red-600 text-xs bg-red-50 border border-red-200 px-4 py-3 rounded-xl">
                 <AlertCircle className="h-4 w-4 flex-shrink-0" /> {error}
               </div>
             )}
 
-            <Button onClick={predict} disabled={loading} className="w-full bg-[#10B981] text-white hover:bg-[#059669] rounded-xl border-0" size="lg">
+            <Button
+              onClick={predict}
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] font-bold hover:brightness-105 rounded-xl border-0 shadow-sm transition-all"
+              size="lg"
+            >
               {loading ? (
-                <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Running ML Model...</>
+                <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Computing Valuation Index...</>
               ) : (
-                <><Brain className="h-4 w-4 mr-2" /> Predict Price</>
+                <><Brain className="h-4 w-4 mr-2" /> Estimate Market Valuation</>
               )}
             </Button>
           </div>
@@ -154,66 +192,82 @@ export default function PricePredictionPage() {
           {/* Result */}
           <div className="space-y-4">
             {!result && !loading && (
-              <div className="bg-[#F8FAFC] rounded-2xl border border-dashed border-[#E2E8F0] p-10 text-center">
-                <TrendingUp className="h-12 w-12 mx-auto text-[#94A3B8] mb-3" />
-                <p className="text-[#64748B] text-sm">Fill in the property details and click Predict Price to see the estimated market value.</p>
+              <div className="bg-[#FCFBF7] rounded-2xl border border-dashed border-[#E8E1D4] p-10 text-center flex flex-col items-center justify-center h-full min-h-[320px]">
+                <div className="w-14 h-14 rounded-2xl bg-[#07111F] flex items-center justify-center mb-3">
+                  <TrendingUp className="h-7 w-7 text-[#D9B45B]" />
+                </div>
+                <h3 className="font-serif font-bold text-[#07111F] text-base mb-1">Awaiting Valuation Parameters</h3>
+                <p className="text-[#6B7280] text-xs max-w-xs leading-relaxed">
+                  Configure the property specs on the left and select Estimate Market Valuation to run the predictive algorithm.
+                </p>
               </div>
             )}
 
             {loading && (
-              <div className="bg-white rounded-2xl shadow-card border border-[#E2E8F0] p-10 text-center">
-                <Loader2 className="h-12 w-12 mx-auto text-[#0891B2] animate-spin mb-3" />
-                <p className="text-[#0F172A] font-medium">Running ML model...</p>
-                <p className="text-[#94A3B8] text-sm mt-1">Analyzing market data for {form.city}</p>
+              <div className="bg-[#FCFBF7] rounded-2xl shadow-sm border border-[#E8E1D4] p-10 text-center flex flex-col items-center justify-center h-full min-h-[320px]">
+                <div className="w-14 h-14 rounded-2xl bg-[#07111F] flex items-center justify-center mb-4">
+                  <Loader2 className="h-7 w-7 text-[#D9B45B] animate-spin" />
+                </div>
+                <p className="text-[#07111F] font-serif font-bold text-base">Running Predictive Model...</p>
+                <p className="text-[#6B7280] text-xs mt-1">Cross-referencing verified market data in {form.city}</p>
               </div>
             )}
 
             {result && (
               <>
                 {/* Main prediction card */}
-                <div className="bg-white border border-[#E2E8F0] shadow-card rounded-2xl p-6 text-[#0F172A]">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Brain className="h-4 w-4 text-[#06B6D4]" />
-                    <span className="text-sm font-medium text-[#64748B]">AI Predicted Price</span>
+                <div className="bg-[#FCFBF7] border border-[#E8E1D4] shadow-sm rounded-2xl p-6 text-[#07111F]">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Brain className="h-4 w-4 text-[#C89B3C]" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-[#6B7280]">AI Estimated Valuation</span>
+                    </div>
+                    <span className="text-[11px] font-bold text-[#A97918] bg-[#C89B3C]/15 border border-[#C89B3C]/30 px-2 py-0.5 rounded-full">
+                      {result.confidence}% Confidence
+                    </span>
                   </div>
-                  <div className="text-3xl font-bold mb-1 text-[#059669]">{formatPrice(result.predictedPrice)}</div>
-                  <div className="text-[#64748B] text-sm">
-                    Range: {formatPrice(result.minPrice)} – {formatPrice(result.maxPrice)}
+
+                  <div className="font-serif text-3xl sm:text-4xl font-bold mb-1 text-[#07111F]">
+                    {formatPrice(result.predictedPrice)}
                   </div>
-                  <div className="mt-4 flex items-center gap-2">
-                    <div className="flex-1 bg-[#E2E8F0] rounded-full h-2">
+                  <div className="text-[#6B7280] text-xs font-medium">
+                    Estimated Range: <span className="text-[#07111F] font-semibold">{formatPrice(result.minPrice)}</span> – <span className="text-[#07111F] font-semibold">{formatPrice(result.maxPrice)}</span>
+                  </div>
+
+                  <div className="mt-5">
+                    <div className="flex justify-between text-xs text-[#6B7280] mb-1.5 font-medium">
+                      <span>Model Confidence Index</span>
+                      <span className="font-bold text-[#07111F]">{result.confidence}%</span>
+                    </div>
+                    <div className="w-full bg-[#E8E1D4] rounded-full h-2 overflow-hidden">
                       <div
-                        className="h-2 rounded-full bg-gradient-to-r from-[#10B981] to-[#059669] transition-all duration-1000"
+                        className="h-2 rounded-full bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] transition-all duration-1000"
                         style={{ width: `${result.confidence}%` }}
                       />
                     </div>
-                    <span className={`text-sm font-bold text-[#06B6D4] px-2 py-0.5`}>
-                      {result.confidence}%
-                    </span>
                   </div>
-                  <p className="text-[#94A3B8] text-xs mt-1">Model confidence</p>
                 </div>
 
                 {/* Insights */}
-                <div className="bg-white rounded-2xl shadow-card border border-[#E2E8F0] p-5">
-                  <h3 className="font-semibold text-[#0F172A] mb-3 flex items-center gap-2">
-                    <Info className="h-4 w-4 text-[#10B981]" /> Price Insights
+                <div className="bg-[#FCFBF7] rounded-2xl shadow-sm border border-[#E8E1D4] p-5">
+                  <h3 className="font-serif font-bold text-[#07111F] text-sm mb-3 flex items-center gap-2">
+                    <Info className="h-4 w-4 text-[#C89B3C]" /> Market Intelligence Insights
                   </h3>
-                  <div className="space-y-2">
+                  <div className="space-y-2.5">
                     {result.insights.map((insight, i) => (
-                      <div key={i} className="flex items-start gap-2 text-sm text-[#0F172A]">
-                        <CheckCircle2 className="h-4 w-4 text-[#10B981] mt-0.5 flex-shrink-0" />
-                        {insight}
+                      <div key={i} className="flex items-start gap-2.5 text-xs text-[#07111F] leading-relaxed">
+                        <CheckCircle2 className="h-4 w-4 text-[#C89B3C] mt-0.5 flex-shrink-0" />
+                        <span>{insight}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
                 {/* Disclaimer */}
-                <div className="bg-yellow-50 border border-yellow-100 rounded-xl px-4 py-3 flex items-start gap-2">
-                  <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-yellow-700">
-                    This is an AI-generated estimate based on training data. Actual market prices may vary. Always consult a local agent before making decisions.
+                <div className="bg-[#07111F] border border-[#C89B3C]/30 rounded-xl px-4 py-3 flex items-start gap-2.5">
+                  <AlertCircle className="h-4 w-4 text-[#D9B45B] mt-0.5 flex-shrink-0" />
+                  <p className="text-[11px] text-[#E8E1D4]/80 leading-normal">
+                    This is an algorithmic appraisal generated by Kiro-Maal data modeling. Actual market transaction prices may vary based on property condition and private negotiations.
                   </p>
                 </div>
               </>

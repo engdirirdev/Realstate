@@ -2,12 +2,13 @@
 // PAGE NAME  : Manager Dashboard — Booking Requests
 // ROUTE      : /dashboard/bookings
 // DESCRIPTION: View customer booking requests & confirm or cancel
+//              Kiro-Maal Real Estate Master Design System
 // ROLE       : USER / Manager
 // ================================================================
 "use client";
 
 import { useState, useEffect } from "react";
-import { Calendar, Building2, MapPin, CheckCircle2, XCircle, Clock, Loader2, CreditCard } from "lucide-react";
+import { Calendar, Building2, MapPin, CheckCircle2, XCircle, Clock, Loader2, CreditCard, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { formatPrice } from "@/lib/utils";
@@ -67,81 +68,89 @@ export default function ManagerBookingsPage() {
   const pendingCount = bookings.filter((b) => b.status === "PENDING").length;
 
   return (
-    <div className="space-y-6 bg-[#F8FAFC]">
+    <div className="space-y-6 bg-[#F7F3EA] min-h-screen p-6 sm:p-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#0F172A] flex items-center gap-2 tracking-tight">
-            <Calendar className="h-6 w-6 text-[#10B981]" /> Customer Booking &amp; Visit Requests
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FCFBF7] border border-[#C89B3C]/30 text-[#A97918] text-xs font-semibold uppercase tracking-wider mb-2 shadow-xs">
+            <Sparkles className="w-3.5 h-3.5 text-[#C89B3C]" /> Visit Operations
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#07111F] flex items-center gap-2.5">
+            <Calendar className="h-7 w-7 text-[#C89B3C]" /> Customer Visit &amp; Booking Requests
           </h1>
-          <p className="text-[#64748B] text-sm mt-1">Review scheduled on-site property viewings and confirmed reservations.</p>
+          <p className="text-[#6B7280] text-sm mt-1">Review scheduled on-site property viewings and confirmed reservations.</p>
         </div>
 
-        <div className="flex items-center gap-2">
-          {["ALL", "PENDING", "CONFIRMED", "CANCELLED"].map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                filter === f
-                  ? "bg-[#10B981] text-white shadow-sm"
-                  : "bg-white text-[#64748B] hover:bg-[#F1F5F9] border border-[#E2E8F0]"
-              }`}
-            >
-              {f.charAt(0) + f.slice(1).toLowerCase()}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          {["ALL", "PENDING", "CONFIRMED", "CANCELLED"].map((f) => {
+            const isActive = filter === f;
+            return (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-xs border ${
+                  isActive
+                    ? "bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] border-transparent"
+                    : "bg-[#FCFBF7] text-[#6B7280] hover:text-[#07111F] border-[#E8E1D4]"
+                }`}
+              >
+                {f.charAt(0) + f.slice(1).toLowerCase()}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* Schedule Summary Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl p-4 border border-[#E2E8F0] shadow-card">
-          <p className="text-xs font-semibold text-[#64748B]">Confirmed Visits</p>
-          <p className="text-2xl font-bold text-[#059669] mt-0.5">{confirmedCount}</p>
+        <div className="bg-[#FCFBF7] rounded-2xl p-4 border border-[#E8E1D4] shadow-sm">
+          <p className="text-xs font-bold uppercase tracking-wider text-[#6B7280]">Confirmed Viewings</p>
+          <p className="text-2xl font-serif font-bold text-[#07111F] mt-0.5">{confirmedCount}</p>
         </div>
-        <div className="bg-white rounded-2xl p-4 border border-[#E2E8F0] shadow-card">
-          <p className="text-xs font-semibold text-[#64748B]">Pending Responses</p>
-          <p className="text-2xl font-bold text-[#F59E0B] mt-0.5">{pendingCount}</p>
+        <div className="bg-[#FCFBF7] rounded-2xl p-4 border border-[#E8E1D4] shadow-sm">
+          <p className="text-xs font-bold uppercase tracking-wider text-[#6B7280]">Pending Responses</p>
+          <p className="text-2xl font-serif font-bold text-amber-700 mt-0.5">{pendingCount}</p>
         </div>
-        <div className="bg-white rounded-2xl p-4 border border-[#E2E8F0] shadow-card col-span-2 sm:col-span-1">
-          <p className="text-xs font-semibold text-[#64748B]">Total Requests</p>
-          <p className="text-2xl font-bold text-[#0F172A] mt-0.5">{bookings.length}</p>
+        <div className="bg-[#FCFBF7] rounded-2xl p-4 border border-[#E8E1D4] shadow-sm col-span-2 sm:col-span-1">
+          <p className="text-xs font-bold uppercase tracking-wider text-[#6B7280]">Total Inquiries</p>
+          <p className="text-2xl font-serif font-bold text-[#07111F] mt-0.5">{bookings.length}</p>
         </div>
       </div>
 
       {loading ? (
-        <div className="p-12 bg-white rounded-2xl border border-[#E2E8F0] text-center flex flex-col items-center justify-center gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-[#10B981]" />
-          <p className="text-sm font-semibold text-[#0F172A]">Loading booking requests...</p>
+        <div className="p-16 bg-[#FCFBF7] rounded-2xl border border-[#E8E1D4] text-center flex flex-col items-center justify-center gap-3 max-w-lg mx-auto shadow-sm">
+          <Loader2 className="h-8 w-8 animate-spin text-[#C89B3C]" />
+          <p className="font-serif font-bold text-[#07111F] text-base">Loading Booking Requests...</p>
         </div>
       ) : filteredBookings.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-card border border-[#E2E8F0] p-12 text-center">
-          <Calendar className="h-12 w-12 text-[#94A3B8] mx-auto mb-3" />
-          <h2 className="text-lg font-bold text-[#0F172A]">No bookings found</h2>
-          <p className="text-[#64748B] text-sm mt-1 max-w-sm mx-auto">
-            {filter === "ALL" ? "When customers reserve your properties, their booking requests will appear here." : `No bookings match the "${filter.toLowerCase()}" filter.`}
+        <div className="bg-[#FCFBF7] rounded-2xl shadow-sm border border-[#E8E1D4] p-12 text-center max-w-lg mx-auto">
+          <div className="w-14 h-14 rounded-2xl bg-[#07111F] flex items-center justify-center mx-auto text-[#D9B45B] mb-4 shadow-inner">
+            <Calendar className="h-7 w-7 opacity-80" />
+          </div>
+          <h2 className="text-lg font-serif font-bold text-[#07111F]">No bookings found</h2>
+          <p className="text-[#6B7280] text-xs mt-1 max-w-sm mx-auto leading-relaxed">
+            {filter === "ALL" ? "When clients request viewings for your listings, their reservations will appear here." : `No bookings match the "${filter.toLowerCase()}" filter.`}
           </p>
         </div>
       ) : (
         <div className="space-y-4">
           {filteredBookings.map((b) => (
-            <div key={b.id} className="bg-white rounded-2xl p-6 shadow-card border border-[#E2E8F0] space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E2E8F0] pb-4">
+            <div key={b.id} className="bg-[#FCFBF7] rounded-2xl p-6 shadow-sm border border-[#E8E1D4] space-y-4 hover:border-[#C89B3C]/50 transition-all">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E8E1D4] pb-4">
                 <div>
-                  <h3 className="font-bold text-[#0F172A] text-base">{b.property?.title}</h3>
-                  <p className="text-xs text-[#64748B] flex items-center gap-2 mt-0.5">
-                    Customer: <span className="font-semibold text-[#0F172A]">{b.customer?.name}</span> ({b.customer?.email})
-                    • Value: <span className="font-bold text-[#059669]">{formatPrice(b.totalPrice)}</span>
+                  <h3 className="font-serif font-bold text-[#07111F] text-base">{b.property?.title}</h3>
+                  <p className="text-xs text-[#6B7280] flex items-center gap-2 mt-0.5">
+                    Client: <span className="font-semibold text-[#07111F]">{b.customer?.name}</span> ({b.customer?.email})
+                    • Portfolio Value: <span className="font-serif font-bold text-[#07111F]">{formatPrice(b.totalPrice)}</span>
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                     b.status === "CONFIRMED"
-                      ? "bg-[#D1FAE5] text-[#065F46] border border-[#A7F3D0]"
+                      ? "bg-[#07111F] text-[#D9B45B] border border-[#C89B3C]/40"
                       : b.status === "CANCELLED"
-                      ? "bg-[#FEE2E2] text-[#991B1B] border border-[#FCA5A5]"
-                      : "bg-[#FEF9C3] text-[#92400E] border border-[#FDE68A]"
+                      ? "bg-red-50 text-red-700 border border-red-200"
+                      : "bg-amber-50 text-amber-800 border border-amber-200"
                   }`}>
                     {b.status}
                   </span>
@@ -152,7 +161,7 @@ export default function ManagerBookingsPage() {
                         onClick={() => handleUpdateStatus(b.id, "CONFIRMED")}
                         disabled={updatingId === b.id}
                         size="sm"
-                        className="bg-[#10B981] hover:bg-[#059669] text-white rounded-xl text-xs gap-1 font-semibold"
+                        className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] hover:brightness-105 rounded-xl text-xs gap-1 font-bold border-0 shadow-xs"
                       >
                         {updatingId === b.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
                         Confirm
@@ -162,7 +171,7 @@ export default function ManagerBookingsPage() {
                         disabled={updatingId === b.id}
                         variant="outline"
                         size="sm"
-                        className="border-[#FCA5A5] text-[#DC2626] hover:bg-[#FEE2E2] rounded-xl text-xs gap-1 font-semibold"
+                        className="border-[#E8E1D4] text-[#DC2626] bg-white hover:bg-red-50 hover:border-red-200 rounded-xl text-xs gap-1 font-medium"
                       >
                         <XCircle className="h-3.5 w-3.5" /> Cancel
                       </Button>
@@ -172,8 +181,8 @@ export default function ManagerBookingsPage() {
               </div>
 
               {b.notes && (
-                <div className="bg-[#F8FAFC] p-3 rounded-xl border border-[#E2E8F0] text-xs text-[#334155]">
-                  <span className="font-semibold text-[#0F172A]">Customer Notes:</span> &ldquo;{b.notes}&rdquo;
+                <div className="bg-[#F7F3EA] p-3.5 rounded-xl border border-[#E8E1D4] text-xs text-[#4B5563]">
+                  <span className="font-bold text-[#07111F]">Client Inquiry Notes:</span> &ldquo;{b.notes}&rdquo;
                 </div>
               )}
             </div>

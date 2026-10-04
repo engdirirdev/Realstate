@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Building2, Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin, ArrowRight } from "lucide-react";
+import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin, ArrowRight } from "lucide-react";
+import BrandLogo from "@/components/layout/BrandLogo";
 
 const footerLinks = {
   Company: [
@@ -22,27 +23,30 @@ const footerLinks = {
 
 export default function Footer() {
   return (
-    <footer className="bg-[#0F172A] text-[#94A3B8]">
+    <footer className="bg-[#07111F] text-[#94A3B8] border-t border-[#C89B3C]/20">
 
       {/* ── Newsletter bar ── */}
-      <div className="bg-[#10B981]">
+      <div className="bg-gradient-to-r from-[#0B1728] via-[#0E1D33] to-[#0B1728] border-b border-[#C89B3C]/20">
         <div className="section-container py-10">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
-              <h3 className="text-xl font-bold text-white tracking-tight">
-                Get Property Alerts
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#C89B3C]/15 border border-[#C89B3C]/30 text-[#D9B45B] text-xs font-semibold uppercase tracking-wider mb-2">
+                <span>✦ VIP Real Estate Insights</span>
+              </div>
+              <h3 className="text-xl sm:text-2xl font-bold text-[#FCFBF7] font-serif tracking-tight">
+                Stay Ahead of the Somali Property Market
               </h3>
-              <p className="text-[#D1FAE5] text-sm mt-1">
-                Subscribe to receive new listings and AI insights
+              <p className="text-[#94A3B8] text-sm mt-1">
+                Subscribe to receive new verified listings, off-market opportunities, and AI market predictions.
               </p>
             </div>
             <div className="flex w-full md:w-auto gap-2">
               <input
                 type="email"
-                placeholder="Enter your email"
-                className="flex-1 md:w-64 px-4 py-2.5 rounded-xl bg-white/20 border border-white/30 text-white placeholder-white/60 text-sm focus:outline-none focus:ring-2 focus:ring-white/40"
+                placeholder="Enter your email address"
+                className="flex-1 md:w-72 px-4 py-2.5 rounded-xl bg-[#07111F]/80 border border-[#E8E1D4]/20 text-[#FCFBF7] placeholder-[#64748B] text-sm focus:outline-none focus:border-[#C89B3C] focus:ring-1 focus:ring-[#C89B3C]"
               />
-              <button className="px-5 py-2.5 rounded-xl bg-white text-[#059669] font-semibold text-sm hover:bg-[#F0FDFA] transition-colors flex items-center gap-2 whitespace-nowrap">
+              <button className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#C89B3C] to-[#D9B45B] text-[#07111F] font-bold text-sm hover:brightness-105 shadow-md shadow-[#C89B3C]/20 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer">
                 Subscribe <ArrowRight className="h-4 w-4" />
               </button>
             </div>
@@ -56,27 +60,24 @@ export default function Footer() {
 
           {/* Brand */}
           <div className="lg:col-span-2">
-            <Link href="/" className="flex items-center gap-2.5 mb-5">
-              <div className="w-9 h-9 rounded-xl bg-[#10B981] flex items-center justify-center">
-                <Building2 className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-bold text-lg text-white tracking-tight">AI RealEstate</span>
-            </Link>
-            <p className="text-sm leading-relaxed text-[#94A3B8] mb-6 max-w-xs">
-              Somalia&apos;s first AI-powered real estate platform. Discover properties, get intelligent recommendations, and predict prices with machine learning.
+            <div className="mb-5">
+              <BrandLogo variant="dark" size="lg" />
+            </div>
+            <p className="text-sm leading-relaxed text-[#94A3B8] mb-6 max-w-sm">
+              Kiro-Maal Real Estate is Somalia&apos;s premier luxury property platform. Discover verified properties, unlock AI-driven valuations, and find your dream home with unmatched trust and precision.
             </p>
             <div className="space-y-2.5 text-sm">
               <div className="flex items-center gap-2.5">
-                <MapPin className="h-4 w-4 text-[#10B981] flex-shrink-0" />
-                <span>Hodan District, Mogadishu, Somalia</span>
+                <MapPin className="h-4 w-4 text-[#C89B3C] flex-shrink-0" />
+                <span className="text-[#E2E8F0]">Wadajir &amp; Hodan Districts, Mogadishu, Somalia</span>
               </div>
               <div className="flex items-center gap-2.5">
-                <Phone className="h-4 w-4 text-[#10B981] flex-shrink-0" />
-                <span>+252 61 200 0000</span>
+                <Phone className="h-4 w-4 text-[#C89B3C] flex-shrink-0" />
+                <span className="text-[#E2E8F0]">+252 61 200 0000 / +252 61 900 0000</span>
               </div>
               <div className="flex items-center gap-2.5">
-                <Mail className="h-4 w-4 text-[#10B981] flex-shrink-0" />
-                <span>hello@airealestate.so</span>
+                <Mail className="h-4 w-4 text-[#C89B3C] flex-shrink-0" />
+                <span className="text-[#E2E8F0]">concierge@kiro-maal.so</span>
               </div>
             </div>
             {/* Social */}
@@ -85,7 +86,7 @@ export default function Footer() {
                 <a
                   key={i}
                   href="#"
-                  className="w-9 h-9 rounded-xl bg-[#1E293B] flex items-center justify-center text-[#64748B] hover:bg-[#10B981] hover:text-white transition-all duration-200"
+                  className="w-9 h-9 rounded-xl bg-[#0B1728] border border-[#C89B3C]/20 flex items-center justify-center text-[#94A3B8] hover:bg-gradient-to-r hover:from-[#C89B3C] hover:to-[#D9B45B] hover:text-[#07111F] hover:border-transparent transition-all duration-200"
                 >
                   <Icon className="h-4 w-4" />
                 </a>
@@ -96,13 +97,13 @@ export default function Footer() {
           {/* Links */}
           {Object.entries(footerLinks).map(([heading, links]) => (
             <div key={heading}>
-              <h4 className="font-semibold text-white text-sm mb-4 tracking-wide">{heading}</h4>
+              <h4 className="font-bold text-[#FCFBF7] text-sm mb-4 tracking-wide uppercase font-serif">{heading}</h4>
               <ul className="space-y-2.5">
                 {links.map(({ label, href }) => (
                   <li key={label}>
                     <Link
                       href={href}
-                      className="text-sm text-[#94A3B8] hover:text-[#10B981] transition-colors"
+                      className="text-sm text-[#94A3B8] hover:text-[#D9B45B] transition-colors"
                     >
                       {label}
                     </Link>
@@ -115,13 +116,13 @@ export default function Footer() {
       </div>
 
       {/* ── Bottom bar ── */}
-      <div className="border-t border-[#1E293B]">
+      <div className="border-t border-[#0B1728] bg-[#050C16]">
         <div className="section-container py-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#64748B]">
-          <p>© {new Date().getFullYear()} AI RealEstate. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Kiro-Maal Real Estate. All rights reserved.</p>
           <div className="flex items-center gap-4">
-            <Link href="#" className="hover:text-[#94A3B8] transition-colors">Privacy Policy</Link>
-            <Link href="#" className="hover:text-[#94A3B8] transition-colors">Terms of Service</Link>
-            <Link href="#" className="hover:text-[#94A3B8] transition-colors">Cookie Policy</Link>
+            <Link href="#" className="hover:text-[#D9B45B] transition-colors">Privacy Policy</Link>
+            <Link href="#" className="hover:text-[#D9B45B] transition-colors">Terms of Service</Link>
+            <Link href="#" className="hover:text-[#D9B45B] transition-colors">Cookie Policy</Link>
           </div>
         </div>
       </div>

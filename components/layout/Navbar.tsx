@@ -77,8 +77,8 @@ export default function Navbar() {
                   className={cn(
                     "px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150",
                     isActive
-                      ? "text-[#1677FF] font-semibold"
-                      : "text-[#475569] hover:text-[#0F172A] hover:bg-[#F5F8FC]"
+                      ? "text-[#C89B3C] font-semibold bg-[#F7F3EA]/70"
+                      : "text-[#475569] hover:text-[#07111F] hover:bg-[#F7F3EA]"
                   )}
                 >
                   {label}
@@ -92,114 +92,98 @@ export default function Navbar() {
             <Link
               href="/properties"
               aria-label="Search properties"
-              className="w-9 h-9 rounded-full bg-[#F5F8FC] hover:bg-[#EDF3FA] border border-[#DCE6F2] flex items-center justify-center text-[#64748B] hover:text-[#0F172A] transition-colors"
+              className="w-9 h-9 rounded-full bg-[#FCFBF7] hover:bg-[#F7F3EA] border border-[#E8E1D4] flex items-center justify-center text-[#6B7280] hover:text-[#C89B3C] transition-colors"
             >
               <Search className="w-4 h-4" />
             </Link>
 
             {status === "loading" ? (
-              <div className="h-9 w-24 rounded-xl bg-[#F1F5F9] animate-pulse" />
+              <div className="h-9 w-24 rounded-xl bg-[#F7F3EA] animate-pulse" />
             ) : session ? (
               <div className="flex items-center gap-2">
                 {/* Direct Dashboard Link */}
                 <Link
                   href={isAdmin ? "/admin" : isCustomer ? "/customer" : "/dashboard"}
-                  className={cn(
-                    "hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs",
-                    isAdmin
-                      ? "bg-[#EFF6FF] text-[#1677FF] hover:bg-[#1677FF] hover:text-white border border-[#BFDBFE]"
-                      : isCustomer
-                      ? "bg-[#F5F3FF] text-[#7C3AED] hover:bg-[#7C3AED] hover:text-white border border-[#DDD6FE]"
-                      : "bg-[#ECFDF5] text-[#059669] hover:bg-[#10B981] hover:text-white border border-[#A7F3D0]"
-                  )}
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs bg-[#FCFBF7] text-[#07111F] hover:bg-gradient-to-r hover:from-[#C89B3C] hover:to-[#D9B45B] hover:text-[#07111F] border border-[#E8E1D4]"
                 >
-                  <LayoutDashboard className="w-3.5 h-3.5" />
+                  <LayoutDashboard className="w-3.5 h-3.5 text-[#C89B3C]" />
                   <span>{isAdmin ? "Admin Dashboard" : isCustomer ? "Customer Portal" : "Manager Dashboard"}</span>
                 </Link>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-[#F8FAFC] border border-transparent hover:border-[#DCE6F2] transition-all group cursor-pointer">
-                      <Avatar className="h-8 w-8 ring-2 ring-[#BFDBFE]">
+                    <button className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-[#F7F3EA] border border-transparent hover:border-[#E8E1D4] transition-all group cursor-pointer">
+                      <Avatar className="h-8 w-8 ring-2 ring-[#C89B3C]/50">
                         <AvatarImage src={session.user?.image || ""} />
-                        <AvatarFallback className="text-xs bg-[#EFF6FF] text-[#1677FF] font-bold">
+                        <AvatarFallback className="text-xs bg-[#F7F3EA] text-[#C89B3C] font-bold">
                           {initials}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex flex-col items-start text-left">
-                        <span className="text-xs font-bold text-[#0F172A] leading-none">
+                        <span className="text-xs font-bold text-[#07111F] leading-none">
                           {session.user?.name?.split(" ")[0]}
                         </span>
-                        <span
-                          className={cn(
-                            "text-[10px] font-bold px-1.5 py-0.5 rounded-md mt-0.5 uppercase tracking-wide",
-                            isAdmin
-                              ? "bg-[#EFF6FF] text-[#1677FF]"
-                              : isCustomer
-                              ? "bg-[#F5F3FF] text-[#7C3AED]"
-                              : "bg-[#ECFDF5] text-[#059669]"
-                          )}
-                        >
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md mt-0.5 uppercase tracking-wide bg-[#F7F3EA] text-[#A97918] border border-[#E8E1D4]/80">
                           {roleLabel}
                         </span>
                       </div>
-                      <ChevronDown className="h-3.5 w-3.5 text-[#94A3B8]" />
+                      <ChevronDown className="h-3.5 w-3.5 text-[#6B7280]" />
                     </button>
                   </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 border-[#DCE6F2] shadow-card-hover p-1.5">
+                <DropdownMenuContent align="end" className="w-56 border-[#E8E1D4] bg-[#FCFBF7] shadow-xl p-1.5 rounded-2xl">
                   <DropdownMenuLabel className="font-normal px-2 py-1.5">
                     <div className="flex flex-col space-y-0.5">
-                      <p className="text-sm font-bold text-[#0F172A]">{session.user?.name}</p>
-                      <p className="text-xs text-[#64748B] truncate">{session.user?.email}</p>
+                      <p className="text-sm font-bold text-[#07111F]">{session.user?.name}</p>
+                      <p className="text-xs text-[#6B7280] truncate">{session.user?.email}</p>
                     </div>
                   </DropdownMenuLabel>
-                  <DropdownMenuSeparator className="bg-[#EDF3FA]" />
+                  <DropdownMenuSeparator className="bg-[#E8E1D4]" />
                   {isAdmin ? (
                     <DropdownMenuItem asChild>
-                      <Link href="/admin" className="flex items-center gap-2 text-[#0F172A] cursor-pointer">
-                        <LayoutDashboard className="h-4 w-4 text-[#1677FF]" /> Admin Dashboard
+                      <Link href="/admin" className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
+                        <LayoutDashboard className="h-4 w-4 text-[#C89B3C]" /> Admin Dashboard
                       </Link>
                     </DropdownMenuItem>
                   ) : isCustomer ? (
                     <>
                       <DropdownMenuItem asChild>
-                        <Link href="/customer" className="flex items-center gap-2 text-[#0F172A] cursor-pointer">
-                          <LayoutDashboard className="h-4 w-4 text-[#1677FF]" /> Customer Portal
+                        <Link href="/customer" className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
+                          <LayoutDashboard className="h-4 w-4 text-[#C89B3C]" /> Customer Portal
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link href="/customer/favorites" className="flex items-center gap-2 text-[#0F172A] cursor-pointer">
-                          <Heart className="h-4 w-4 text-[#EF4444]" /> Saved Favorites
+                        <Link href="/customer/favorites" className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
+                          <Heart className="h-4 w-4 text-[#C89B3C]" /> Saved Favorites
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link href="/customer/profile" className="flex items-center gap-2 text-[#0F172A] cursor-pointer">
-                          <User className="h-4 w-4 text-[#64748B]" /> Profile Settings
+                        <Link href="/customer/profile" className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
+                          <User className="h-4 w-4 text-[#6B7280]" /> Profile Settings
                         </Link>
                       </DropdownMenuItem>
                     </>
                   ) : (
                     <>
                       <DropdownMenuItem asChild>
-                        <Link href="/dashboard" className="flex items-center gap-2 text-[#0F172A] cursor-pointer">
-                          <LayoutDashboard className="h-4 w-4 text-[#1677FF]" /> Manager Dashboard
+                        <Link href="/dashboard" className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
+                          <LayoutDashboard className="h-4 w-4 text-[#C89B3C]" /> Manager Dashboard
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link href="/dashboard/profile" className="flex items-center gap-2 text-[#0F172A] cursor-pointer">
-                          <User className="h-4 w-4 text-[#64748B]" /> Profile Settings
+                        <Link href="/dashboard/profile" className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
+                          <User className="h-4 w-4 text-[#6B7280]" /> Profile Settings
                         </Link>
                       </DropdownMenuItem>
                     </>
                   )}
-                  <DropdownMenuSeparator className="bg-[#EDF3FA]" />
+                  <DropdownMenuSeparator className="bg-[#E8E1D4]" />
                   <DropdownMenuItem asChild>
-                    <Link href="/login?switch=true" className="flex items-center gap-2 text-[#475569] hover:text-[#1677FF] cursor-pointer">
-                      <User className="h-4 w-4 text-[#1677FF]" /> Switch Account
+                    <Link href="/login?switch=true" className="flex items-center gap-2 text-[#6B7280] hover:text-[#C89B3C] hover:bg-[#F7F3EA] rounded-xl cursor-pointer">
+                      <User className="h-4 w-4 text-[#C89B3C]" /> Switch Account
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    className="text-[#EF4444] focus:text-[#DC2626] focus:bg-[#FEE2E2] cursor-pointer"
+                    className="text-[#DC2626] focus:text-[#B91C1C] focus:bg-[#FEF2F2] rounded-xl cursor-pointer"
                     onClick={() => signOut({ callbackUrl: "/" })}
                   >
                     <LogOut className="h-4 w-4 mr-2" /> Sign Out
@@ -209,8 +193,8 @@ export default function Navbar() {
             </div>
           ) : (
               <Link href="/login">
-                <Button size="sm" className="bg-[#1677FF] hover:bg-[#0F5ED7] text-white font-bold rounded-xl text-sm px-5 py-2 shadow-xs transition-all">
-                  Login
+                <Button size="sm" className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] hover:brightness-105 text-[#07111F] font-bold rounded-xl text-sm px-6 py-2 shadow-md shadow-[#C89B3C]/20 border border-[#A97918]/30 transition-all cursor-pointer">
+                  Sign In
                 </Button>
               </Link>
             )}
@@ -218,7 +202,7 @@ export default function Navbar() {
 
           {/* ── Mobile toggle ── */}
           <button
-            className="xl:hidden p-2 rounded-lg text-[#64748B] hover:bg-[#F1F5F9] transition-colors"
+            className="xl:hidden p-2 rounded-lg text-[#6B7280] hover:bg-[#F7F3EA] transition-colors"
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label="Toggle menu"
           >
@@ -228,23 +212,23 @@ export default function Navbar() {
 
         {/* ── Mobile Menu ── */}
         {mobileOpen && (
-          <div className="xl:hidden py-4 border-t border-[#DCE6F2] animate-fade-in bg-white">
+          <div className="xl:hidden py-4 border-t border-[#E8E1D4] animate-fade-in bg-[#FCFBF7]">
             <div className="flex flex-col gap-1">
               {referenceNavLinks.map(({ href, label }) => (
                 <Link
                   key={href}
                   href={href}
                   onClick={() => setMobileOpen(false)}
-                  className="px-4 py-2 rounded-xl text-sm font-medium text-[#475569] hover:text-[#1677FF] hover:bg-[#F5F8FC]"
+                  className="px-4 py-2 rounded-xl text-sm font-medium text-[#475569] hover:text-[#C89B3C] hover:bg-[#F7F3EA]"
                 >
                   {label}
                 </Link>
               ))}
-              <div className="border-t border-[#EDF3FA] pt-3 mt-2 flex flex-col gap-2 px-3">
+              <div className="border-t border-[#E8E1D4] pt-3 mt-2 flex flex-col gap-2 px-3">
                 {session ? (
                   <Link
                     href={isAdmin ? "/admin" : isCustomer ? "/customer" : "/dashboard"}
-                    className="btn-primary text-center text-sm py-2 rounded-xl"
+                    className="bg-gradient-to-r from-[#C89B3C] to-[#D9B45B] text-[#07111F] text-center text-sm py-2 rounded-xl font-bold shadow-sm"
                     onClick={() => setMobileOpen(false)}
                   >
                     Go to Portal
@@ -253,9 +237,9 @@ export default function Navbar() {
                   <Link
                     href="/login"
                     onClick={() => setMobileOpen(false)}
-                    className="btn-primary text-center text-sm py-2.5 rounded-xl font-bold"
+                    className="bg-gradient-to-r from-[#C89B3C] to-[#D9B45B] text-[#07111F] text-center text-sm py-2.5 rounded-xl font-bold shadow-sm"
                   >
-                    Login
+                    Sign In
                   </Link>
                 )}
               </div>

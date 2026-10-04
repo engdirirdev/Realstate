@@ -14,8 +14,8 @@ import PropertyCard from "@/components/PropertyCard";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Properties – SkyHome Real Estate",
-  description: "Browse all properties with AI-powered filters and smart search.",
+  title: "Properties – Kiro-Maal Real Estate",
+  description: "Browse verified luxury properties with AI-powered valuations and smart search in Somalia.",
 };
 
 export const revalidate = 60; // ISR: refresh every minute
@@ -53,17 +53,20 @@ export default async function PropertiesPage({
   });
 
   return (
-    <div className="bg-[#F5F1EA] min-h-screen py-10">
+    <div className="bg-[#F7F3EA] min-h-screen py-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header & Filter Card */}
-        <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-xs border border-[#DCE6F2] mb-8">
+        <div className="bg-[#FCFBF7] p-6 sm:p-8 rounded-3xl shadow-sm border border-[#E8E1D4] mb-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] tracking-tight">
-                Featured Properties
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#C89B3C]/15 border border-[#C89B3C]/30 text-[#A97918] text-[11px] font-bold uppercase tracking-wider mb-2">
+                <span>✦ Verified Listings</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-black font-serif text-[#07111F] tracking-tight">
+                Kiro-Maal Properties
               </h1>
-              <p className="text-[#64748B] text-xs sm:text-sm mt-1">
-                Explore verified listings with AI price estimates and smart matching
+              <p className="text-[#6B7280] text-xs sm:text-sm mt-1">
+                Explore verified listings with AI valuations and precision neighborhood insights
               </p>
             </div>
             <SaveSearchButton
@@ -81,19 +84,19 @@ export default async function PropertiesPage({
           {/* Search / Filters Form */}
           <form method="GET" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
             <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#A97918]" />
               <input
                 name="location"
                 defaultValue={searchLocation ?? ""}
                 placeholder="City or district (e.g. Mogadishu)"
-                className="w-full pl-9.5 pr-3 py-2 rounded-xl border border-[#DCE6F2] bg-[#F5F8FC] focus:bg-white focus:border-[#1677FF] focus:ring-2 focus:ring-[#1677FF]/15 text-[#0F172A] text-xs h-10 outline-hidden transition-all"
+                className="w-full pl-9.5 pr-3 py-2 rounded-xl border border-[#E8E1D4] bg-[#FCFBF7] focus:bg-white focus:border-[#C89B3C] focus:ring-2 focus:ring-[#C89B3C]/20 text-[#07111F] text-xs h-10 outline-hidden transition-all"
               />
             </div>
 
             <select
               name="type"
               defaultValue={type ?? ""}
-              className="w-full px-3 py-2 rounded-xl border border-[#DCE6F2] bg-[#F5F8FC] focus:bg-white focus:border-[#1677FF] focus:ring-2 focus:ring-[#1677FF]/15 text-[#0F172A] text-xs h-10 outline-hidden transition-all cursor-pointer"
+              className="w-full px-3 py-2 rounded-xl border border-[#E8E1D4] bg-[#FCFBF7] focus:bg-white focus:border-[#C89B3C] focus:ring-2 focus:ring-[#C89B3C]/20 text-[#07111F] text-xs h-10 outline-hidden transition-all cursor-pointer"
             >
               <option value="">All Property Types</option>
               {[
@@ -115,7 +118,7 @@ export default async function PropertiesPage({
             <select
               name="bedrooms"
               defaultValue={bedrooms ?? ""}
-              className="w-full px-3 py-2 rounded-xl border border-[#DCE6F2] bg-[#F5F8FC] focus:bg-white focus:border-[#1677FF] focus:ring-2 focus:ring-[#1677FF]/15 text-[#0F172A] text-xs h-10 outline-hidden transition-all cursor-pointer"
+              className="w-full px-3 py-2 rounded-xl border border-[#E8E1D4] bg-[#FCFBF7] focus:bg-white focus:border-[#C89B3C] focus:ring-2 focus:ring-[#C89B3C]/20 text-[#07111F] text-xs h-10 outline-hidden transition-all cursor-pointer"
             >
               <option value="">Any Bedrooms</option>
               <option value="1">1+ Bedrooms</option>
@@ -128,7 +131,7 @@ export default async function PropertiesPage({
             <select
               name="maxPrice"
               defaultValue={maxPrice ?? ""}
-              className="w-full px-3 py-2 rounded-xl border border-[#DCE6F2] bg-[#F5F8FC] focus:bg-white focus:border-[#1677FF] focus:ring-2 focus:ring-[#1677FF]/15 text-[#0F172A] text-xs h-10 outline-hidden transition-all cursor-pointer"
+              className="w-full px-3 py-2 rounded-xl border border-[#E8E1D4] bg-[#FCFBF7] focus:bg-white focus:border-[#C89B3C] focus:ring-2 focus:ring-[#C89B3C]/20 text-[#07111F] text-xs h-10 outline-hidden transition-all cursor-pointer"
             >
               <option value="">Any Price</option>
               <option value="50000">Under $50,000</option>
@@ -141,7 +144,7 @@ export default async function PropertiesPage({
             <select
               name="sort"
               defaultValue={sort ?? ""}
-              className="w-full px-3 py-2 rounded-xl border border-[#DCE6F2] bg-[#F5F8FC] focus:bg-white focus:border-[#1677FF] focus:ring-2 focus:ring-[#1677FF]/15 text-[#0F172A] text-xs h-10 outline-hidden transition-all cursor-pointer"
+              className="w-full px-3 py-2 rounded-xl border border-[#E8E1D4] bg-[#FCFBF7] focus:bg-white focus:border-[#C89B3C] focus:ring-2 focus:ring-[#C89B3C]/20 text-[#07111F] text-xs h-10 outline-hidden transition-all cursor-pointer"
             >
               <option value="">Sort: Newest First</option>
               <option value="price_asc">Price: Low to High</option>
@@ -152,15 +155,15 @@ export default async function PropertiesPage({
             <div className="col-span-1 sm:col-span-2 lg:col-span-3 flex gap-3">
               <Button
                 type="submit"
-                className="flex-1 bg-[#1677FF] hover:bg-[#0F5ED7] text-white rounded-xl text-xs font-bold h-10 gap-2 shadow-xs transition-colors"
+                className="flex-1 bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] hover:brightness-105 text-[#07111F] rounded-xl text-xs font-bold h-10 gap-2 shadow-md shadow-[#C89B3C]/20 border border-[#A97918]/30 transition-all cursor-pointer"
               >
                 <Filter className="h-4 w-4" /> Apply Filters
               </Button>
               <Link
                 href="/properties"
-                className="inline-flex items-center justify-center px-4 py-2 border border-[#DCE6F2] rounded-xl text-xs font-semibold text-[#64748B] hover:bg-[#F5F8FC] h-10 transition-colors gap-1.5"
+                className="inline-flex items-center justify-center px-4 py-2 border border-[#E8E1D4] bg-[#FCFBF7] rounded-xl text-xs font-semibold text-[#07111F] hover:bg-[#F7F3EA] h-10 transition-colors gap-1.5"
               >
-                <RotateCcw className="h-3.5 w-3.5" />
+                <RotateCcw className="h-3.5 w-3.5 text-[#A97918]" />
                 <span>Reset</span>
               </Link>
             </div>
@@ -169,15 +172,15 @@ export default async function PropertiesPage({
 
         {/* Property Grid */}
         {properties.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-3xl border border-[#DCE6F2] shadow-xs">
-            <Search className="h-12 w-12 text-[#1677FF] mx-auto mb-4 opacity-50" />
-            <h3 className="text-lg font-bold text-[#0F172A]">No properties found</h3>
-            <p className="text-[#64748B] text-xs sm:text-sm mt-1 max-w-sm mx-auto">
+          <div className="text-center py-20 bg-[#FCFBF7] rounded-3xl border border-[#E8E1D4] shadow-sm">
+            <Search className="h-12 w-12 text-[#C89B3C] mx-auto mb-4 opacity-60" />
+            <h3 className="text-lg font-bold font-serif text-[#07111F]">No properties found</h3>
+            <p className="text-[#6B7280] text-xs sm:text-sm mt-1 max-w-sm mx-auto">
               We couldn&apos;t find any listings matching your search filters. Try adjusting your criteria or clearing filters.
             </p>
             <Link
               href="/properties"
-              className="inline-flex items-center gap-1.5 mt-5 px-4 py-2 bg-[#1677FF] text-white text-xs font-bold rounded-xl shadow-xs hover:bg-[#0F5ED7] transition-colors"
+              className="inline-flex items-center gap-1.5 mt-5 px-5 py-2.5 bg-gradient-to-r from-[#C89B3C] to-[#D9B45B] text-[#07111F] text-xs font-bold rounded-xl shadow-md shadow-[#C89B3C]/20 hover:brightness-105 transition-all"
             >
               View All Properties
             </Link>

@@ -169,16 +169,16 @@ export default async function AdminPage() {
     return { month, revenue: sum };
   });
 
-  // Property Types Pie Data matching Donut Chart colors
+  // Property Types Pie Data matching Kiro-Maal palette
   const typeColorPalette: Record<string, string> = {
-    APARTMENT: "#1E60D5",
-    VILLA: "#059669",
-    HOUSE: "#D9A336",
-    COMMERCIAL: "#E11D48",
-    LAND: "#F43F5E",
-    OFFICE: "#3B82F6",
-    TOWNHOUSE: "#8B5CF6",
-    STUDIO: "#64748B",
+    APARTMENT: "#C89B3C",
+    VILLA: "#07111F",
+    HOUSE: "#D9B45B",
+    COMMERCIAL: "#A97918",
+    LAND: "#8F6412",
+    OFFICE: "#142642",
+    TOWNHOUSE: "#E2C37D",
+    STUDIO: "#6B7280",
   };
 
   const propertyTypesData = propertiesByType.map((item) => {
@@ -293,7 +293,7 @@ export default async function AdminPage() {
           </div>
 
           <div className="flex items-center gap-2 text-xs">
-            <span className="font-bold text-[#10B981]">↑ Live</span>
+            <span className="font-bold text-[#C89B3C]">↑ Live</span>
             <span className="text-slate-400 font-medium">Total Registered</span>
           </div>
         </div>
@@ -351,8 +351,8 @@ export default async function AdminPage() {
           </div>
 
           <div className="flex items-center gap-2 text-xs">
-            <span className="font-bold text-[#10B981] flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" /> Active
+            <span className="font-bold text-[#C89B3C] flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#C89B3C]" /> Active
             </span>
             <span className="text-slate-400 font-medium">In Lease</span>
           </div>
@@ -382,7 +382,7 @@ export default async function AdminPage() {
           </div>
 
           <div className="flex items-center gap-2 text-xs">
-            <span className="font-bold text-[#10B981]">↑ +14%</span>
+            <span className="font-bold text-[#C89B3C]">↑ +14%</span>
             <span className="text-slate-500 font-medium">Registered Buyers</span>
           </div>
         </div>
@@ -411,8 +411,8 @@ export default async function AdminPage() {
           </div>
 
           <div className="flex items-center gap-2 text-xs">
-            <span className="font-bold text-[#10B981] flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" /> Total
+            <span className="font-bold text-[#C89B3C] flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#C89B3C]" /> Total
               Amount
             </span>
             <span className="text-slate-500 font-medium">Collected Today</span>
@@ -475,8 +475,8 @@ export default async function AdminPage() {
           </div>
 
           <div className="flex items-center gap-2 text-xs">
-            <span className="font-bold text-[#3B82F6] flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#3B82F6]" /> Scheduled
+            <span className="font-bold text-[#C89B3C] flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#C89B3C]" /> Scheduled
             </span>
             <span className="text-slate-500 font-medium">Tours & Visits</span>
           </div>
@@ -506,7 +506,7 @@ export default async function AdminPage() {
           </div>
 
           <div className="flex items-center gap-2 text-xs">
-            <span className="font-bold text-[#10B981]">↑ Live</span>
+            <span className="font-bold text-[#C89B3C]">↑ Live</span>
             <span className="text-slate-400 font-medium">Verified Agents</span>
           </div>
         </div>

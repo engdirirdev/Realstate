@@ -24,11 +24,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
     : 0;
 
   return (
-    <div className="min-h-screen bg-[#F5F1EA] flex">
-      {/* ─── Sidebar (Deep Rich Midnight Navy Gradient) ─── */}
-      <aside className="hidden lg:flex w-64 flex-col bg-gradient-to-b from-[#051325] via-[#071D36] to-[#040E1B] border-r border-[#103058] fixed inset-y-0 left-0 z-30 shadow-2xl">
+    <div className="min-h-screen bg-[#F7F3EA] flex">
+      {/* ─── Sidebar (Kiro-Maal Master Deep Navy) ─── */}
+      <aside className="hidden lg:flex w-64 flex-col bg-[#07111F] border-r border-[#C89B3C]/20 fixed inset-y-0 left-0 z-30 shadow-2xl">
         {/* Brand Logo */}
-        <div className="h-18 px-6 border-b border-[#103058] flex items-center bg-[#040E1B]/95">
+        <div className="h-18 px-6 border-b border-[#C89B3C]/20 flex items-center bg-[#07111F]">
           <BrandLogo variant="dark" />
         </div>
 
@@ -38,16 +38,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
 
         {/* Bottom User & Sign Out */}
-        <div className="p-4 border-t border-[#103058] space-y-2 bg-[#030B15]/95">
+        <div className="p-4 border-t border-[#C89B3C]/20 space-y-2 bg-[#050C16]">
           <div className="flex items-center gap-3 px-2 py-1">
-            <div className="w-8 h-8 rounded-lg bg-[#1677FF]/25 border border-[#1677FF]/50 flex items-center justify-center flex-shrink-0">
-              <User className="h-4 w-4 text-[#38BDF8]" />
+            <div className="w-8 h-8 rounded-xl bg-[#C89B3C]/15 border border-[#C89B3C]/30 flex items-center justify-center flex-shrink-0">
+              <User className="h-4 w-4 text-[#D9B45B]" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="font-bold text-white text-xs truncate">
+              <p className="font-bold text-[#FCFBF7] text-xs truncate">
                 {session.user?.name || "Manager"}
               </p>
-              <p className="text-[10px] text-[#38BDF8] font-semibold truncate">
+              <p className="text-[10px] text-[#D9B45B] font-semibold truncate">
                 {session.user?.email || "manager@realestate.so"}
               </p>
             </div>
@@ -58,7 +58,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </aside>
 
       {/* ─── Main Content Area ─── */}
-      <div className="lg:ml-64 flex-1 flex flex-col min-h-screen bg-[#F5F1EA]">
+      <div className="lg:ml-64 flex-1 flex flex-col min-h-screen bg-[#F7F3EA]">
         <ManagerHeader
           userName={session.user?.name}
           userEmail={session.user?.email}
@@ -66,7 +66,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           unreadCount={unreadCount}
         />
 
-        <main className="flex-1 p-5 sm:p-7 lg:p-8 bg-[#F5F1EA]">
+        <main className="flex-1 p-5 sm:p-7 lg:p-8 bg-[#F7F3EA]">
           {children}
         </main>
       </div>

@@ -79,7 +79,7 @@ export default function DashboardSidebarNav() {
       {managerNavGroups.map((group, groupIdx) => (
         <div key={groupIdx} className="space-y-1">
           {group.title && (
-            <p className="px-3 text-[10px] font-extrabold text-[#38BDF8]/80 uppercase tracking-wider mb-2">
+            <p className="px-3 text-[10px] font-extrabold text-[#C89B3C]/80 uppercase tracking-widest mb-2 font-serif">
               {group.title}
             </p>
           )}
@@ -92,16 +92,16 @@ export default function DashboardSidebarNav() {
                 className={cn(
                   "group flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200",
                   isActive
-                    ? "bg-gradient-to-r from-[#1677FF] to-[#0F5ED7] text-white font-bold shadow-lg shadow-[#1677FF]/35 border-l-4 border-[#38BDF8]"
-                    : "text-white/85 hover:text-white hover:bg-white/10 active:bg-white/15"
+                    ? "bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] font-extrabold shadow-lg shadow-[#C89B3C]/25"
+                    : "text-white/80 hover:text-white hover:bg-white/5 active:bg-white/10"
                 )}
               >
                 <Icon
                   className={cn(
                     "h-4 w-4 flex-shrink-0 transition-transform duration-200",
                     isActive
-                      ? "text-white scale-110 drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]"
-                      : "text-[#7DD3FC] group-hover:text-white group-hover:scale-110"
+                      ? "text-[#07111F] scale-110"
+                      : "text-[#D9B45B] group-hover:text-[#F3D78A] group-hover:scale-110"
                   )}
                 />
                 <span className="truncate">{label}</span>

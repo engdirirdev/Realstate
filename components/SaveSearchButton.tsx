@@ -89,14 +89,14 @@ export default function SaveSearchButton({ filters }: SaveSearchButtonProps) {
       variant="outline"
       onClick={handleSaveSearch}
       disabled={saving || saved}
-      className="rounded-xl border-[#E2E8F0] bg-white text-[#0F172A] hover:bg-[#F8FAFC] text-xs font-semibold gap-1.5 shadow-sm"
+      className="rounded-xl border-[#E8E1D4] bg-[#FCFBF7] text-[#07111F] hover:bg-[#F7F3EA] text-xs font-semibold gap-1.5 shadow-sm"
     >
       {saving ? (
-        <Loader2 className="h-3.5 w-3.5 animate-spin text-[#10B981]" />
+        <Loader2 className="h-3.5 w-3.5 animate-spin text-[#C89B3C]" />
       ) : saved ? (
-        <Check className="h-3.5 w-3.5 text-[#10B981]" />
+        <Check className="h-3.5 w-3.5 text-[#C89B3C]" />
       ) : (
-        <Bookmark className="h-3.5 w-3.5 text-[#3B82F6]" />
+        <Bookmark className="h-3.5 w-3.5 text-[#C89B3C]" />
       )}
       {saved ? "Search Saved" : "Save Search Alert"}
     </Button>

@@ -61,9 +61,9 @@ export default function PropertyShareAndReport({ propertyId, propertyTitle }: Pr
           variant="outline"
           size="sm"
           onClick={handleShare}
-          className="rounded-xl text-xs font-semibold gap-1.5 border-[#E2E8F0] bg-white hover:bg-[#F8FAFC]"
+          className="rounded-xl text-xs font-semibold gap-1.5 border-[#E8E1D4] bg-[#FCFBF7] text-[#07111F] hover:bg-[#F7F3EA]"
         >
-          {copied ? <Check className="h-3.5 w-3.5 text-[#10B981]" /> : <Share2 className="h-3.5 w-3.5 text-[#3B82F6]" />}
+          {copied ? <Check className="h-3.5 w-3.5 text-[#C89B3C]" /> : <Share2 className="h-3.5 w-3.5 text-[#C89B3C]" />}
           {copied ? "Copied!" : "Share Listing"}
         </Button>
 
@@ -72,31 +72,31 @@ export default function PropertyShareAndReport({ propertyId, propertyTitle }: Pr
           variant="outline"
           size="sm"
           onClick={() => setReportOpen(true)}
-          className="rounded-xl text-xs font-semibold gap-1.5 border-[#E2E8F0] bg-white text-[#EF4444] hover:bg-[#FEE2E2]/30"
+          className="rounded-xl text-xs font-semibold gap-1.5 border-[#E8E1D4] bg-[#FCFBF7] text-[#991B1B] hover:bg-[#991B1B]/10"
         >
-          <Flag className="h-3.5 w-3.5 text-[#EF4444]" />
+          <Flag className="h-3.5 w-3.5 text-[#991B1B]" />
           Report
         </Button>
       </div>
 
       <Dialog open={reportOpen} onOpenChange={setReportOpen}>
-        <DialogContent className="max-w-md bg-white rounded-2xl p-6 shadow-xl border border-[#E2E8F0]">
+        <DialogContent className="max-w-md bg-[#FCFBF7] rounded-2xl p-6 shadow-xl border border-[#E8E1D4]">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-[#0F172A] flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-[#EF4444]" /> Report Listing
+            <DialogTitle className="text-xl font-bold font-serif text-[#07111F] flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-[#991B1B]" /> Report Listing
             </DialogTitle>
-            <DialogDescription className="text-xs text-[#64748B]">
+            <DialogDescription className="text-xs text-[#6B7280]">
               Tell us why you are reporting &ldquo;{propertyTitle}&rdquo;.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleReportSubmit} className="space-y-4 mt-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[#0F172A]">Reason for Report</Label>
+              <Label className="text-xs font-semibold text-[#07111F]">Reason for Report</Label>
               <select
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                className="w-full h-10 border border-[#E2E8F0] rounded-xl px-3 text-xs bg-white text-[#0F172A]"
+                className="w-full h-10 border border-[#E8E1D4] rounded-xl px-3 text-xs bg-white text-[#07111F] focus:outline-none focus:border-[#C89B3C]"
               >
                 <option value="MISLEADING">Misleading information / Inaccurate photos</option>
                 <option value="PRICE_FRAUD">Suspicious price or scam</option>
@@ -107,20 +107,20 @@ export default function PropertyShareAndReport({ propertyId, propertyTitle }: Pr
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-[#0F172A]">Additional Details (Optional)</Label>
+              <Label className="text-xs font-semibold text-[#07111F]">Additional Details (Optional)</Label>
               <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Provide any additional context to assist the moderation team..."
-                className="min-h-[90px] border-[#E2E8F0] rounded-xl text-xs"
+                className="min-h-[90px] border-[#E8E1D4] bg-white rounded-xl text-xs text-[#07111F]"
               />
             </div>
 
             <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" onClick={() => setReportOpen(false)} className="rounded-xl text-xs">
+              <Button type="button" variant="outline" onClick={() => setReportOpen(false)} className="rounded-xl text-xs border-[#E8E1D4] text-[#07111F]">
                 Cancel
               </Button>
-              <Button type="submit" disabled={submitting} className="bg-[#EF4444] hover:bg-[#DC2626] text-white rounded-xl text-xs font-semibold">
+              <Button type="submit" disabled={submitting} className="bg-[#991B1B] hover:bg-[#7F1D1D] text-white rounded-xl text-xs font-semibold border-0">
                 {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Submit Report"}
               </Button>
             </DialogFooter>

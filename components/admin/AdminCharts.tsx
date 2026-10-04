@@ -13,6 +13,7 @@ import {
   Cell,
 } from "recharts";
 import { formatPrice } from "@/lib/utils";
+import { BarChart3, Building2, ChevronDown } from "lucide-react";
 
 interface RevenueMonthData {
   month: string;
@@ -32,7 +33,17 @@ interface AdminChartsProps {
   totalProperties: number;
 }
 
-const TYPE_COLORS = ["#1677FF", "#06B6D4", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#64748B"];
+// Exact colors matching reference donut chart
+const DONUT_COLORS: Record<string, string> = {
+  APARTMENT: "#1E60D5", // Royal Blue (40%)
+  VILLA: "#059669",     // Emerald (25%)
+  HOUSE: "#D9A336",     // Gold (20%)
+  COMMERCIAL: "#E11D48",// Crimson (10%)
+  LAND: "#F43F5E",      // Coral/Rose (5%)
+  OFFICE: "#3B82F6",
+  TOWNHOUSE: "#8B5CF6",
+  STUDIO: "#64748B",
+};
 
 export default function AdminCharts({
   monthlyRevenue,
@@ -41,52 +52,68 @@ export default function AdminCharts({
 }: AdminChartsProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* ─── Monthly Revenue Spline Area Chart (2 cols) ─── */}
-      <div className="lg:col-span-2 bg-gradient-to-br from-[#071D36] via-[#092546] to-[#0B2C52] rounded-2xl border border-[#133C6D] p-5 sm:p-6 shadow-xl text-white flex flex-col justify-between">
+      {/* ─── Monthly Revenue Area Chart (2 cols) ─── */}
+      <div className="lg:col-span-2 bg-white rounded-2xl border border-[#E6DED4] p-5 sm:p-6 shadow-xs flex flex-col justify-between">
         <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">Monthly Revenue</h3>
-            <p className="text-xs text-[#94A3B8]">Platform financial performance and transactions</p>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#C99126] text-white flex items-center justify-center shrink-0 shadow-xs">
+              <BarChart3 className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base sm:text-lg font-bold text-[#0B1523] tracking-tight">
+                Monthly Revenue
+              </h3>
+              <p className="text-xs text-slate-500">
+                Platform financial performance and transactions
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold px-2.5 py-1 bg-white/10 border border-white/20 rounded-lg text-white">
-              {new Date().getFullYear()}
-            </span>
+
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D9CEBF] rounded-xl text-xs font-semibold text-slate-700 shadow-2xs cursor-pointer hover:bg-slate-50">
+            <span>{new Date().getFullYear()}</span>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
           </div>
         </div>
 
-        <div className="h-64 sm:h-72 w-full">
+        <div className="h-64 sm:h-72 w-full pt-2">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={monthlyRevenue} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+            <AreaChart
+              data={monthlyRevenue}
+              margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+            >
               <defs>
-                <linearGradient id="adminRevenueGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#1677FF" stopOpacity={0.45} />
-                  <stop offset="95%" stopColor="#1677FF" stopOpacity={0.0} />
+                <linearGradient id="goldRevenueGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#C99126" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#C99126" stopOpacity={0.0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#133C6D" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E6DED4" />
               <XAxis
                 dataKey="month"
-                stroke="#94A3B8"
+                stroke="#6B7280"
                 fontSize={11}
                 tickLine={false}
                 axisLine={false}
               />
               <YAxis
-                stroke="#94A3B8"
+                stroke="#6B7280"
                 fontSize={11}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(val) => (val >= 1000 ? `$${(val / 1000).toFixed(0)}k` : `$${val}`)}
+                tickFormatter={(val) =>
+                  val >= 1000 ? `$${(val / 1000).toFixed(0)}k` : `$${val}`
+                }
               />
               <Tooltip
                 content={({ active, payload }) => {
                   if (active && payload && payload.length) {
                     const data = payload[0].payload;
                     return (
-                      <div className="bg-[#040E1C] text-white px-3 py-2 rounded-xl text-xs shadow-2xl border border-[#1677FF]">
-                        <p className="font-bold text-[#38BDF8]">{data.month}</p>
-                        <p className="font-black text-sm mt-0.5">{formatPrice(data.revenue)}</p>
+                      <div className="bg-[#0B1523] text-white px-3.5 py-2 rounded-xl text-xs shadow-xl border border-[#C99126]">
+                        <p className="font-bold text-[#D9A336]">{data.month}</p>
+                        <p className="font-extrabold text-sm mt-0.5 text-white">
+                          {formatPrice(data.revenue)}
+                        </p>
                       </div>
                     );
                   }
@@ -96,11 +123,17 @@ export default function AdminCharts({
               <Area
                 type="monotone"
                 dataKey="revenue"
-                stroke="#1677FF"
-                strokeWidth={3.5}
+                stroke="#C99126"
+                strokeWidth={2.5}
                 fillOpacity={1}
-                fill="url(#adminRevenueGradient)"
-                activeDot={{ r: 6, fill: "#1677FF", stroke: "#FFFFFF", strokeWidth: 3 }}
+                fill="url(#goldRevenueGradient)"
+                dot={{ r: 4, fill: "#C99126", stroke: "#FFFFFF", strokeWidth: 1.5 }}
+                activeDot={{
+                  r: 6,
+                  fill: "#C99126",
+                  stroke: "#0B1523",
+                  strokeWidth: 2,
+                }}
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -108,77 +141,106 @@ export default function AdminCharts({
       </div>
 
       {/* ─── Property Types Donut Chart (1 col) ─── */}
-      <div className="bg-gradient-to-br from-[#071D36] via-[#092546] to-[#0B2C52] rounded-2xl border border-[#133C6D] p-5 sm:p-6 shadow-xl text-white flex flex-col justify-between">
+      <div className="bg-white rounded-2xl border border-[#E6DED4] p-5 sm:p-6 shadow-xs flex flex-col justify-between">
         <div className="flex items-center justify-between mb-2">
-          <div>
-            <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">Property Types</h3>
-            <p className="text-xs text-[#94A3B8]">Distribution of active assets</p>
-          </div>
-          <span className="text-xs font-semibold px-2.5 py-1 bg-white/10 border border-white/20 rounded-lg text-white">
-            {new Date().getFullYear()}
-          </span>
-        </div>
-
-        <div className="relative h-48 sm:h-52 w-full flex items-center justify-center my-2">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={propertyTypes}
-                cx="50%"
-                cy="50%"
-                innerRadius={55}
-                outerRadius={80}
-                paddingAngle={3}
-                dataKey="value"
-              >
-                {propertyTypes.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={entry.color || TYPE_COLORS[index % TYPE_COLORS.length]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip
-                content={({ active, payload }) => {
-                  if (active && payload && payload.length) {
-                    const data = payload[0].payload as PropertyTypeData;
-                    return (
-                      <div className="bg-[#040E1C] text-white px-3 py-1.5 rounded-xl text-xs shadow-2xl border border-[#133C6D]">
-                        <span className="font-semibold">{data.name}: </span>
-                        <span className="font-bold text-[#38BDF8]">{data.value} listings</span>
-                        <span className="text-[11px] text-gray-400 ml-1">({data.percentage}%)</span>
-                      </div>
-                    );
-                  }
-                  return null;
-                }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-
-          {/* Center stats in Donut */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span className="text-2xl sm:text-3xl font-black text-white leading-none">
-              {totalProperties.toLocaleString()}
-            </span>
-            <span className="text-[11px] font-semibold text-white/70 mt-1">Total Properties</span>
-          </div>
-        </div>
-
-        {/* Legend */}
-        <div className="grid grid-cols-2 gap-x-3 gap-y-2 pt-2.5 border-t border-[#133C6D]">
-          {propertyTypes.slice(0, 6).map((type, i) => (
-            <div key={type.name} className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-1.5 truncate">
-                <span
-                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: type.color || TYPE_COLORS[i % TYPE_COLORS.length] }}
-                />
-                <span className="text-white/80 truncate font-medium">{type.name}</span>
-              </div>
-              <span className="font-bold text-white ml-2">{type.percentage}%</span>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#C99126] text-white flex items-center justify-center shrink-0 shadow-xs">
+              <Building2 className="w-5 h-5" />
             </div>
-          ))}
+            <div>
+              <h3 className="text-base sm:text-lg font-bold text-[#0B1523] tracking-tight">
+                Property Types
+              </h3>
+              <p className="text-xs text-slate-500">Distribution of active assets</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D9CEBF] rounded-xl text-xs font-semibold text-slate-700 shadow-2xs cursor-pointer hover:bg-slate-50">
+            <span>{new Date().getFullYear()}</span>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 my-auto pt-3">
+          {/* Donut Chart with Centered Number */}
+          <div className="relative w-44 h-44 shrink-0 flex items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={propertyTypes}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={52}
+                  outerRadius={75}
+                  paddingAngle={2}
+                  dataKey="value"
+                >
+                  {propertyTypes.map((entry, index) => {
+                    const typeKey = entry.name.toUpperCase().replace(/S$/, "");
+                    const sliceColor =
+                      DONUT_COLORS[typeKey] || entry.color || "#1E60D5";
+                    return <Cell key={`cell-${index}`} fill={sliceColor} />;
+                  })}
+                </Pie>
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload as PropertyTypeData;
+                      return (
+                        <div className="bg-[#0B1523] text-white px-3 py-1.5 rounded-xl text-xs shadow-xl border border-[#C99126]">
+                          <span className="font-semibold">{data.name}: </span>
+                          <span className="font-bold text-[#D9A336]">
+                            {data.value} listings
+                          </span>
+                          <span className="text-[11px] text-slate-300 ml-1">
+                            ({data.percentage}%)
+                          </span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+
+            {/* Donut Center */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-2xl font-black text-[#0B1523] leading-none">
+                {totalProperties}
+              </span>
+              <span className="text-[10px] font-semibold text-slate-500 mt-0.5">
+                Total Properties
+              </span>
+            </div>
+          </div>
+
+          {/* Legend on Right (Matching Screenshot) */}
+          <div className="space-y-2.5 w-full sm:w-auto text-xs min-w-[130px]">
+            {propertyTypes.slice(0, 5).map((type, idx) => {
+              const typeKey = type.name.toUpperCase().replace(/S$/, "");
+              const dotColor = DONUT_COLORS[typeKey] || type.color || "#1E60D5";
+              return (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between gap-3 text-xs"
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: dotColor }}
+                    />
+                    <span className="text-slate-700 font-medium truncate max-w-[85px]">
+                      {type.name}
+                    </span>
+                  </div>
+                  <span className="font-bold text-[#0B1523]">
+                    {type.percentage}%
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

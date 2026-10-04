@@ -2,7 +2,7 @@
   "modelId": "valuation-ridgeregression-v2",
   "modelVersion": "2.0.0",
   "modelType": "RidgeRegression",
-  "trainedAt": "2026-10-04T13:09:25.556Z",
+  "trainedAt": "2026-10-04T15:00:46.667Z",
   "datasetHash": "3add7f972838515d",
   "sampleCount": 28,
   "trainCount": 19,

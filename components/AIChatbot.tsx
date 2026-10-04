@@ -51,11 +51,6 @@ export default function AIChatbot() {
   const [error, setError] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Do not render floating chatbot button over authentication forms
-  if (pathname === "/login" || pathname === "/register") {
-    return null;
-  }
-
   const role = session?.user?.role || "PUBLIC";
   const userName = session?.user?.name || "Guest";
 
@@ -179,7 +174,7 @@ export default function AIChatbot() {
           hour: "2-digit",
           minute: "2-digit",
         }),
-        properties: data.properties || [],
+        properties: data.shouldRenderPropertyCards && data.properties ? data.properties : [],
       };
 
       setMessages((prev) => [...prev, botMsg]);
@@ -223,6 +218,11 @@ export default function AIChatbot() {
       });
     }
   };
+
+  // Do not render floating chatbot button over authentication forms
+  if (pathname === "/login" || pathname === "/register") {
+    return null;
+  }
 
   return (
     <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end font-sans">

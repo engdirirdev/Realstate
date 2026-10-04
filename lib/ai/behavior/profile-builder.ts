@@ -200,7 +200,115 @@ export async function buildUserProfile(
     return coldStartProfile;
   }
 
-  // 4. Aggregate features weighted by time-decay
+  // 4. Aggregate features weighted by time-decay and negative signal netting
+  const profileResult = aggregateInteractions(userId, allEvents, now);
+
+
+  // 6. Upsert to database (with concurrency and foreign-key safety)
+  try {
+    const userExists = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+
+    if (userExists) {
+      await prisma.userPreferenceProfile.upsert({
+        where: { userId },
+        update: {
+          confidence: profileResult.confidence,
+          totalInteractions: allEvents.length,
+          totalWeight: profileResult.totalWeight,
+          preferredCities: JSON.stringify(profileResult.preferredCities),
+          preferredTypes: JSON.stringify(profileResult.preferredTypes),
+          minPrice: profileResult.priceRange.minPrice,
+          maxPrice: profileResult.priceRange.maxPrice,
+          avgPrice: profileResult.priceRange.avgPrice,
+          preferredBeds: profileResult.preferredBedrooms,
+          preferredBaths: profileResult.preferredBathrooms,
+          amenities: JSON.stringify(profileResult.preferredAmenities),
+          semanticVector: profileResult.semanticVector ? JSON.stringify(profileResult.semanticVector) : null,
+          lastActiveAt: profileResult.lastActiveAt,
+          updatedAt: now,
+        },
+        create: {
+          userId,
+          confidence: profileResult.confidence,
+          totalInteractions: allEvents.length,
+          totalWeight: profileResult.totalWeight,
+          preferredCities: JSON.stringify(profileResult.preferredCities),
+          preferredTypes: JSON.stringify(profileResult.preferredTypes),
+          minPrice: profileResult.priceRange.minPrice,
+          maxPrice: profileResult.priceRange.maxPrice,
+          avgPrice: profileResult.priceRange.avgPrice,
+          preferredBeds: profileResult.preferredBedrooms,
+          preferredBaths: profileResult.preferredBathrooms,
+          amenities: JSON.stringify(profileResult.preferredAmenities),
+          semanticVector: profileResult.semanticVector ? JSON.stringify(profileResult.semanticVector) : null,
+          lastActiveAt: profileResult.lastActiveAt,
+        },
+      });
+    }
+  } catch (err: any) {
+    if (err.code === "P2002") {
+      // Handled race condition: update existing
+      try {
+        await prisma.userPreferenceProfile.update({
+          where: { userId },
+          data: {
+            confidence: profileResult.confidence,
+            totalInteractions: allEvents.length,
+            totalWeight: profileResult.totalWeight,
+            preferredCities: JSON.stringify(profileResult.preferredCities),
+            preferredTypes: JSON.stringify(profileResult.preferredTypes),
+            minPrice: profileResult.priceRange.minPrice,
+            maxPrice: profileResult.priceRange.maxPrice,
+            avgPrice: profileResult.priceRange.avgPrice,
+            preferredBeds: profileResult.preferredBedrooms,
+            preferredBaths: profileResult.preferredBathrooms,
+            amenities: JSON.stringify(profileResult.preferredAmenities),
+            semanticVector: profileResult.semanticVector ? JSON.stringify(profileResult.semanticVector) : null,
+            lastActiveAt: profileResult.lastActiveAt,
+            updatedAt: now,
+          },
+        });
+      } catch {
+        // Safe ignore
+      }
+    } else {
+      console.warn(`[AI:ProfileBuilder] Could not persist profile for ${userId}: ${err.message}`);
+    }
+  }
+
+  return profileResult;
+}
+
+/**
+ * Pure aggregation function for historical behavioral interactions.
+ * Applies time decay and negative interaction netting.
+ */
+export function aggregateInteractions(
+  userId: string,
+  allEvents: any[],
+  now: Date = new Date()
+): LearnedUserPreferences {
+  if (allEvents.length === 0) {
+    return {
+      userId,
+      confidence: 0.0,
+      totalInteractions: 0,
+      totalWeight: 0.0,
+      preferredCities: {},
+      preferredTypes: {},
+      priceRange: { minPrice: 0, maxPrice: 0, avgPrice: 0 },
+      preferredBedrooms: 0,
+      preferredBathrooms: 0,
+      preferredAmenities: [],
+      semanticVector: null,
+      lastActiveAt: now,
+      isColdStart: true,
+    };
+  }
+
   let totalEffectiveWeight = 0;
   const cityWeights: Record<string, number> = {};
   const typeWeights: Record<string, number> = {};
@@ -218,50 +326,52 @@ export async function buildUserProfile(
   let totalVectorWeight = 0;
 
   for (const event of allEvents) {
-    const baseW = SIGNAL_BASE_WEIGHTS[event.eventType as InteractionType] || 1.0;
+    const evType = (event.eventType || event.interactionType) as InteractionType;
+    const baseW = SIGNAL_BASE_WEIGHTS[evType] !== undefined ? SIGNAL_BASE_WEIGHTS[evType] : 1.0;
     const decayedW = calculateDecayedWeight(baseW, event.createdAt, now);
 
-    // Negative signals decrease weights or skip accumulation
-    if (decayedW <= 0) continue;
+    // Process signal with negative netting support
+    if (decayedW === 0) continue;
 
     const prop = event.property;
     if (!prop) continue;
 
-    totalEffectiveWeight += decayedW;
+    // Positive signals add, negative signals net out (floored at 0)
+    totalEffectiveWeight = Math.max(0, totalEffectiveWeight + decayedW);
 
-    // City aggregation
+    // City aggregation (netting allowed, floored at 0)
     if (prop.city) {
-      cityWeights[prop.city] = (cityWeights[prop.city] || 0) + decayedW;
+      cityWeights[prop.city] = Math.max(0, (cityWeights[prop.city] || 0) + decayedW);
     }
 
-    // Type aggregation
+    // Type aggregation (netting allowed, floored at 0)
     if (prop.type) {
-      typeWeights[prop.type] = (typeWeights[prop.type] || 0) + decayedW;
+      typeWeights[prop.type] = Math.max(0, (typeWeights[prop.type] || 0) + decayedW);
     }
 
-    // Bedroom / Bathroom aggregation
-    if (prop.bedrooms) {
-      sumWeightedBeds += prop.bedrooms * decayedW;
-    }
-    if (prop.bathrooms) {
-      sumWeightedBaths += prop.bathrooms * decayedW;
-    }
-
-    // Price aggregation
-    if (prop.price && prop.price > 0) {
-      sumWeightedPrice += prop.price * decayedW;
-      if (prop.price < minObservedPrice) minObservedPrice = prop.price;
-      if (prop.price > maxObservedPrice) maxObservedPrice = prop.price;
+    // Bedroom / Bathroom aggregation (accumulated from positive interactions)
+    if (decayedW > 0) {
+      if (prop.bedrooms) {
+        sumWeightedBeds += prop.bedrooms * decayedW;
+      }
+      if (prop.bathrooms) {
+        sumWeightedBaths += prop.bathrooms * decayedW;
+      }
+      if (prop.price && prop.price > 0) {
+        sumWeightedPrice += prop.price * decayedW;
+        if (prop.price < minObservedPrice) minObservedPrice = prop.price;
+        if (prop.price > maxObservedPrice) maxObservedPrice = prop.price;
+      }
     }
 
     // Amenities aggregation
     if (prop.amenities) {
       try {
-        const parsed = JSON.parse(prop.amenities);
+        const parsed = typeof prop.amenities === "string" ? JSON.parse(prop.amenities) : prop.amenities;
         if (Array.isArray(parsed)) {
           for (const item of parsed) {
             const clean = String(item).toLowerCase().trim();
-            amenityWeights[clean] = (amenityWeights[clean] || 0) + decayedW;
+            amenityWeights[clean] = Math.max(0, (amenityWeights[clean] || 0) + decayedW);
           }
         }
       } catch {
@@ -272,7 +382,7 @@ export async function buildUserProfile(
     // Semantic vector accumulation
     if (prop.embedding && prop.embedding.embedding) {
       try {
-        const propVec: number[] = JSON.parse(prop.embedding.embedding);
+        const propVec: number[] = typeof prop.embedding.embedding === "string" ? JSON.parse(prop.embedding.embedding) : prop.embedding.embedding;
         if (Array.isArray(propVec) && propVec.length === vectorDim) {
           for (let i = 0; i < vectorDim; i++) {
             vectorAccumulator[i] += propVec[i] * decayedW;
@@ -285,7 +395,7 @@ export async function buildUserProfile(
     }
   }
 
-  // 5. Normalize distributions
+  // Normalize distributions
   const normalizedCities: Record<string, number> = {};
   if (totalEffectiveWeight > 0) {
     for (const [c, w] of Object.entries(cityWeights)) {
@@ -326,7 +436,7 @@ export async function buildUserProfile(
   // Compute profile confidence
   const confidence = calculateProfileConfidence(totalEffectiveWeight);
 
-  const profileResult: LearnedUserPreferences = {
+  return {
     userId,
     confidence,
     totalInteractions: allEvents.length,
@@ -345,81 +455,4 @@ export async function buildUserProfile(
     lastActiveAt: allEvents[0]?.createdAt || now,
     isColdStart: confidence === 0,
   };
-
-  // 6. Upsert to database (with concurrency and foreign-key safety)
-  try {
-    const userExists = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true },
-    });
-
-    if (userExists) {
-      await prisma.userPreferenceProfile.upsert({
-        where: { userId },
-        update: {
-          confidence,
-          totalInteractions: allEvents.length,
-          totalWeight: Math.round(totalEffectiveWeight * 100) / 100,
-          preferredCities: JSON.stringify(normalizedCities),
-          preferredTypes: JSON.stringify(normalizedTypes),
-          minPrice,
-          maxPrice,
-          avgPrice,
-          preferredBeds: prefBeds,
-          preferredBaths: prefBaths,
-          amenities: JSON.stringify(sortedAmenities),
-          semanticVector: semanticVector ? JSON.stringify(semanticVector) : null,
-          lastActiveAt: profileResult.lastActiveAt,
-          updatedAt: now,
-        },
-        create: {
-          userId,
-          confidence,
-          totalInteractions: allEvents.length,
-          totalWeight: Math.round(totalEffectiveWeight * 100) / 100,
-          preferredCities: JSON.stringify(normalizedCities),
-          preferredTypes: JSON.stringify(normalizedTypes),
-          minPrice,
-          maxPrice,
-          avgPrice,
-          preferredBeds: prefBeds,
-          preferredBaths: prefBaths,
-          amenities: JSON.stringify(sortedAmenities),
-          semanticVector: semanticVector ? JSON.stringify(semanticVector) : null,
-          lastActiveAt: profileResult.lastActiveAt,
-        },
-      });
-    }
-  } catch (err: any) {
-    if (err.code === "P2002") {
-      // Handled race condition: update existing
-      try {
-        await prisma.userPreferenceProfile.update({
-          where: { userId },
-          data: {
-            confidence,
-            totalInteractions: allEvents.length,
-            totalWeight: Math.round(totalEffectiveWeight * 100) / 100,
-            preferredCities: JSON.stringify(normalizedCities),
-            preferredTypes: JSON.stringify(normalizedTypes),
-            minPrice,
-            maxPrice,
-            avgPrice,
-            preferredBeds: prefBeds,
-            preferredBaths: prefBaths,
-            amenities: JSON.stringify(sortedAmenities),
-            semanticVector: semanticVector ? JSON.stringify(semanticVector) : null,
-            lastActiveAt: profileResult.lastActiveAt,
-            updatedAt: now,
-          },
-        });
-      } catch {
-        // Safe ignore
-      }
-    } else {
-      console.warn(`[AI:ProfileBuilder] Could not persist profile for ${userId}: ${err.message}`);
-    }
-  }
-
-  return profileResult;
 }

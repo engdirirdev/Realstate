@@ -33,6 +33,7 @@ const SUGGESTIONS = [
 ];
 
 export default function AIAssistantPage() {
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
@@ -96,16 +97,23 @@ export default function AIAssistantPage() {
       const res = await fetch("/api/ai-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: content, history: chatHistory }),
+        body: JSON.stringify({
+          message: content,
+          history: chatHistory,
+          sessionId: sessionId || undefined,
+        }),
       });
       const data = await res.json();
+      if (data.sessionId && !sessionId) {
+        setSessionId(data.sessionId);
+      }
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
           content: data.reply || "Sorry, I couldn't process that. Please try again.",
           timestamp: new Date(),
-          properties: data.properties || [],
+          properties: data.shouldRenderPropertyCards && data.properties ? data.properties : [],
         },
       ]);
     } catch {

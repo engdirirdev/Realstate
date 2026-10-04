@@ -18,6 +18,8 @@ export interface NumericConstraint {
   rawMatchedText?: string;
 }
 
+import { resolveLocation, normalizeCanonicalCity } from "./location-resolver";
+
 export interface ExtractedEntities {
   city?: string;
   propertyType?: string;
@@ -28,6 +30,7 @@ export interface ExtractedEntities {
     maxPrice?: number;
     approxPrice?: number;
     operator: "lte" | "gte" | "between" | "approx" | "eq";
+    period?: "month" | "year" | "week" | "day";
     rawMatchedText?: string;
   };
   parking?: boolean;
@@ -42,67 +45,67 @@ export interface ExtractedEntities {
 const CITY_DICTIONARY: Record<string, string[]> = {
   Mogadishu: [
     "mogadishu", "muqdisho", "muqdisho ah", "muqdishu", "hamar", "xamar",
-    "banaadir", "banadir", "مقديشو", "بندر"
+    "banaadir", "banadir", "magaalada muqdisho", "مقديشو", "بندر"
   ],
   Hargeisa: [
-    "hargeisa", "hargeysa", "hargaysa", "هرجيسا"
+    "hargeisa", "hargeysa", "hargaysa", "magaalada hargeysa", "hergeisa", "هرجيسا"
   ],
   Bosaso: [
-    "bosaso", "boosaaso", "bosaaso", "بوساسو"
+    "bosaso", "boosaaso", "bosaaso", "magaalada boosaaso", "بوساسو"
   ],
   Kismayo: [
-    "kismayo", "kismaayo", "kismayu", "كسمايو"
+    "kismayo", "kismaayo", "kismayu", "magaalada kismaayo", "كسمايو"
   ],
   Garowe: [
-    "garowe", "garoowe", "غاروي", "جروي"
+    "garowe", "garoowe", "magaalada garoowe", "غاروي", "جروي"
   ],
   Baydhabo: [
-    "baydhabo", "baidoa", "baydhaba", "بيداوا", "بيدوا"
+    "baydhabo", "baidoa", "baydhaba", "magaalada baydhabo", "بيداوا", "بيدوا"
   ],
   Berbera: [
-    "berbera", "barbera", "بربرة"
+    "berbera", "barbera", "magaalada berbera", "بربرة"
   ],
 };
 
-// 2. Property Type Mappings (Strictly preserving distinct types)
+// 2. Property Type Mappings (Strictly preserving distinct types - specific types evaluated before generic HOUSE)
 const TYPE_DICTIONARY: Record<string, string[]> = {
-  HOUSE: [
-    "house", "home", "family home", "single family", "residential house",
-    "guri", "guriga", "guryo",
-    "منزل", "بيت", "دار"
-  ],
   APARTMENT: [
-    "apartment", "flat", "condo", "condominium",
-    "dabaq", "apartment-ka", "qolal",
+    "apartment", "apartments", "flat", "flats", "condo", "condominium",
+    "dabaq", "dabaqyo", "apartment-ka",
     "شقة", "شقق"
   ],
   VILLA: [
     "villa", "villas", "mansion", "compound",
-    "fiilo", "villa-da",
+    "fiilo", "fiilooyin", "villa-da",
     "فيلا", "فلل", "قصر"
+  ],
+  STUDIO: [
+    "studio", "bedsitter", "single room apartment",
+    "istuudiyo", "istuudiyow", "استوديو"
+  ],
+  TOWNHOUSE: [
+    "townhouse", "townhouses", "town home", "row house",
+    "tawnhawz"
   ],
   OFFICE: [
     "office", "offices", "workplace", "desk",
-    "xafiis", "xafiiska",
+    "xafiis", "xafiisyo", "xafiiska",
     "مكتب", "مكاتب"
   ],
   LAND: [
     "land", "plot", "lot", "parcel", "ground",
-    "dhul", "boos", "dhul banaan",
+    "dhul", "dhulka", "boos", "boosas", "dhul banaan",
     "أرض", "قطعة أرض", "أراضي"
   ],
   COMMERCIAL: [
-    "commercial", "shop", "store", "retail", "warehouse",
-    "dukaan", "ganacsi", "goob ganacsi",
+    "commercial", "shop", "shops", "store", "stores", "retail", "warehouse",
+    "dukaan", "dukaamo", "ganacsi", "goob ganacsi",
     "تجاري", "محل", "متجر", "مستودع"
   ],
-  TOWNHOUSE: [
-    "townhouse", "town home", "row house",
-    "tawnhawz"
-  ],
-  STUDIO: [
-    "studio", "bedsitter", "single room apartment",
-    "istuudiyow", "استوديو"
+  HOUSE: [
+    "house", "houses", "home", "homes", "family home", "single family", "residential house",
+    "guri", "guriga", "guryo", "guryaha", "guryaal",
+    "منزل", "بيت", "دار"
   ],
 };
 
@@ -161,22 +164,12 @@ export function extractEntities(query: string): ExtractedEntities {
   const text = query.trim();
 
   // -------------------------------------------------------------
-  // A. CITY EXTRACTION
+  // A. CITY EXTRACTION (Unified LocationResolver)
   // -------------------------------------------------------------
-  for (const [canonicalCity, aliases] of Object.entries(CITY_DICTIONARY)) {
-    for (const alias of aliases) {
-      const isArabic = /[\u0600-\u06FF]/.test(alias);
-      const matchFound = isArabic
-        ? text.includes(alias)
-        : new RegExp(`\\b${alias}\\b`, "i").test(text);
-
-      if (matchFound) {
-        result.city = canonicalCity;
-        result.rawEntities.city = alias;
-        break;
-      }
-    }
-    if (result.city) break;
+  const locationMatch = resolveLocation(text);
+  if (locationMatch) {
+    result.city = locationMatch.canonicalCity;
+    result.rawEntities.city = locationMatch.matchedAlias;
   }
 
   // -------------------------------------------------------------
@@ -201,12 +194,12 @@ export function extractEntities(query: string): ExtractedEntities {
   // -------------------------------------------------------------
   // C. BEDROOM EXTRACTION
   // -------------------------------------------------------------
-  // 1. Digits: "3 bedroom", "3-bedroom", "3BR", "3 beds", "3 qol", "3 غرف"
-  const bedDigitRegex = /(\d+)\s*(?:-|–|\s+)?\s*(?:bedrooms?|beds?|bed|bds?|br|qol|qolal|غرف نوم|غرف|غرفة)\b/iu;
-  // 2. English / Somali words (with optional hyphen for "three-bedroom")
-  const bedWordRegex = /(?:([a-zA-Z]+)\s*(?:-|–|\s+)\s*(?:bedrooms?|beds?|qol|qolal)|(?:qol|qolal)\s+([a-zA-Z]+))/iu;
-  // 3. Arabic word forms
-  const bedArabicRegex = /(ثلاث|ثلاثة|أربع|اربع|أربعة|اربعة|خمس|خمسة|ست|ستة|غرفتين|غرفة واحدة)\s*(?:غرف نوم|غرف|غرفة)?/u;
+    // 1. Digits: "3 bedroom", "3-bedroom", "3BR", "3 beds", "3 qol", "3 غرف", "بـ 3 غرف"
+    const bedDigitRegex = /(?:مع\s+|بـ?|ب)?(\d+)\s*(?:-|–|\s+)?\s*(?:bedrooms?|beds?|bed|bds?|br|qol|qolal|غرف نوم|غرف|غرفة)\b/iu;
+    // 2. English / Somali words (with optional hyphen for "three-bedroom")
+    const bedWordRegex = /(?:([a-zA-Z]+)\s*(?:-|–|\s+)\s*(?:bedrooms?|beds?|qol|qolal)|(?:qol|qolal)\s+([a-zA-Z]+))/iu;
+    // 3. Arabic word forms (e.g. "بثلاث غرف نوم", "ثلاث غرف")
+    const bedArabicRegex = /(?:مع\s+|بـ?|ب)?(ثلاث|ثلاثة|أربع|اربع|أربعة|اربعة|خمس|خمسة|ست|ستة|غرفتين|غرفة واحدة)\s*(?:غرف نوم|غرف|غرفة)?/u;
 
   let bedMatch = text.match(bedDigitRegex);
   let bedValue: number | undefined;
@@ -235,6 +228,18 @@ export function extractEntities(query: string): ExtractedEntities {
           bedValue = NUMBER_WORDS[arWord];
           rawBedText = arMatch[0];
         }
+      }
+    }
+
+    // Standalone single number or word when answering interview question (e.g. "3", "seddex", "three")
+    if (!bedValue) {
+      const trimmed = text.trim().toLowerCase();
+      if (/^(?:[1-9]|10)$/.test(trimmed)) {
+        bedValue = parseInt(trimmed, 10);
+        rawBedText = `${bedValue} bedrooms`;
+      } else if (NUMBER_WORDS[trimmed] && NUMBER_WORDS[trimmed] <= 10) {
+        bedValue = NUMBER_WORDS[trimmed];
+        rawBedText = `${bedValue} bedrooms`;
       }
     }
   }
@@ -388,19 +393,71 @@ export function extractEntities(query: string): ExtractedEntities {
     }
   }
 
-  // 5. Standalone price fallback if accompanied by currency or 'k'
+  // 5. Standalone price & conversational budget fallback (e.g. "budget is 80k", "500 dollar bishii", "80k", "$80,000")
   if (!result.price) {
-    const budgetPattern = /(?:budget|qiimo|سعر)?\s*(?:\$|usd)\s*(\d+(?:,\d+)?)\s*(k|kun|ألف|الف|m|million)?/iu;
-    const budgetMatch = text.match(budgetPattern);
-    if (budgetMatch) {
-      const val = parsePriceValue(budgetMatch[1], budgetMatch[2]);
+    // 5a. Rental period price pattern (e.g. "500 dollar bishii", "$500 bishii", "500/month", "600 sanadkii")
+    const periodRentalPricePattern = /(?:\$|usd)?\s*(\d+(?:,\d+)?)\s*(?:dollar|doolar|\$|usd)?\s*(bishii|bishiiba|bille|per month|\/month|monthly|sanadkii|per year|\/year|yearly|todobaadkii|weekly|شهريا|شهري|سنويا|سنوي)\b/iu;
+    const rentalMatch = text.match(periodRentalPricePattern);
+    if (rentalMatch) {
+      const val = parsePriceValue(rentalMatch[1]);
       if (val > 0) {
+        const periodText = rentalMatch[2].toLowerCase();
+        const period: "month" | "year" | "week" =
+          periodText.includes("sanad") || periodText.includes("year") || periodText.includes("سنو")
+            ? "year"
+            : periodText.includes("todobaad") || periodText.includes("week") || periodText.includes("أسبوع")
+            ? "week"
+            : "month";
+
         result.price = {
           operator: "lte",
           maxPrice: val,
-          rawMatchedText: budgetMatch[0],
+          period,
+          rawMatchedText: rentalMatch[0].trim(),
         };
+        result.purpose = "RENT";
         result.rawEntities.price = result.price;
+        result.rawEntities.purpose = "RENT";
+      }
+    }
+
+    if (!result.price) {
+      const conversationalBudgetPattern = /(?:budget|miisaaniyad(?:eydu|adaadu)?|qiimaha|سعر|الميزانية|ميزانيتي)\s*(?:is|waa|=|:|around|ku dhowaad|حول)?\s*(?:\$|usd)?\s*(\d+(?:,\d+)?)\s*(k|kun|ألف|الف|m|million|malyan|مليون)?/iu;
+      const standaloneKPattern = /(?:^|\s)(?:\$|usd)?\s*(\d+(?:,\d+)?)\s*(k|kun|ألف|الف|m|million|malyan|مليون)\b/iu;
+      const currencyNumberPattern = /(?:\$|usd)\s*(\d+(?:,\d+)?)\s*(k|kun|ألف|الف|m|million)?/iu;
+
+      const convMatch = text.match(conversationalBudgetPattern);
+      const kMatch = text.match(standaloneKPattern);
+      const currMatch = text.match(currencyNumberPattern);
+
+      const matchToUse = convMatch || currMatch || kMatch;
+      if (matchToUse) {
+        const val = parsePriceValue(matchToUse[1], matchToUse[2]);
+        if (val > 0) {
+          result.price = {
+            operator: "lte",
+            maxPrice: val,
+            rawMatchedText: matchToUse[0].trim(),
+          };
+          result.rawEntities.price = result.price;
+        }
+      }
+
+      // Standalone numeric amount e.g. "80000", "100,000", "$80,000", "50000"
+      if (!result.price) {
+        const standaloneNumberPattern = /^\s*(?:\$|usd)?\s*(\d{1,3}(?:,\d{3})+|\d{4,9})\s*(?:\$|usd)?\s*$/i;
+        const numMatch = text.match(standaloneNumberPattern);
+        if (numMatch) {
+          const val = parsePriceValue(numMatch[1]);
+          if (val >= 500) {
+            result.price = {
+              operator: "lte",
+              maxPrice: val,
+              rawMatchedText: numMatch[0].trim(),
+            };
+            result.rawEntities.price = result.price;
+          }
+        }
       }
     }
   }
@@ -431,14 +488,15 @@ export function extractEntities(query: string): ExtractedEntities {
   // H. PURPOSE EXTRACTION (Sale vs Rent)
   // -------------------------------------------------------------
   if (
-    /\b(for sale|buy|purchase|iib|iib ah|gadasho)\b/i.test(text) ||
+    /\b(for sale|buy|purchase|iib|iib ah|iibsan|iibsadaa|gadasho|gadashada|iibka)\b/i.test(text) ||
     /(للبيع|شراء)/u.test(text)
   ) {
     result.purpose = "SALE";
     result.rawEntities.purpose = "SALE";
   } else if (
-    /\b(for rent|rent|lease|kiro|kiree|kireysto)\b/i.test(text) ||
-    /(للإيجار|للايجار|استئجار)/u.test(text)
+    result.purpose === "RENT" ||
+    /\b(for rent|rent|lease|kiro|kirro|kiro ah|kirro ah|kiree|kireeyo|kireysto|kireysan|kiraysanayaa|aan kireysto|la kireeyo|la kireysto|kireeysanayaa)\b/i.test(text) ||
+    /(للإيجار|للايجار|استئجار|ايجار|إيجار)/u.test(text)
   ) {
     result.purpose = "RENT";
     result.rawEntities.purpose = "RENT";

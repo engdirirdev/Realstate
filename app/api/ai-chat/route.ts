@@ -16,6 +16,7 @@ import {
   createRateLimitResponse,
   RATE_LIMIT_PRESETS,
 } from "@/lib/rate-limiter";
+import { processConversationalTurn } from "@/lib/ai/conversation/chat-engine";
 
 const genAI = process.env.GOOGLE_AI_API_KEY
   ? new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY)
@@ -232,186 +233,101 @@ export async function POST(request: NextRequest) {
       },
     }).catch((err) => console.error("Failed to persist user chat message:", err));
 
-    // 5. Build strict server-side authorization context (client-supplied roles are completely ignored)
-    const authContext: ChatAuthContext = {
-      role: userRole,
+    // 5. Fetch authentic historical session messages for sliding window multi-turn memory
+    const dbMessages = await prisma.chatMessage.findMany({
+      where: { sessionId: activeSessionId },
+      orderBy: { createdAt: "asc" },
+      take: 20,
+    });
+
+    // 6. Process conversational turn with full context continuity, entity memory, and multilingual support
+    const historyToUse = dbMessages.length > 1
+      ? dbMessages.map((m) => ({
+          role: m.role,
+          content: m.content,
+          metadata: m.metadata || undefined,
+        }))
+      : (Array.isArray(history) && history.length > 0)
+      ? history.map((m: any) => ({
+          role: m.role,
+          content: m.content,
+          metadata: m.metadata || undefined,
+        }))
+      : dbMessages.map((m) => ({
+          role: m.role,
+          content: m.content,
+          metadata: m.metadata || undefined,
+        }));
+
+    const turnResult = await processConversationalTurn({
+      sessionId: activeSessionId,
+      message: message.trim(),
+      history: historyToUse,
+      userName,
+      userRole,
       userId,
-    };
+    });
 
-    // 6. CLASSIFY USER INTENT
-    const intentResult = classifyUserIntent(message, history);
+    let finalReply = turnResult.reply;
 
-    let reply = "";
-    let properties: GroundedPropertyResult[] = [];
-    let totalMatches = 0;
-    let suggestions: any = undefined;
-
-    switch (intentResult.intent) {
-      // 1. GREETING — Reply naturally, DO NOT search database
-      case "GREETING": {
-        const greetings = [
-          `Hello ${userName}! How can I assist you with Somali real estate today? You can ask me to find houses in Mogadishu, apartments in Hargeisa, or ask any question about the housing market.`,
-          `Hi ${userName}! Welcome to AI Real Estate. What city or type of property are you interested in exploring?`,
-          `Greetings! I'm your AI Real Estate Assistant. Let me know what location, property type, or budget you're curious about!`,
-        ];
-        reply = greetings[Math.floor(Math.random() * greetings.length)];
-        break;
-      }
-
-      // 2. BOOKING WORKFLOW
-      case "BOOKING": {
-        reply = `📅 **Schedule a Property Visit**:\nTo book an in-person viewing or inspection tour, simply click the **"Book Visit"** button directly on any property card below or on its listing page. Our verified managers will coordinate directly with you.`;
-        if (intentResult.propertyIdentifier) {
-          const matched = await getPropertyDetailsByIdOrTitle(intentResult.propertyIdentifier, authContext);
-          if (matched) {
-            properties = [matched];
-            totalMatches = 1;
-          }
-        }
-        break;
-      }
-
-      // 3. AVAILABILITY CHECK
-      case "AVAILABILITY": {
-        if (intentResult.propertyIdentifier) {
-          const matched = await getPropertyDetailsByIdOrTitle(intentResult.propertyIdentifier, authContext);
-          if (matched) {
-            properties = [matched];
-            totalMatches = 1;
-            reply = `**Live Status for "${matched.title}"**:\n\n${matched.statusEmoji} (${matched.statusLabel}).\n\nPrice: **${matched.formattedPrice}** in **${matched.city}**.`;
-          } else {
-            reply = `I searched our database, but could not locate that specific property ID or listing in our approved inventory.`;
-          }
-        } else {
-          reply = `To check real-time availability, please provide the Property Title or ID, or browse our available listings below.`;
-        }
-        break;
-      }
-
-      // 4. PROPERTY DETAILS
-      case "PROPERTY_DETAILS": {
-        if (intentResult.propertyIdentifier) {
-          const matched = await getPropertyDetailsByIdOrTitle(intentResult.propertyIdentifier, authContext);
-          if (matched) {
-            properties = [matched];
-            totalMatches = 1;
-            reply = `Here are the complete verified specifications for **${matched.title}** (${matched.city}):\n• **Bedrooms**: ${matched.bedrooms} | **Bathrooms**: ${matched.bathrooms}\n• **Area**: ${matched.areaSize} m² | **Land Size**: ${matched.landSize} m²\n• **Status**: ${matched.statusEmoji}\n• **Parking**: ${matched.parkingSpaces} space(s)\n• **Furnished**: ${matched.furnished ? "Yes (Fully Furnished)" : "Unfurnished"}`;
-          } else {
-            reply = `No matching property details found for that identifier in our approved database records.`;
-          }
-        } else {
-          reply = `Which property would you like details on? You can mention the property title or location.`;
-        }
-        break;
-      }
-
-      // 5. GENERAL QUESTIONS — Answer directly, DO NOT search database
-      case "GENERAL_QUESTIONS": {
-        const aiAnswer = await generateGroundedAIResponse({
-          userMessage: message,
-          intent: intentResult.intent,
-          properties: [],
-          totalMatches: 0,
-          userName,
-          userRole,
-          explanation: intentResult.explanation,
-        });
-
-        if (aiAnswer) {
-          reply = aiAnswer;
-        } else {
-          const lower = message.toLowerCase();
-          if (lower.includes("villa") && lower.includes("townhouse")) {
-            reply = `A **villa** is typically a standalone, luxury private residence with its own private land, perimeter walls, and often a garden or pool. In contrast, a **townhouse** is a multi-story home that shares one or two walls with neighboring homes while having its own private street entrance.`;
-          } else if (lower.includes("ai") || lower.includes("price prediction")) {
-            reply = `Our platform employs comparative market analysis algorithms trained on neighborhood property records across Mogadishu, Hargeisa, Bosaso, and Garowe to estimate fair market value based on area, bedrooms, age, and infrastructure.`;
-          } else if (lower.includes("payment") || lower.includes("escrow")) {
-            reply = `We support secure digital transactions and escrow reservations, including local mobile money (EVC Plus, Premier Wallet) integrations. Escrow holds your funds securely until inspection conditions are satisfied.`;
-          } else {
-            reply = `AI Real Estate is Somalia's advanced property intelligence platform. We offer verified property listings, transparent valuation tools, and direct connections between verified buyers, tenants, and property managers.`;
-          }
-        }
-        break;
-      }
-
-      // 6. PROPERTY SEARCH & FOLLOW-UP — Search Database Strictly with visibility checks
-      case "PROPERTY_SEARCH":
-      case "FOLLOW_UP":
-      default: {
-        const searchResult = await searchDatabaseProperties(intentResult, 4, authContext);
-        properties = searchResult.properties;
-        totalMatches = searchResult.totalMatches;
-        suggestions = searchResult.suggestions;
-
-        // Attempt LLM generation grounded strictly in the database results
-        const aiSearchReply = await generateGroundedAIResponse({
-          userMessage: message,
-          intent: intentResult.intent,
-          properties,
-          totalMatches,
-          suggestions,
-          userName,
-          userRole,
-          explanation: intentResult.explanation,
-        });
-
-        if (aiSearchReply) {
-          reply = aiSearchReply;
-        } else if (properties.length > 0) {
-          const filterCriteriaDesc = [
-            intentResult.city ? `in **${intentResult.city}**` : "",
-            intentResult.propertyType ? `type **${intentResult.propertyType}**` : "",
-            intentResult.bedrooms ? `with **${intentResult.bedrooms}+ bedrooms**` : "",
-            intentResult.maxPrice ? `under **$${intentResult.maxPrice.toLocaleString()}**` : "",
-          ]
-            .filter(Boolean)
-            .join(", ");
-
-          reply = `Found **${totalMatches} matching ${
-            totalMatches === 1 ? "property" : "properties"
-          }** in our database${filterCriteriaDesc ? ` ${filterCriteriaDesc}` : ""}.\n\nThese properties match your requested criteria:`;
-        } else {
-          // IF NOTHING EXISTS IN THE DATABASE
-          const targetLoc = intentResult.city ? ` in **${intentResult.city}**` : "";
-          reply = `I searched our database, but there are currently no properties available matching your criteria${targetLoc}.\n\nHere are some verified suggestions from our inventory:`;
-          if (suggestions?.nearbyCities && suggestions.nearbyCities.length > 0) {
-            reply += `\n• **Nearby Cities**: Check active listings in ${suggestions.nearbyCities.join(", ")}.`;
-          }
-          if (suggestions?.otherAvailableTypes && suggestions.otherAvailableTypes.length > 0) {
-            reply += `\n• **Different Property Types**: Explore ${suggestions.otherAvailableTypes.join(" or ")}.`;
-          }
-          if (suggestions?.suggestHigherBudget) {
-            reply += `\n• **Different Budget**: Average properties in this area start around $${suggestions.suggestHigherBudget.toLocaleString()}.`;
-          }
-        }
-        break;
+    // Optional LLM enhancement if GOOGLE_AI_API_KEY is configured
+    if (genAI && turnResult.properties.length > 0) {
+      const aiEnhanced = await generateGroundedAIResponse({
+        userMessage: message,
+        intent: turnResult.intent,
+        properties: turnResult.properties as any,
+        totalMatches: turnResult.totalMatches,
+        userName,
+        userRole,
+        explanation: `Topic: ${turnResult.topic}, Language: ${turnResult.language}`,
+      });
+      if (aiEnhanced) {
+        finalReply = aiEnhanced;
       }
     }
 
-    // Persist ASSISTANT message
+    // 7. Persist ASSISTANT message with full conversation state in metadata
     await prisma.chatMessage.create({
       data: {
         sessionId: activeSessionId,
         role: "assistant",
-        content: reply,
+        content: finalReply,
         metadata: JSON.stringify({
-          intent: intentResult.intent,
-          confidence: intentResult.confidence,
-          totalMatches,
-          propertyIds: properties.map((p) => p.id),
+          intent: turnResult.intent,
+          topic: turnResult.topic,
+          confidence: turnResult.confidence,
+          language: turnResult.language,
+          conversationLanguage: turnResult.conversationLanguage,
+          languageConfidence: turnResult.languageConfidence,
+          searchReadiness: turnResult.searchReadiness,
+          missingSlots: turnResult.missingSlots,
+          totalMatches: turnResult.totalMatches,
+          conversationState: turnResult.state,
+          propertyIds: turnResult.properties.map((p) => p.id),
+          resolution: turnResult.resolution,
         }),
       },
     }).catch((err) => console.error("Failed to persist assistant chat message:", err));
 
     return NextResponse.json({
       sessionId: activeSessionId,
-      reply,
-      properties,
-      intent: intentResult.intent,
-      confidence: intentResult.confidence,
-      explanation: intentResult.explanation,
-      totalMatches,
-      suggestions,
+      reply: finalReply,
+      properties: turnResult.shouldRenderPropertyCards ? turnResult.properties : [],
+      intent: turnResult.intent,
+      topic: turnResult.topic,
+      confidence: turnResult.confidence,
+      language: turnResult.language,
+      conversationLanguage: turnResult.conversationLanguage,
+      languageConfidence: turnResult.languageConfidence,
+      searchReadiness: turnResult.searchReadiness,
+      missingSlots: turnResult.missingSlots,
+      totalMatches: turnResult.totalMatches,
+      conversationState: turnResult.state,
+      resolution: turnResult.resolution,
+      responseType: turnResult.responseType,
+      shouldRenderPropertyCards: turnResult.shouldRenderPropertyCards,
+      activeSearchCriteria: turnResult.activeSearchCriteria,
+      referencedPropertyIds: turnResult.referencedPropertyIds,
     });
   } catch (error) {
     console.error("AI chat error:", error);

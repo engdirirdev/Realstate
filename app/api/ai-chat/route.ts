@@ -29,7 +29,7 @@ async function generateGroundedAIResponse(params: {
   if (!genAI) return null;
 
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     let systemContext = `You are the AI Real Estate Assistant for Somalia's premier real estate platform.
 User Name: ${params.userName}

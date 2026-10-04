@@ -46,7 +46,7 @@ export default function AboutPage() {
               Transforming Real Estate in Somalia with AI
             </h1>
             <p className="text-[#64748B] text-lg leading-relaxed">
-              We're on a mission to make property discovery smarter, fairer, and more accessible for every Somali — whether you're in Mogadishu or the diaspora.
+              We&apos;re on a mission to make property discovery smarter, fairer, and more accessible for every Somali — whether you&apos;re in Mogadishu or the diaspora.
             </p>
           </div>
         </div>
@@ -78,7 +78,7 @@ export default function AboutPage() {
             Finding a property in Somalia has traditionally been difficult — a mix of word-of-mouth, unreliable listings, and expensive agents. We built AI Real Estate to change that.
           </p>
           <p className="text-[#64748B] leading-relaxed">
-            By combining a modern web platform with machine learning price prediction and a conversational AI assistant, we've created the most comprehensive property discovery experience in the Horn of Africa.
+            By combining a modern web platform with machine learning price prediction and a conversational AI assistant, we&apos;ve created the most comprehensive property discovery experience in the Horn of Africa.
           </p>
         </div>
       </section>

@@ -133,7 +133,7 @@ export default function AIAssistantPage() {
             <Sparkles className="h-4 w-4" /> AI-Powered Assistant
           </div>
           <h1 className="font-display text-3xl font-bold text-[#0F172A]">AI Property Assistant</h1>
-          <p className="text-[#64748B] mt-1">Ask anything about properties — I'll search the database for you</p>
+          <p className="text-[#64748B] mt-1">Ask anything about properties — I&apos;ll search the database for you</p>
         </div>
 
         {/* Chat Window */}

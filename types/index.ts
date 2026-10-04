@@ -18,8 +18,8 @@ export type {
 
 // Enums
 export type PropertyType = "HOUSE" | "APARTMENT" | "VILLA" | "OFFICE" | "LAND" | "COMMERCIAL" | "TOWNHOUSE" | "STUDIO";
-export type PropertyStatus = "PENDING" | "APPROVED" | "REJECTED" | "SOLD" | "UNAVAILABLE";
-export type Role = "USER" | "ADMIN";
+export type PropertyStatus = "DRAFT" | "PENDING" | "APPROVED" | "REJECTED" | "PUBLISHED" | "SOLD" | "RENTED" | "INACTIVE" | "UNAVAILABLE";
+export type Role = "USER" | "ADMIN" | "CUSTOMER";
 export type ListingType = "SALE" | "RENT";
 
 // Property with joined images
@@ -31,13 +31,13 @@ export interface PropertyWithImages {
   city: string;
   address: string | null;
   type: PropertyType;
-  listingType: ListingType;
+  listingType?: ListingType;
   status: PropertyStatus;
   bedrooms: number;
   bathrooms: number;
   area: number;
   yearBuilt: number | null;
-  features: string[];
+  features?: string[];
   isFurnished: boolean;
   isFeatured: boolean;
   viewCount: number;

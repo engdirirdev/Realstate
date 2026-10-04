@@ -378,7 +378,7 @@ export default function AdminUserReviewPage({ params }: Props) {
                       <span>From: {inq.customer?.name} ({inq.customer?.email})</span>
                       <span className="text-[#10B981]">{inq.status}</span>
                     </div>
-                    <p className="text-[#334155]">"{inq.message}"</p>
+                    <p className="text-[#334155]">&ldquo;{inq.message}&rdquo;</p>
                   </div>
                 ))
               )}
@@ -554,7 +554,7 @@ export default function AdminUserReviewPage({ params }: Props) {
                 user.customerInquiries?.map((inq: any) => (
                   <div key={inq.id} className="bg-white p-4 rounded-2xl shadow-card border border-[#E2E8F0] space-y-2 text-xs">
                     <p className="font-bold text-[#0F172A]">{inq.property?.title}</p>
-                    <p className="text-[#334155]">"{inq.message}"</p>
+                    <p className="text-[#334155]">&ldquo;{inq.message}&rdquo;</p>
                   </div>
                 ))
               )}

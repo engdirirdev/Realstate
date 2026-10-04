@@ -22,8 +22,63 @@ module.exports = {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
 
-        // ─── Primary = Emerald (buttons, prices, CTAs) ───────────────
+        // ─── Theme Colors matching Reference Design ──────────────────
+        brand: {
+          navy: "#0F2747",
+          sidebar: "#08203A",
+          blue: "#1677FF",
+          blueHover: "#0F5ED7",
+          sky: "#38BDF8",
+          emerald: "#10B981",
+          success: "#22C55E",
+          purple: "#8B5CF6",
+          warning: "#F59E0B",
+          danger: "#EF4444",
+          bg: "#F5F1EA",
+          beige: "#F5F1EA",
+          beigeLight: "#FAF7F2",
+          card: "#FFFFFF",
+          border: "#E2DDD1",
+          text: "#0F172A",
+          muted: "#64748B",
+          light: "#94A3B8",
+        },
+
+        // ─── Primary (Bright Blue #1677FF) ───────────────────────────
         primary: {
+          DEFAULT: "#1677FF",
+          50:  "#EFF6FF",
+          100: "#DBEAFE",
+          200: "#BFDBFE",
+          300: "#93C5FD",
+          400: "#60A5FA",
+          500: "#1677FF",
+          600: "#0F5ED7",
+          700: "#1D4ED8",
+          800: "#1E40AF",
+          900: "#1E3A8A",
+          foreground: "#FFFFFF",
+        },
+
+        // ─── Sidebar & Navy Shades ───────────────────────────────────
+        navy: {
+          DEFAULT: "#0F2747",
+          sidebar: "#08203A",
+          50:  "#F5F8FC",
+          100: "#E8EEF5",
+          200: "#DCE6F2",
+          300: "#CBD5E1",
+          400: "#94A3B8",
+          500: "#64748B",
+          600: "#475569",
+          700: "#334155",
+          800: "#0F2747",
+          900: "#08203A",
+          950: "#051324",
+        },
+
+        // ─── Emerald & Cyan Accents ──────────────────────────────────
+        emerald: {
           DEFAULT: "#10B981",
           50:  "#ECFDF5",
           100: "#D1FAE5",
@@ -35,26 +90,7 @@ module.exports = {
           700: "#047857",
           800: "#065F46",
           900: "#064E3B",
-          foreground: "#FFFFFF",
         },
-
-        // ─── Navy (headings, sidebar, footer) ───────────────────────
-        navy: {
-          DEFAULT: "#0F172A",
-          50:  "#F8FAFC",
-          100: "#F1F5F9",
-          200: "#E2E8F0",
-          300: "#CBD5E1",
-          400: "#94A3B8",
-          500: "#64748B",
-          600: "#475569",
-          700: "#334155",
-          800: "#1E293B",
-          900: "#0F172A",
-          950: "#020617",
-        },
-
-        // ─── Cyan (AI features only) ─────────────────────────────────
         cyan: {
           DEFAULT: "#06B6D4",
           50:  "#ECFEFF",
@@ -65,8 +101,15 @@ module.exports = {
           500: "#06B6D4",
           600: "#0891B2",
           700: "#0E7490",
-          800: "#155E75",
-          900: "#164E63",
+        },
+        purple: {
+          DEFAULT: "#8B5CF6",
+          50:  "#FAF5FF",
+          100: "#F3E8FF",
+          200: "#E9D5FF",
+          500: "#8B5CF6",
+          600: "#7C3AED",
+          700: "#6D28D9",
         },
 
         // ─── shadcn/ui system tokens ─────────────────────────────────
@@ -83,8 +126,8 @@ module.exports = {
           foreground: "#64748B",
         },
         accent: {
-          DEFAULT: "#ECFDF5",
-          foreground: "#059669",
+          DEFAULT: "#EFF6FF",
+          foreground: "#1677FF",
         },
         popover: {
           DEFAULT: "hsl(var(--popover))",
@@ -140,15 +183,15 @@ module.exports = {
 
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        "hero-pattern":    "linear-gradient(135deg, #F8FAFC 0%, #ECFDF5 50%, #F0FDFA 100%)",
+        "hero-pattern":    "linear-gradient(135deg, #0F2747 0%, #08203A 100%)",
         shimmer:           "linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)",
       },
 
       boxShadow: {
-        card:       "0 1px 3px rgba(15,23,42,0.06), 0 4px 6px rgba(15,23,42,0.04)",
-        "card-hover":"0 12px 28px rgba(15,23,42,0.10), 0 4px 6px rgba(15,23,42,0.05)",
-        glow:       "0 0 0 3px rgba(16,185,129,0.20)",
-        "cyan-glow":"0 0 0 3px rgba(6,182,212,0.20)",
+        card:       "0 1px 3px rgba(15,39,71,0.05), 0 4px 12px rgba(15,39,71,0.03)",
+        "card-hover":"0 12px 28px rgba(15,39,71,0.08), 0 4px 8px rgba(15,39,71,0.04)",
+        glow:       "0 0 0 3px rgba(22,119,255,0.20)",
+        "blue-glow":"0 0 0 3px rgba(22,119,255,0.25)",
       },
     },
   },

@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import Link from "next/link";
-import {
-  LayoutDashboard, Heart, Bot, BarChart3, Settings,
-  LogOut, User, Building2, Bell, Sparkles, ChevronRight,
-} from "lucide-react";
+import { LogOut, User } from "lucide-react";
 import DashboardSidebarNav from "./DashboardSidebarNav";
+import ManagerHeader from "@/components/manager/ManagerHeader";
+import BrandLogo from "@/components/layout/BrandLogo";
+import { prisma } from "@/lib/prisma";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -13,86 +13,65 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if ((session.user as any)?.role === "ADMIN") redirect("/admin");
   if ((session.user as any)?.role === "CUSTOMER") redirect("/customer");
 
+  const userId = session.user?.id;
+
+  // Unread notification count
+  const unreadCount = userId
+    ? await prisma.notification.count({
+        where: { userId, isRead: false },
+      }).catch(() => 0)
+    : 0;
+
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex">
-      {/* ─── Sidebar (Deep Navy #0F172A) ─── */}
-      <aside className="hidden lg:flex w-64 flex-col bg-[#0F172A] border-r border-[#1E293B] fixed inset-y-0 left-0 z-30 shadow-lg">
-
-
-        {/* User info */}
-        <div className="p-5 border-b border-[#1E293B]">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#10B981]/20 border border-[#10B981]/30 flex items-center justify-center flex-shrink-0">
-              <User className="h-5 w-5 text-[#34D399]" />
-            </div>
-            <div className="min-w-0">
-              <p className="font-semibold text-white text-sm truncate">{session.user?.name || "User"}</p>
-              <p className="text-xs text-[#94A3B8] truncate">{session.user?.email}</p>
-            </div>
-          </div>
+    <div className="min-h-screen bg-[#F5F1EA] flex">
+      {/* ─── Sidebar (Deep Rich Midnight Navy Gradient) ─── */}
+      <aside className="hidden lg:flex w-64 flex-col bg-gradient-to-b from-[#051325] via-[#071D36] to-[#040E1B] border-r border-[#103058] fixed inset-y-0 left-0 z-30 shadow-2xl">
+        {/* Brand Logo */}
+        <div className="h-18 px-6 border-b border-[#103058] flex items-center bg-[#040E1B]/95">
+          <BrandLogo variant="dark" />
         </div>
 
-        {/* Client Navigation Items with Active Route Highlighting */}
-        <DashboardSidebarNav />
+        {/* Navigation */}
+        <div className="flex-1 overflow-y-auto scrollbar-hide py-4">
+          <DashboardSidebarNav />
+        </div>
 
-        {/* Bottom actions */}
-        <div className="p-4 border-t border-[#1E293B] space-y-1">
-          <Link
-            href="/properties"
-            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-[#CBD5E1] hover:bg-white/10 hover:text-white transition-all"
-          >
-            <Building2 className="h-4 w-4 text-[#34D399]" /> Browse Properties
-          </Link>
+        {/* Bottom User & Sign Out */}
+        <div className="p-4 border-t border-[#103058] space-y-2 bg-[#030B15]/95">
+          <div className="flex items-center gap-3 px-2 py-1">
+            <div className="w-8 h-8 rounded-lg bg-[#1677FF]/25 border border-[#1677FF]/50 flex items-center justify-center flex-shrink-0">
+              <User className="h-4 w-4 text-[#38BDF8]" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-bold text-white text-xs truncate">
+                {session.user?.name || "Manager"}
+              </p>
+              <p className="text-[10px] text-[#38BDF8] font-semibold truncate">
+                {session.user?.email || "manager@realestate.so"}
+              </p>
+            </div>
+          </div>
+
           <Link
             href="/api/auth/signout"
-            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-[#FCA5A5] hover:bg-[#EF4444]/15 hover:text-[#EF4444] transition-all"
+            className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-[#F87171] hover:bg-[#EF4444]/20 hover:text-white transition-all w-full"
           >
-            <LogOut className="h-4 w-4" /> Sign Out
+            <LogOut className="h-3.5 w-3.5" />
+            <span>Sign Out</span>
           </Link>
         </div>
       </aside>
 
       {/* ─── Main Content Area ─── */}
-      <div className="lg:ml-64 flex-1 flex flex-col min-h-screen">
-        {/* Top header bar */}
-        <header className="bg-white border-b border-[#E2E8F0] px-4 py-3.5 flex items-center justify-between lg:px-8 sticky top-0 z-20 shadow-xs">
-          {/* Mobile brand header */}
-          <div className="flex items-center gap-3 lg:hidden">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-[#10B981] flex items-center justify-center">
-                <Building2 className="w-4 h-4 text-white" />
-              </div>
-              <span className="font-bold text-[#0F172A] text-sm">AI RealEstate</span>
-            </Link>
-          </div>
+      <div className="lg:ml-64 flex-1 flex flex-col min-h-screen bg-[#F5F1EA]">
+        <ManagerHeader
+          userName={session.user?.name}
+          userEmail={session.user?.email}
+          userImage={session.user?.image}
+          unreadCount={unreadCount}
+        />
 
-          {/* Desktop title */}
-          <div className="hidden lg:block">
-            <h2 className="text-sm font-semibold text-[#0F172A] flex items-center gap-2">
-              Welcome back, <span className="text-[#10B981] font-bold">{session.user?.name?.split(" ")[0]}</span> 👋
-            </h2>
-          </div>
-
-          {/* Top Right Header Controls */}
-          <div className="flex items-center gap-3">
-            <button
-              aria-label="Notifications"
-              className="w-9 h-9 rounded-xl border border-[#E2E8F0] bg-white flex items-center justify-center hover:bg-[#F8FAFC] transition-colors relative"
-            >
-              <Bell className="h-4 w-4 text-[#0F172A]" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-[#10B981] rounded-full ring-2 ring-white" />
-            </button>
-
-            <div className="flex items-center gap-2.5 pl-2 border-l border-[#E2E8F0]">
-              <div className="w-9 h-9 rounded-xl bg-[#ECFDF5] border border-[#A7F3D0] flex items-center justify-center">
-                <User className="h-4.5 w-4.5 text-[#059669]" />
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* Page content container */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-[#F8FAFC]">
+        <main className="flex-1 p-5 sm:p-7 lg:p-8 bg-[#F5F1EA]">
           {children}
         </main>
       </div>

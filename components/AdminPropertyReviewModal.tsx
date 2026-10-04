@@ -84,7 +84,7 @@ export default function AdminPropertyReviewModal({
               <AlertTriangle className="h-5 w-5 text-[#DC2626]" /> Reject Property Listing
             </DialogTitle>
             <DialogDescription className="text-xs text-[#64748B]">
-              Provide a clear rejection reason for "{propertyTitle}". The property manager will view this reason and fix the issues to resubmit.
+              Provide a clear rejection reason for &ldquo;{propertyTitle}&rdquo;. The property manager will view this reason and fix the issues to resubmit.
             </DialogDescription>
           </DialogHeader>
 

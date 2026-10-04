@@ -42,7 +42,7 @@ export default async function CustomerInquiriesPage() {
           <MessageSquare className="h-12 w-12 text-[#94A3B8] mx-auto mb-3" />
           <h2 className="text-lg font-bold text-[#0F172A]">No inquiries sent yet</h2>
           <p className="text-[#64748B] text-sm mt-1 max-w-sm mx-auto mb-6">
-            When you view a property, click "Send Property Enquiry" to ask the manager questions directly.
+            When you view a property, click &ldquo;Send Property Enquiry&rdquo; to ask the manager questions directly.
           </p>
           <Link
             href="/properties"

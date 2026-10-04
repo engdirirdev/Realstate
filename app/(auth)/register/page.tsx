@@ -100,7 +100,7 @@ export default function RegisterPage() {
             Join Free Today
           </div>
           <h2 className="text-3xl font-bold text-white leading-tight mb-3">
-            Join Somalia's #1 AI Property Platform
+            Join Somalia&apos;s #1 AI Property Platform
           </h2>
           <p className="text-[#CBD5E1] text-sm leading-relaxed mb-8">
             Create your free account and unlock personalized property recommendations powered by artificial intelligence.

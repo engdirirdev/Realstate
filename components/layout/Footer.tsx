@@ -63,7 +63,7 @@ export default function Footer() {
               <span className="font-bold text-lg text-white tracking-tight">AI RealEstate</span>
             </Link>
             <p className="text-sm leading-relaxed text-[#94A3B8] mb-6 max-w-xs">
-              Somalia's first AI-powered real estate platform. Discover properties, get intelligent recommendations, and predict prices with machine learning.
+              Somalia&apos;s first AI-powered real estate platform. Discover properties, get intelligent recommendations, and predict prices with machine learning.
             </p>
             <div className="space-y-2.5 text-sm">
               <div className="flex items-center gap-2.5">

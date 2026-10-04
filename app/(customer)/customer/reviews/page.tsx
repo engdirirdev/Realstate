@@ -126,7 +126,7 @@ export default function CustomerReviewsPage() {
                     <MapPin className="h-3 w-3 text-[#94A3B8]" /> {r.property.city} • {formatPrice(r.property.price)}
                   </p>
                   <p className="text-xs text-[#334155] italic bg-[#F8FAFC] border border-[#E2E8F0] p-2.5 rounded-xl mt-2">
-                    "{r.comment}"
+                    &ldquo;{r.comment}&rdquo;
                   </p>
                 </div>
               </div>

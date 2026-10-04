@@ -42,7 +42,7 @@ export default async function CustomerBookingsPage() {
           <Calendar className="h-12 w-12 text-[#94A3B8] mx-auto mb-3" />
           <h2 className="text-lg font-bold text-[#0F172A]">No bookings or reservations yet</h2>
           <p className="text-[#64748B] text-sm mt-1 max-w-sm mx-auto mb-6">
-            Find your dream home and click "Book / Reserve Property" to reserve it.
+            Find your dream home and click &ldquo;Book / Reserve Property&rdquo; to reserve it.
           </p>
           <Link
             href="/properties"
@@ -92,7 +92,7 @@ export default async function CustomerBookingsPage() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#64748B]">
                 <div>
                   <p>Booked on: <span className="font-semibold text-[#0F172A]">{new Date(b.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span></p>
-                  {b.notes && <p className="mt-1 text-[#334155]">Notes: "{b.notes}"</p>}
+                  {b.notes && <p className="mt-1 text-[#334155]">Notes: &ldquo;{b.notes}&rdquo;</p>}
                 </div>
 
                 {b.payments.length > 0 ? (

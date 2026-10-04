@@ -1,390 +1,357 @@
 // ================================================================
-// PAGE NAME  : Home Page
+// PAGE NAME  : Public Home Page (SkyHome)
 // ROUTE      : /
-// DESCRIPTION: Main landing page — hero, featured properties,
-//              AI features, how-it-works, cities, CTA sections
+// DESCRIPTION: Redesigned based on Section 1 of reference image
 // ================================================================
 import Link from "next/link";
-import { Suspense } from "react";
 import {
-  Search, MapPin, BedDouble, DollarSign, Building2, ArrowRight,
-  Bot, BarChart3, Sparkles, Users, Home, TrendingUp, CheckCircle2,
-  Star, Shield, Zap, Brain,
+  Building2, Users, Award, Star, ArrowRight, Bot,
+  Sparkles, CheckCircle2, Search, TrendingUp, ShieldCheck, Compass
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/prisma";
-import { formatPrice, getPropertyTypeLabel } from "@/lib/utils";
+import PropertyCard from "@/components/PropertyCard";
+import HeroSearchBar from "@/components/HeroSearchBar";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "AI Real Estate | Find Your Perfect Property in Somalia",
+  title: "SkyHome Real Estate | Your Future Home Is Here",
   description:
-    "Somalia's first AI-powered real estate platform. Get intelligent property recommendations, price predictions, and personalized search.",
+    "Discover, buy, rent or sell properties with the power of AI. Smart search. Better decisions. A brighter future.",
 };
 
+export const revalidate = 60; // ISR cache 60s
+
 async function getHomeData() {
-  const [featuredProperties, stats] = await Promise.all([
+  const [featuredProperties, totalCount] = await Promise.all([
     prisma.property.findMany({
-      where: { status: "APPROVED", isFeatured: true },
+      where: { status: "APPROVED" },
       include: { images: { orderBy: { order: "asc" }, take: 1 } },
-      take: 6,
+      take: 4,
       orderBy: { createdAt: "desc" },
     }),
-    Promise.all([
-      prisma.property.count({ where: { status: "APPROVED" } }),
-      prisma.user.count({ where: { role: "USER" } }),
-      prisma.recommendation.count(),
-      prisma.pricePrediction.count(),
-    ]),
+    prisma.property.count({ where: { status: "APPROVED" } }),
   ]);
-  return { featuredProperties, stats };
+  return { featuredProperties, totalCount };
 }
 
 const popularLocations = [
-  { city: "Mogadishu", emoji: "🏙️", count: "120+ Properties", desc: "Capital & largest city" },
-  { city: "Hargeisa", emoji: "🌆", count: "85+ Properties", desc: "Capital of Somaliland" },
-  { city: "Bosaso", emoji: "⚓", count: "60+ Properties", desc: "Major port city" },
-  { city: "Kismayo", emoji: "🌊", count: "45+ Properties", desc: "Southern commercial hub" },
-  { city: "Garowe", emoji: "🏛️", count: "38+ Properties", desc: "Capital of Puntland" },
-  { city: "Baydhabo", emoji: "🌿", count: "30+ Properties", desc: "Bay region center" },
-];
-
-const howItWorksSteps = [
-  { step: "01", title: "Set Your Preferences", desc: "Tell us your budget, preferred location, and property type.", icon: () => <Users className="h-6 w-6 text-[#10B981]" /> },
-  { step: "02", title: "AI Finds Best Matches", desc: "Our algorithm scores properties across 5 key factors to find your perfect match.", icon: () => <Brain className="h-6 w-6 text-[#10B981]" /> },
-  { step: "03", title: "Predict the Price", desc: "Use our ML model to get estimated market prices before making an offer.", icon: () => <BarChart3 className="h-6 w-6 text-[#10B981]" /> },
-  { step: "04", title: "Chat with AI Assistant", desc: "Ask questions in natural language — our AI queries the database for you.", icon: () => <Bot className="h-6 w-6 text-[#10B981]" /> },
-];
-
-const aiFeatures = [
-  { title: "Smart Recommendations", desc: "Weighted scoring across location, price, bedrooms, type & area — tailored to your profile.", icon: Sparkles, color: "bg-[#ECFEFF] text-[#0891B2]" },
-  { title: "Price Prediction ML", desc: "TensorFlow.js model trained on real market data gives you estimated values with confidence scores.", icon: BarChart3, color: "bg-[#ECFEFF] text-[#0891B2]" },
-  { title: "Conversational AI", desc: "Ask in plain language: 'Find me a 3-bed house in Mogadishu under $60k' — get real results.", icon: Bot, color: "bg-[#ECFEFF] text-[#0891B2]" },
-  { title: "Zero Hallucination", desc: "Our chatbot only answers from real database data. If it doesn't exist, it tells you honestly.", icon: Shield, color: "bg-[#ECFEFF] text-[#0891B2]" },
+  { city: "Mogadishu", emoji: "🏙️", count: "402+ Properties", desc: "Capital & economic powerhouse" },
+  { city: "Hargeisa", emoji: "🌆", count: "320+ Properties", desc: "Capital of Somaliland" },
+  { city: "Bosaso", emoji: "⚓", count: "188+ Properties", desc: "Major port & commercial hub" },
+  { city: "Garowe", emoji: "🏛️", count: "156+ Properties", desc: "Capital of Puntland" },
+  { city: "Kismayo", emoji: "🌊", count: "98+ Properties", desc: "Southern port & coastal villas" },
+  { city: "Berbera", emoji: "🏖️", count: "65+ Properties", desc: "Historic coastal trade center" },
 ];
 
 export default async function HomePage() {
-  const { featuredProperties, stats } = await getHomeData();
-  const [propCount, userCount, recCount, predCount] = stats;
+  const { featuredProperties, totalCount } = await getHomeData();
 
   return (
-    <div className="overflow-x-hidden bg-[#F8FAFC]">
-      {/* ─── HERO ────────────────────────────────── */}
-      <section className="relative min-h-[92vh] flex items-center bg-hero overflow-hidden">
-        <div className="section-container relative z-10 pt-20 pb-16">
-          <div className="max-w-4xl mx-auto text-center">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#ECFEFF] border border-[#A5F3FC] text-[#0891B2] text-sm font-medium mb-6">
-              <Zap className="h-4 w-4" />
-              AI-Powered Real Estate Platform
+    <div className="overflow-x-hidden bg-[#F5F1EA]">
+      {/* ─── 1. HERO SECTION ────────────────────────────────── */}
+      <section className="relative min-h-[640px] lg:min-h-[720px] flex items-center justify-center pt-24 pb-16 px-4">
+        {/* Background Image with Gradient Overlay */}
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          <img
+            src="https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1920&q=80"
+            alt="Luxury Villa"
+            className="w-full h-full object-cover object-center scale-105 animate-fade-in"
+          />
+          {/* Deep Navy Gradient Overlay matching reference */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#08203A]/90 via-[#0F2747]/80 to-[#08203A]/60" />
+        </div>
+
+        <div className="section-container relative z-10 w-full">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-8 mb-8">
+            {/* Left Hero Text */}
+            <div className="max-w-2xl text-white text-center lg:text-left">
+              <p className="text-sm font-bold tracking-wide uppercase mb-2 text-white/90">
+                Find Your <span className="text-[#FBBF24]">Dream Property</span>
+              </p>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight text-white mb-4">
+                Your Future Home <br />
+                <span className="text-white">Is Here</span>
+              </h1>
+              <p className="text-base sm:text-lg text-white/80 leading-relaxed max-w-xl">
+                Discover, buy, rent or sell properties with the power of AI. Smart search. Better decisions. A brighter future.
+              </p>
             </div>
 
-            <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold text-[#0F172A] leading-tight mb-6">
-              Find Your Perfect Property{" "}
-              <span className="text-[#10B981]">with AI</span>
-            </h1>
-            <p className="text-lg sm:text-xl text-[#64748B] leading-relaxed max-w-2xl mx-auto mb-10">
-              Discover properties that match your needs and get intelligent
-              property recommendations and price insights powered by machine learning.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-              <Link href="/properties">
-                <Button size="xl" className="bg-[#10B981] text-white hover:bg-[#059669] rounded-xl shadow-lg gap-2 w-full sm:w-auto">
-                  <Search className="h-5 w-5" />
-                  Explore Properties
-                </Button>
-              </Link>
-              <Link href="/ai-assistant">
-                <Button size="xl" variant="outline" className="bg-white border border-[#E2E8F0] text-[#0F172A] hover:bg-gray-50 rounded-xl gap-2 w-full sm:w-auto">
-                  <Bot className="h-5 w-5 text-[#0891B2]" />
-                  Ask AI Assistant
-                </Button>
-              </Link>
-            </div>
-
-            {/* Stats */}
-            <div suppressHydrationWarning className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto">
-              {[
-                { value: `${propCount}+`, label: "Properties" },
-                { value: `${userCount}+`, label: "Happy Users" },
-                { value: `${recCount}+`, label: "AI Recommendations" },
-                { value: `${predCount}+`, label: "Price Predictions" },
-              ].map(({ value, label }) => (
-                <div key={label} className="bg-white border border-[#E2E8F0] shadow-card rounded-2xl py-4 px-3 text-center">
-                  <div className="text-2xl font-display font-bold text-[#0F172A]">{value}</div>
-                  <div className="text-xs text-[#64748B] mt-0.5">{label}</div>
+            {/* Right Floating AI Badge Card */}
+            <div className="hidden lg:flex flex-col bg-[#08203A]/85 backdrop-blur-md border border-white/20 p-5 rounded-2xl shadow-2xl text-white max-w-xs">
+              <div className="flex items-center gap-2.5 mb-3">
+                <div className="w-9 h-9 rounded-xl bg-[#06B6D4]/20 border border-[#06B6D4]/40 flex items-center justify-center text-[#38BDF8]">
+                  <Bot className="w-5 h-5" />
                 </div>
-              ))}
+                <div>
+                  <h2 className="text-sm font-extrabold text-white">AI-Powered</h2>
+                  <p className="text-[10px] text-[#38BDF8] font-medium">Smart Real Estate Engine</p>
+                </div>
+              </div>
+              <div className="space-y-1.5 text-xs text-white/80">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981] flex-shrink-0" />
+                  <span>Property Recommendations</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981] flex-shrink-0" />
+                  <span>Price Prediction</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981] flex-shrink-0" />
+                  <span>Smart Search</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Integrated Search Bar with Tabs */}
+          <div className="mt-4">
+            <HeroSearchBar />
+          </div>
+        </div>
+      </section>
+
+      {/* ─── 2. HERO STATISTICS STRIP ───────────────────────── */}
+      <section className="bg-[#08203A] border-y border-white/10 py-5">
+        <div className="section-container">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="flex items-center gap-3.5 p-3 rounded-xl bg-white/5 border border-white/10 text-white">
+              <div className="w-10 h-10 rounded-xl bg-[#1677FF]/20 flex items-center justify-center text-[#38BDF8] flex-shrink-0">
+                <Building2 className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-black text-white">
+                  {totalCount > 0 ? `${totalCount}+` : "20,000+"}
+                </p>
+                <p className="text-xs text-white/70 font-medium">Properties Listed</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3.5 p-3 rounded-xl bg-white/5 border border-white/10 text-white">
+              <div className="w-10 h-10 rounded-xl bg-[#10B981]/20 flex items-center justify-center text-[#34D399] flex-shrink-0">
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-black text-white">5,000+</p>
+                <p className="text-xs text-white/70 font-medium">Happy Clients</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3.5 p-3 rounded-xl bg-white/5 border border-white/10 text-white">
+              <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/20 flex items-center justify-center text-[#FBBF24] flex-shrink-0">
+                <Award className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-black text-white">150+</p>
+                <p className="text-xs text-white/70 font-medium">Expert Agents</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3.5 p-3 rounded-xl bg-white/5 border border-white/10 text-white">
+              <div className="w-10 h-10 rounded-xl bg-[#8B5CF6]/20 flex items-center justify-center text-[#C084FC] flex-shrink-0">
+                <Star className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xl sm:text-2xl font-black text-white">10+</p>
+                <p className="text-xs text-white/70 font-medium">Years of Experience</p>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ─── QUICK SEARCH ──────────────────────── */}
-      <section className="bg-[#F8FAFC] pb-16 -mt-4">
+      {/* ─── 3. FEATURED PROPERTIES SECTION ─────────────────── */}
+      <section className="py-14 sm:py-16">
         <div className="section-container">
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-white rounded-2xl shadow-card border border-[#E2E8F0] p-6">
-              <h2 className="text-lg font-bold text-[#0F172A] mb-4 flex items-center gap-2">
-                <Search className="h-5 w-5 text-[#10B981]" /> Quick Property Search
-              </h2>
-              <form action="/properties" method="GET">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                  <div className="lg:col-span-2 relative">
-                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
-                    <input
-                      name="location"
-                      placeholder="Location (e.g. Mogadishu)"
-                      className="w-full pl-9 py-2 rounded-xl border border-[#E2E8F0] focus:border-[#10B981] focus:ring focus:ring-[#10B981]/30 bg-white text-[#0F172A] text-sm"
-                    />
-                  </div>
-                  <div className="relative">
-                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
-                    <select name="type" className="w-full pl-9 py-2 rounded-xl border border-[#E2E8F0] focus:border-[#10B981] focus:ring focus:ring-[#10B981]/30 appearance-none bg-white text-[#0F172A] text-sm">
-                      <option value="">Property Type</option>
-                      {["HOUSE","APARTMENT","VILLA","OFFICE","LAND","COMMERCIAL","TOWNHOUSE","STUDIO"].map(t => (
-                        <option key={t} value={t}>{getPropertyTypeLabel(t)}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="relative">
-                    <BedDouble className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
-                    <select name="bedrooms" className="w-full pl-9 py-2 rounded-xl border border-[#E2E8F0] focus:border-[#10B981] focus:ring focus:ring-[#10B981]/30 appearance-none bg-white text-[#0F172A] text-sm">
-                      <option value="">Bedrooms</option>
-                      {[1,2,3,4,5,6].map(n => (
-                        <option key={n} value={n}>{n}+ Beds</option>
-                      ))}
-                    </select>
-                  </div>
-                  <button
-                    type="submit"
-                    className="bg-[#10B981] text-white hover:bg-[#059669] rounded-xl flex items-center justify-center gap-2 py-2 px-4 transition-colors text-sm font-medium"
-                  >
-                    <Search className="h-4 w-4" /> Search
-                  </button>
-                </div>
-                <div className="grid grid-cols-2 gap-3 mt-3">
-                  <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
-                    <input name="minPrice" type="number" placeholder="Min Price ($)" className="w-full pl-9 py-2 rounded-xl border border-[#E2E8F0] focus:border-[#10B981] focus:ring focus:ring-[#10B981]/30 bg-white text-[#0F172A] text-sm" />
-                  </div>
-                  <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
-                    <input name="maxPrice" type="number" placeholder="Max Price ($)" className="w-full pl-9 py-2 rounded-xl border border-[#E2E8F0] focus:border-[#10B981] focus:ring focus:ring-[#10B981]/30 bg-white text-[#0F172A] text-sm" />
-                  </div>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── FEATURED PROPERTIES ───────────────── */}
-      <section className="py-16 bg-[#FFFFFF]">
-        <div className="section-container">
-          <div className="flex items-end justify-between mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
             <div>
-              <p className="text-[#10B981] font-bold text-sm mb-1">✦ Featured Listings</p>
-              <h2 className="font-display text-3xl font-bold text-[#0F172A]">
+              <h2 className="text-2xl sm:text-3xl font-black text-[#0F172A] tracking-tight">
                 Featured Properties
               </h2>
+              <p className="text-sm text-[#64748B] mt-1">
+                Explore some of our handpicked verified properties just for you.
+              </p>
             </div>
-            <Link href="/properties" className="hidden sm:flex items-center gap-1 text-[#10B981] font-medium text-sm hover:gap-2 transition-all">
-              View all <ArrowRight className="h-4 w-4" />
+            <Link
+              href="/properties"
+              className="inline-flex items-center gap-1.5 text-sm font-bold text-[#1677FF] hover:text-[#0F5ED7] transition-colors"
+            >
+              View All Properties
+              <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 
-          {featuredProperties.length === 0 ? (
-            <div className="text-center py-16 text-[#94A3B8]">
-              <Building2 className="h-16 w-16 mx-auto mb-4 opacity-30" />
-              <p>No featured properties yet. Run the database seed to add sample data.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {featuredProperties.map((property) => {
-                const image = property.images[0]?.url;
-                return (
-                  <Link href={`/properties/${property.id}`} key={property.id} className="group block">
-                    <div className="bg-white border border-[#E2E8F0] overflow-hidden rounded-2xl shadow-card">
-                      <div className="relative h-52 overflow-hidden bg-gray-100">
-                        {image ? (
-                          <img
-                            src={image}
-                            alt={property.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-[#F8FAFC]">
-                            <Building2 className="h-16 w-16 text-[#94A3B8]" />
-                          </div>
-                        )}
-                        <div className="absolute top-3 left-3">
-                          <span className="bg-[#D1FAE5] text-[#065F46] px-2 py-1 rounded-md text-xs font-semibold">{getPropertyTypeLabel(property.type)}</span>
-                        </div>
-                        {property.isFeatured && (
-                          <div className="absolute top-3 right-3">
-                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-[#FEF9C3] text-[#92400E] text-xs font-semibold">
-                              <Star className="h-3 w-3" /> Featured
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-4">
-                        <p className="text-xs text-[#94A3B8] flex items-center gap-1 mb-1">
-                          <MapPin className="h-3 w-3" /> {property.city}
-                        </p>
-                        <h3 className="font-bold text-[#0F172A] text-sm mb-2 line-clamp-1 group-hover:text-[#10B981] transition-colors">
-                          {property.title}
-                        </h3>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[#059669] font-bold text-lg">
-                            {formatPrice(property.price)}
-                          </span>
-                          <div className="flex items-center gap-2 text-xs text-[#64748B]">
-                            {property.bedrooms > 0 && (
-                              <span className="flex items-center gap-1">
-                                <BedDouble className="h-3 w-3" /> {property.bedrooms}
-                              </span>
-                            )}
-                            <span>{property.area} m²</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {featuredProperties.map((p) => (
+              <PropertyCard
+                key={p.id}
+                property={{
+                  id: p.id,
+                  title: p.title,
+                  price: p.price,
+                  location: p.location,
+                  city: p.city,
+                  type: p.type,
+                  bedrooms: p.bedrooms,
+                  bathrooms: p.bathrooms,
+                  area: p.area,
+                  images: p.images,
+                  isFeatured: p.isFeatured,
+                }}
+              />
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* ─── POPULAR LOCATIONS ─────────────────── */}
-      <section className="py-16 bg-[#F8FAFC]">
+      {/* ─── 4. AI SERVICES STRIP ───────────────────────────── */}
+      <section className="bg-[#08203A] py-8 text-white">
+        <div className="section-container">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Link
+              href="/ai-assistant"
+              className="flex items-center gap-3.5 p-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all group"
+            >
+              <div className="w-10 h-10 rounded-xl bg-[#1677FF]/30 flex items-center justify-center text-[#38BDF8] flex-shrink-0 group-hover:scale-110 transition-transform">
+                <Search className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">AI Property Search</h3>
+                <p className="text-xs text-white/60">Find your perfect match</p>
+              </div>
+            </Link>
+
+            <Link
+              href="/price-prediction"
+              className="flex items-center gap-3.5 p-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all group"
+            >
+              <div className="w-10 h-10 rounded-xl bg-[#10B981]/30 flex items-center justify-center text-[#34D399] flex-shrink-0 group-hover:scale-110 transition-transform">
+                <TrendingUp className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">Price Prediction</h3>
+                <p className="text-xs text-white/60">Know the future value</p>
+              </div>
+            </Link>
+
+            <Link
+              href="/customer/recommendations"
+              className="flex items-center gap-3.5 p-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all group"
+            >
+              <div className="w-10 h-10 rounded-xl bg-[#8B5CF6]/30 flex items-center justify-center text-[#C084FC] flex-shrink-0 group-hover:scale-110 transition-transform">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">Smart Recommendations</h3>
+                <p className="text-xs text-white/60">Personalized for you</p>
+              </div>
+            </Link>
+
+            <Link
+              href="/properties"
+              className="flex items-center gap-3.5 p-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all group"
+            >
+              <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/30 flex items-center justify-center text-[#FBBF24] flex-shrink-0 group-hover:scale-110 transition-transform">
+                <Compass className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">Virtual Tour</h3>
+                <p className="text-xs text-white/60">Explore 360° view</p>
+              </div>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── 5. AI ASSISTANT & TESTIMONIAL SECTION ──────────── */}
+      <section className="py-14 sm:py-16 bg-[#FFFFFF] border-b border-[#DCE6F2]">
+        <div className="section-container">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+            {/* AI Assistant Card */}
+            <div className="bg-gradient-to-br from-[#0F2747] to-[#08203A] p-6 sm:p-8 rounded-3xl text-white relative overflow-hidden shadow-xl flex flex-col sm:flex-row items-center gap-6">
+              <div className="relative w-28 h-28 sm:w-36 sm:h-36 flex-shrink-0 flex items-center justify-center">
+                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-gradient-to-tr from-[#1677FF] to-[#38BDF8] flex items-center justify-center shadow-lg">
+                  <Bot className="w-14 h-14 text-white animate-bounce" />
+                </div>
+              </div>
+              <div className="text-center sm:text-left space-y-3">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-xs font-semibold text-[#38BDF8]">
+                  <Sparkles className="w-3.5 h-3.5" /> 24/7 Virtual Assistant
+                </div>
+                <h3 className="text-2xl font-black text-white">Meet Your AI Assistant</h3>
+                <p className="text-xs sm:text-sm text-white/80 leading-relaxed">
+                  Ask anything about properties, locations, prices and get instant answers powered by Gemini and our real property database.
+                </p>
+                <div>
+                  <Link
+                    href="/ai-assistant"
+                    className="inline-flex items-center gap-2 bg-[#1677FF] hover:bg-[#0F5ED7] text-white text-xs sm:text-sm font-bold px-5 py-2.5 rounded-xl shadow-xs transition-transform active:scale-95"
+                  >
+                    Chat Now
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+            {/* Testimonial Card */}
+            <div className="bg-[#F8FAFC] border border-[#DCE6F2] p-6 sm:p-8 rounded-3xl shadow-xs flex flex-col justify-between space-y-4">
+              <div className="flex items-center gap-1 text-[#F59E0B]">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className="w-4 h-4 fill-[#F59E0B]" />
+                ))}
+              </div>
+              <p className="text-[#334155] italic text-sm sm:text-base leading-relaxed">
+                &ldquo;This platform made it so easy to find our dream home. The AI recommendations were spot on, and the verified property data gave us complete confidence.&rdquo;
+              </p>
+              <div className="flex items-center gap-3 pt-2">
+                <div className="w-11 h-11 rounded-full bg-[#1677FF]/10 border border-[#1677FF]/30 flex items-center justify-center font-bold text-[#1677FF]">
+                  AH
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-[#0F172A]">Ahmed Hassan</h3>
+                  <p className="text-xs text-[#64748B]">Happy Customer • Mogadishu</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── 6. POPULAR LOCATIONS SECTION ───────────────────── */}
+      <section className="py-14 sm:py-16 bg-[#F5F1EA]">
         <div className="section-container">
           <div className="text-center mb-10">
-            <p className="text-[#10B981] font-bold text-sm mb-1">✦ Explore by City</p>
-            <h2 className="font-display text-3xl font-bold text-[#0F172A]">Popular Locations</h2>
-            <p className="text-[#64748B] mt-2 max-w-xl mx-auto">
-              Browse properties in Somalia's major cities and regions
+            <p className="text-xs font-bold text-[#1677FF] uppercase tracking-wider mb-1">
+              ✦ Explore by City
+            </p>
+            <h2 className="text-2xl sm:text-3xl font-black text-[#0F172A] tracking-tight">
+              Popular Locations
+            </h2>
+            <p className="text-sm text-[#64748B] mt-1.5 max-w-xl mx-auto">
+              Browse properties in Somalia&apos;s major cities and economic hubs.
             </p>
           </div>
+
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {popularLocations.map(({ city, emoji, count, desc }) => (
               <Link
                 key={city}
                 href={`/properties?location=${city}`}
-                className="group flex flex-col items-center text-center p-5 rounded-2xl border border-[#E2E8F0] bg-white hover:shadow-card hover:-translate-y-1 transition-all duration-300"
+                className="group flex flex-col items-center text-center p-4 rounded-2xl border border-[#DCE6F2] bg-white hover:border-[#1677FF] hover:shadow-card hover:-translate-y-1 transition-all duration-300"
               >
-                <span className="text-4xl mb-3">{emoji}</span>
-                <h3 className="font-bold text-[#0F172A] group-hover:text-[#10B981] transition-colors text-sm mb-0.5">
+                <span className="text-3xl mb-2.5 group-hover:scale-110 transition-transform">{emoji}</span>
+                <h3 className="font-bold text-[#0F172A] group-hover:text-[#1677FF] transition-colors text-sm">
                   {city}
                 </h3>
-                <p className="text-xs text-[#64748B] font-medium">{count}</p>
-                <p className="text-xs text-[#94A3B8] mt-1">{desc}</p>
+                <p className="text-[11px] text-[#1677FF] font-semibold mt-0.5">{count}</p>
+                <p className="text-[10px] text-[#94A3B8] mt-1 line-clamp-1">{desc}</p>
               </Link>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── HOW IT WORKS ──────────────────────── */}
-      <section className="py-16 bg-[#FFFFFF]">
-        <div className="section-container">
-          <div className="text-center mb-12">
-            <p className="text-[#10B981] font-bold text-sm mb-1">✦ Simple Process</p>
-            <h2 className="font-display text-3xl font-bold text-[#0F172A]">How It Works</h2>
-            <p className="text-[#64748B] mt-2 max-w-xl mx-auto">
-              Find your perfect property in 4 simple AI-powered steps
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {howItWorksSteps.map(({ step, title, desc, icon: Icon }, i) => (
-              <div key={step} className="relative">
-                {i < howItWorksSteps.length - 1 && (
-                  <div className="hidden lg:block absolute top-8 left-full w-full h-0.5 bg-[#E2E8F0] z-0" />
-                )}
-                <div className="bg-white rounded-2xl p-6 border border-[#E2E8F0] shadow-card hover:shadow-card-hover hover:-translate-y-1 transition-all duration-300 relative z-10">
-                  <div className="w-14 h-14 rounded-2xl bg-[#ECFDF5] flex items-center justify-center mb-4">
-                    <Icon />
-                  </div>
-                  <span className="text-xs font-bold text-[#10B981] tracking-widest">{step}</span>
-                  <h3 className="font-bold text-[#0F172A] mt-1 mb-2">{title}</h3>
-                  <p className="text-sm text-[#64748B] leading-relaxed">{desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── AI FEATURES ───────────────────────── */}
-      <section className="py-16 bg-[#F8FAFC]">
-        <div className="section-container">
-          <div className="text-center mb-12">
-            <p className="text-[#0891B2] font-bold text-sm mb-1">✦ Intelligent Platform</p>
-            <h2 className="font-display text-3xl font-bold text-[#0F172A]">
-              AI-Powered Features
-            </h2>
-            <p className="text-[#64748B] mt-2 max-w-xl mx-auto">
-              Cutting-edge artificial intelligence built specifically for real estate
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {aiFeatures.map(({ title, desc, icon: Icon, color }) => (
-              <div key={title} className="flex gap-5 p-6 rounded-2xl border border-[#A5F3FC] bg-white shadow-card hover:shadow-card-hover hover:-translate-y-1 transition-all duration-300">
-                <div className={`w-12 h-12 rounded-xl ${color} flex items-center justify-center flex-shrink-0`}>
-                  <Icon className="h-6 w-6" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-[#0F172A] mb-1">{title}</h3>
-                  <p className="text-sm text-[#64748B] leading-relaxed">{desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/ai-assistant">
-              <Button size="lg" className="bg-[#10B981] text-white hover:bg-[#059669] rounded-xl gap-2">
-                <Bot className="h-5 w-5" /> Try AI Assistant
-              </Button>
-            </Link>
-            <Link href="/price-prediction">
-              <Button variant="outline" size="lg" className="bg-white border border-[#E2E8F0] text-[#0F172A] hover:bg-gray-50 rounded-xl gap-2">
-                <BarChart3 className="h-5 w-5 text-[#0891B2]" /> Predict Property Price
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── CTA ───────────────────────────────── */}
-      <section className="py-20 bg-[#0F172A]">
-        <div className="section-container text-center">
-          <div className="max-w-2xl mx-auto">
-            <h2 className="font-display text-3xl sm:text-4xl font-bold text-white mb-4">
-              Ready to Find Your Dream Property?
-            </h2>
-            <p className="text-[#94A3B8] text-lg mb-8 leading-relaxed">
-              Join thousands of users who found their perfect property using our AI-powered platform.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/register">
-                <Button size="xl" className="bg-[#10B981] text-white hover:bg-[#059669] rounded-xl gap-2 w-full sm:w-auto">
-                  <CheckCircle2 className="h-5 w-5" /> Create Free Account
-                </Button>
-              </Link>
-              <Link href="/properties">
-                <Button size="xl" variant="outline" className="border border-white/30 text-white hover:bg-white/10 rounded-xl gap-2 w-full sm:w-auto">
-                  Browse Properties <ArrowRight className="h-5 w-5" />
-                </Button>
-              </Link>
-            </div>
           </div>
         </div>
       </section>
     </div>
   );
 }
-

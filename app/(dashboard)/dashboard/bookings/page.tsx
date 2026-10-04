@@ -173,7 +173,7 @@ export default function ManagerBookingsPage() {
 
               {b.notes && (
                 <div className="bg-[#F8FAFC] p-3 rounded-xl border border-[#E2E8F0] text-xs text-[#334155]">
-                  <span className="font-semibold text-[#0F172A]">Customer Notes:</span> "{b.notes}"
+                  <span className="font-semibold text-[#0F172A]">Customer Notes:</span> &ldquo;{b.notes}&rdquo;
                 </div>
               )}
             </div>

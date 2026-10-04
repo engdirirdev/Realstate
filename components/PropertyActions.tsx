@@ -190,7 +190,7 @@ export default function PropertyActions({ propertyId, propertyTitle, propertyPri
               <Mail className="h-5 w-5 text-[#10B981]" /> Contact Property Manager
             </DialogTitle>
             <DialogDescription className="text-xs text-[#64748B]">
-              Inquire about "{propertyTitle}" directly with the listed property manager.
+              Inquire about &ldquo;{propertyTitle}&rdquo; directly with the listed property manager.
             </DialogDescription>
           </DialogHeader>
 
@@ -237,7 +237,7 @@ export default function PropertyActions({ propertyId, propertyTitle, propertyPri
               <Calendar className="h-5 w-5 text-[#10B981]" /> Reserve Property
             </DialogTitle>
             <DialogDescription className="text-xs text-[#64748B]">
-              Reserve "{propertyTitle}" for {formatPrice(propertyPrice)}.
+              Reserve &ldquo;{propertyTitle}&rdquo; for {formatPrice(propertyPrice)}.
             </DialogDescription>
           </DialogHeader>
 

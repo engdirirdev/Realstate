@@ -86,7 +86,7 @@ export default function PropertyShareAndReport({ propertyId, propertyTitle }: Pr
               <AlertTriangle className="h-5 w-5 text-[#EF4444]" /> Report Listing
             </DialogTitle>
             <DialogDescription className="text-xs text-[#64748B]">
-              Tell us why you are reporting "{propertyTitle}".
+              Tell us why you are reporting &ldquo;{propertyTitle}&rdquo;.
             </DialogDescription>
           </DialogHeader>
 

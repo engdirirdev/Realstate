@@ -185,7 +185,7 @@ export default async function ManagerPropertiesPage({
                     <AlertTriangle className="h-4 w-4 text-[#DC2626]" /> Admin Rejection Reason:
                   </div>
                   <p className="text-xs text-[#7F1D1D] leading-relaxed">
-                    "{prop.rejectionReason || "Listing requires additional details or photos."}"
+                    &ldquo;{prop.rejectionReason || "Listing requires additional details or photos."}&rdquo;
                   </p>
                   <div className="pt-1">
                     <Link

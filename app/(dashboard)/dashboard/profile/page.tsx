@@ -142,7 +142,7 @@ export default function ProfilePage() {
       <div className="bg-white rounded-2xl shadow-card border border-gray-100 p-6">
         <h2 className="font-semibold text-gray-900 mb-1">AI Recommendation Preferences</h2>
         <p className="text-gray-500 text-sm mb-5">
-          Help our AI find properties that match exactly what you're looking for.
+          Help our AI find properties that match exactly what you&apos;re looking for.
         </p>
         <form onSubmit={savePreferences} className="space-y-4">
           <div className="grid sm:grid-cols-2 gap-4">

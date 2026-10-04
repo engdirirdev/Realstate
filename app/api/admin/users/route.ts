@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Password must be at least 8 characters." }, { status: 400 });
     }
 
-    const assignedRole = role === "ADMIN" ? "ADMIN" : "USER";
+    const assignedRole = role === "ADMIN" ? "ADMIN" : role === "CUSTOMER" ? "CUSTOMER" : "USER";
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -69,7 +69,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const dataToUpdate: any = {};
-    if (role && (role === "ADMIN" || role === "USER")) {
+    if (role && (role === "ADMIN" || role === "USER" || role === "CUSTOMER")) {
       dataToUpdate.role = role;
     }
     if (typeof isActive === "boolean") {

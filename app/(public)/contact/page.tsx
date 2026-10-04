@@ -52,7 +52,7 @@ export default function ContactPage() {
           <p className="text-[#10B981] font-bold text-sm mb-2">✦ Get in Touch</p>
           <h1 className="font-display text-3xl font-bold text-[#0F172A]">Contact Us</h1>
           <p className="text-[#64748B] mt-2 max-w-xl mx-auto">
-            Have questions about a property or our platform? We'd love to hear from you.
+            Have questions about a property or our platform? We&apos;d love to hear from you.
           </p>
         </div>
 
@@ -78,7 +78,7 @@ export default function ContactPage() {
               <div className="text-center py-10">
                 <CheckCircle2 className="h-16 w-16 text-[#10B981] mx-auto mb-4" />
                 <h3 className="font-display text-2xl font-bold text-[#0F172A] mb-2">Message Sent!</h3>
-                <p className="text-[#64748B]">Thank you for reaching out. We'll respond within 24 hours.</p>
+                <p className="text-[#64748B]">Thank you for reaching out. We&apos;ll respond within 24 hours.</p>
                 <Button className="mt-6 bg-[#10B981] text-white hover:bg-[#059669] rounded-xl" onClick={() => { setSent(false); setForm({ name: "", email: "", phone: "", subject: "", message: "" }); }}>
                   Send Another Message
                 </Button>

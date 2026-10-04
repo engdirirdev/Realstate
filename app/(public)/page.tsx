@@ -6,11 +6,11 @@
 import Link from "next/link";
 import {
   Building2, Users, Award, Star, ArrowRight, Bot,
-  Sparkles, CheckCircle2, Search, TrendingUp, Compass
+  Sparkles, Search, TrendingUp, Compass
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import PropertyCard from "@/components/PropertyCard";
-import HeroSearchBar from "@/components/HeroSearchBar";
+import OpenAIChatButton from "@/components/OpenAIChatButton";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -62,52 +62,30 @@ export default async function HomePage() {
         </div>
 
         <div className="section-container relative z-10 w-full">
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-8 mb-8">
-            {/* Left Hero Text */}
-            <div className="max-w-2xl text-white text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#C89B3C]/20 border border-[#C89B3C]/40 text-[#D9B45B] text-xs font-bold uppercase tracking-wider mb-4">
-                <span>✦ Official Kiro-Maal Real Estate</span>
-              </div>
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black font-serif tracking-tight leading-tight text-[#FCFBF7] mb-4">
-                Smart Property Search <br />
-                <span className="bg-gradient-to-r from-[#C89B3C] via-[#F3D78A] to-[#D9B45B] bg-clip-text text-transparent">Powered by AI</span>
-              </h1>
-              <p className="text-base sm:text-lg text-[#E2E8F0] leading-relaxed max-w-xl">
-                Get personalized recommendations, predict prices with precision, and chat with our 24/7 AI assistant to find your perfect property in Somalia.
-              </p>
+          <div className="max-w-3xl mx-auto text-white text-center py-6 sm:py-10">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#C89B3C]/20 border border-[#C89B3C]/40 text-[#D9B45B] text-xs font-bold uppercase tracking-wider mb-5">
+              <span>✦ Official Kiro-Maal Real Estate</span>
             </div>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black font-serif tracking-tight leading-tight text-[#FCFBF7] mb-5">
+              Smart Property Search <br />
+              <span className="bg-gradient-to-r from-[#C89B3C] via-[#F3D78A] to-[#D9B45B] bg-clip-text text-transparent">Powered by AI</span>
+            </h1>
+            <p className="text-base sm:text-lg text-[#E2E8F0] leading-relaxed max-w-2xl mx-auto mb-9">
+              Discover verified luxury villas, modern apartments, and premium commercial listings across Somalia with precision valuations and trusted agents.
+            </p>
 
-            {/* Right Floating AI Badge Card */}
-            <div className="hidden lg:flex flex-col bg-[#0B1728]/90 backdrop-blur-md border border-[#C89B3C]/30 p-6 rounded-3xl shadow-2xl text-white max-w-xs">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#C89B3C] to-[#A97918] flex items-center justify-center text-[#07111F] shadow-md shadow-[#C89B3C]/30">
-                  <Bot className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-sm font-extrabold text-[#FCFBF7]">Next-Gen Real Estate AI</h2>
-                  <p className="text-[10px] text-[#D9B45B] font-semibold">24/7 Intelligent Concierge</p>
-                </div>
-              </div>
-              <div className="space-y-2 text-xs text-[#E2E8F0]">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#C89B3C] flex-shrink-0" />
-                  <span>55+ Verified Properties in Somalia</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#C89B3C] flex-shrink-0" />
-                  <span>ML Price Valuation &amp; Predictions</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#C89B3C] flex-shrink-0" />
-                  <span>Tailored Recommendations</span>
-                </div>
-              </div>
+            {/* Action Button: Search Properties */}
+            <div className="flex items-center justify-center">
+              <Link
+                href="/properties"
+                id="hero-search-properties-btn"
+                className="inline-flex items-center gap-3 px-9 py-4 rounded-2xl bg-gradient-to-r from-[#C89B3C] via-[#E8B849] to-[#D9A336] text-[#07111F] font-black text-base sm:text-lg shadow-xl shadow-[#C89B3C]/35 hover:shadow-2xl hover:shadow-[#C89B3C]/50 hover:scale-[1.03] active:scale-95 transition-all duration-300 group border border-[#F3D78A]/60 cursor-pointer"
+              >
+                <Search className="w-5 h-5 text-[#07111F] transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
+                <span>Search Properties</span>
+                <ArrowRight className="w-5 h-5 text-[#07111F] transition-transform duration-300 group-hover:translate-x-1" />
+              </Link>
             </div>
-          </div>
-
-          {/* Integrated Search Bar with Tabs */}
-          <div className="mt-4">
-            <HeroSearchBar />
           </div>
         </div>
       </section>
@@ -212,9 +190,8 @@ export default async function HomePage() {
       <section className="bg-[#07111F] py-10 text-white border-y border-[#C89B3C]/20">
         <div className="section-container">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Link
-              href="/ai-assistant"
-              className="flex items-center gap-3.5 p-4 rounded-2xl bg-[#0B1728] hover:bg-[#0E1D33] border border-[#C89B3C]/20 hover:border-[#C89B3C]/50 transition-all group"
+            <OpenAIChatButton
+              className="flex items-center gap-3.5 p-4 rounded-2xl bg-[#0B1728] hover:bg-[#0E1D33] border border-[#C89B3C]/20 hover:border-[#C89B3C]/50 transition-all group text-left cursor-pointer"
             >
               <div className="w-11 h-11 rounded-xl bg-[#C89B3C]/15 border border-[#C89B3C]/30 flex items-center justify-center text-[#D9B45B] flex-shrink-0 group-hover:scale-110 transition-transform">
                 <Search className="w-5 h-5" />
@@ -223,7 +200,7 @@ export default async function HomePage() {
                 <h3 className="text-sm font-bold text-[#FCFBF7]">AI Smart Search</h3>
                 <p className="text-xs text-[#94A3B8]">Match properties in seconds</p>
               </div>
-            </Link>
+            </OpenAIChatButton>
 
             <Link
               href="/price-prediction"
@@ -287,13 +264,12 @@ export default async function HomePage() {
                   Ask anything about verified properties, districts in Mogadishu, market prices, and investment returns.
                 </p>
                 <div>
-                  <Link
-                    href="/ai-assistant"
+                  <OpenAIChatButton
                     className="inline-flex items-center gap-2 bg-gradient-to-r from-[#C89B3C] to-[#D9B45B] hover:brightness-105 text-[#07111F] text-xs sm:text-sm font-bold px-6 py-2.5 rounded-xl shadow-md shadow-[#C89B3C]/20 transition-all cursor-pointer"
                   >
-                    Chat With Assistant
+                    <span>Chat With Assistant</span>
                     <ArrowRight className="w-4 h-4" />
-                  </Link>
+                  </OpenAIChatButton>
                 </div>
               </div>
             </div>

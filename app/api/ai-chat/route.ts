@@ -212,25 +212,32 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create a new session if no valid existing session was provided
-    if (!activeSessionId) {
-      const newSession = await prisma.chatSession.create({
-        data: {
-          userId: userId, // null for anonymous guests, or authenticated userId
-          title: message.slice(0, 45).trim() || "New Conversation",
-        },
-      });
-      activeSessionId = newSession.id;
+    // Create a new persistent session only for authenticated users with a userId
+    if (userId && !activeSessionId) {
+      try {
+        const newSession = await prisma.chatSession.create({
+          data: {
+            userId: userId,
+            title: message.slice(0, 45).trim() || "New Conversation",
+          },
+        });
+        activeSessionId = newSession.id;
+      } catch (sessionErr: any) {
+        // Safe logging without crashing Next.js console serializer
+        console.warn("Could not persist ChatSession:", sessionErr?.message || "Unknown error");
+      }
     }
 
-    // Persist USER message
-    await prisma.chatMessage.create({
-      data: {
-        sessionId: activeSessionId,
-        role: "user",
-        content: message.trim(),
-      },
-    }).catch((err) => console.error("Failed to persist user chat message:", err));
+    // Persist USER message if session is active
+    if (activeSessionId) {
+      await prisma.chatMessage.create({
+        data: {
+          sessionId: activeSessionId,
+          role: "user",
+          content: message.trim(),
+        },
+      }).catch((err) => console.error("Failed to persist user chat message:", err));
+    }
 
     // 5. Build strict server-side authorization context (client-supplied roles are completely ignored)
     const authContext: ChatAuthContext = {
@@ -388,20 +395,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Persist ASSISTANT message
-    await prisma.chatMessage.create({
-      data: {
-        sessionId: activeSessionId,
-        role: "assistant",
-        content: reply,
-        metadata: JSON.stringify({
-          intent: intentResult.intent,
-          confidence: intentResult.confidence,
-          totalMatches,
-          propertyIds: properties.map((p) => p.id),
-        }),
-      },
-    }).catch((err) => console.error("Failed to persist assistant chat message:", err));
+    // Persist ASSISTANT message if session is active
+    if (activeSessionId) {
+      await prisma.chatMessage.create({
+        data: {
+          sessionId: activeSessionId,
+          role: "assistant",
+          content: reply,
+          metadata: JSON.stringify({
+            intent: intentResult.intent,
+            confidence: intentResult.confidence,
+            totalMatches,
+            propertyIds: properties.map((p) => p.id),
+          }),
+        },
+      }).catch((err) => console.error("Failed to persist assistant chat message:", err));
+    }
 
     return NextResponse.json({
       sessionId: activeSessionId,
@@ -413,8 +422,8 @@ export async function POST(request: NextRequest) {
       totalMatches,
       suggestions,
     });
-  } catch (error) {
-    console.error("AI chat error:", error);
+  } catch (error: any) {
+    console.error("AI chat error:", error?.message || String(error));
     return NextResponse.json(
       { error: "Internal server error", reply: "Sorry, something went wrong while searching the database." },
       { status: 500 }

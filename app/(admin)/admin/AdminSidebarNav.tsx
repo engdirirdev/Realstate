@@ -7,12 +7,16 @@ import {
   Building2,
   Plus,
   FolderTree,
-  SlidersHorizontal,
+  MapPin,
   Users,
   UserCheck,
   Shield,
   CreditCard,
   MessageSquare,
+  Calendar,
+  BarChart3,
+  ScrollText,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -35,24 +39,36 @@ const navGroups: NavGroup[] = [
     title: "PROPERTY MANAGEMENT",
     items: [
       { href: "/admin/properties", label: "All Properties", icon: Building2 },
-      { href: "/dashboard/properties/add", label: "Add Property", icon: Plus },
       { href: "/admin/categories", label: "Categories", icon: FolderTree },
-      { href: "/admin/locations", label: "Features", icon: SlidersHorizontal },
+      { href: "/admin/locations", label: "Locations", icon: MapPin },
+    ],
+  },
+  {
+    title: "APPOINTMENTS",
+    items: [
+      { href: "/admin/bookings", label: "Tour Bookings", icon: Calendar },
     ],
   },
   {
     title: "USERS",
     items: [
       { href: "/admin/users?role=CUSTOMER", label: "Customers", icon: Users },
-      { href: "/admin/users?role=USER", label: "Agents", icon: UserCheck },
-      { href: "/admin/users?role=ADMIN", label: "Owners", icon: Shield },
+      { href: "/admin/users?role=USERS", label: "Users", icon: UserCheck },
     ],
   },
   {
     title: "TRANSACTIONS",
     items: [
       { href: "/admin/payments", label: "Payments", icon: CreditCard },
-      { href: "/admin/messages", label: "Requests", icon: MessageSquare },
+      { href: "/admin/messages", label: "Contact Requests", icon: MessageSquare },
+    ],
+  },
+  {
+    title: "SYSTEM & INTELLIGENCE",
+    items: [
+      { href: "/admin/analytics", label: "Platform Analytics", icon: BarChart3 },
+      { href: "/admin/audit-logs", label: "Audit Logs", icon: ScrollText },
+      { href: "/admin/settings", label: "Settings", icon: Settings },
     ],
   },
 ];

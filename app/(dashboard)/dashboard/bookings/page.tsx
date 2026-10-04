@@ -145,13 +145,16 @@ export default function ManagerBookingsPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider inline-flex items-center gap-1.5 ${
                     b.status === "CONFIRMED"
                       ? "bg-[#07111F] text-[#D9B45B] border border-[#C89B3C]/40"
                       : b.status === "CANCELLED"
-                      ? "bg-red-50 text-red-700 border border-red-200"
-                      : "bg-amber-50 text-amber-800 border border-amber-200"
+                      ? "bg-red-500/15 text-red-700 border border-red-500/30"
+                      : b.status === "COMPLETED"
+                      ? "bg-emerald-500/20 text-emerald-800 border border-emerald-500/40"
+                      : "bg-amber-500/15 text-amber-800 border border-amber-500/30"
                   }`}>
+                    {b.status === "COMPLETED" && "✓ "}
                     {b.status}
                   </span>
 
@@ -161,7 +164,7 @@ export default function ManagerBookingsPage() {
                         onClick={() => handleUpdateStatus(b.id, "CONFIRMED")}
                         disabled={updatingId === b.id}
                         size="sm"
-                        className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] hover:brightness-105 rounded-xl text-xs gap-1 font-bold border-0 shadow-xs"
+                        className="bg-gradient-to-r from-[#C89B3C] via-[#E8B849] to-[#D9A336] text-[#07111F] hover:brightness-105 rounded-xl text-xs gap-1 font-bold border-0 shadow-xs cursor-pointer"
                       >
                         {updatingId === b.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
                         Confirm
@@ -171,11 +174,46 @@ export default function ManagerBookingsPage() {
                         disabled={updatingId === b.id}
                         variant="outline"
                         size="sm"
-                        className="border-[#E8E1D4] text-[#DC2626] bg-white hover:bg-red-50 hover:border-red-200 rounded-xl text-xs gap-1 font-medium"
+                        className="border-red-200 text-red-600 bg-red-50/50 hover:bg-red-100 rounded-xl text-xs gap-1 font-medium cursor-pointer"
                       >
                         <XCircle className="h-3.5 w-3.5" /> Cancel
                       </Button>
                     </div>
+                  )}
+
+                  {b.status === "CONFIRMED" && (
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        onClick={() => handleUpdateStatus(b.id, "COMPLETED")}
+                        disabled={updatingId === b.id}
+                        size="sm"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs gap-1 font-bold shadow-xs cursor-pointer"
+                      >
+                        {updatingId === b.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                        Complete
+                      </Button>
+                      <Button
+                        onClick={() => handleUpdateStatus(b.id, "CANCELLED")}
+                        disabled={updatingId === b.id}
+                        variant="outline"
+                        size="sm"
+                        className="border-red-200 text-red-600 bg-red-50/50 hover:bg-red-100 rounded-xl text-xs gap-1 font-medium cursor-pointer"
+                      >
+                        <XCircle className="h-3.5 w-3.5" /> Cancel
+                      </Button>
+                    </div>
+                  )}
+
+                  {b.status === "COMPLETED" && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-500/15 text-emerald-800 text-xs font-bold border border-emerald-500/30 cursor-default select-none">
+                      ✓ Completed
+                    </span>
+                  )}
+
+                  {b.status === "CANCELLED" && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-red-500/15 text-red-700 text-xs font-bold border border-red-500/30 cursor-default select-none">
+                      ✕ Cancelled
+                    </span>
                   )}
                 </div>
               </div>

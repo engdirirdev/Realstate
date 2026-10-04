@@ -15,7 +15,13 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status");
 
     const where: any = {};
-    if (role && role !== "ALL") where.role = role;
+    if (role && role !== "ALL") {
+      if (role === "USERS" || role === "STAFF") {
+        where.role = { in: ["ADMIN", "USER"] };
+      } else {
+        where.role = role;
+      }
+    }
     if (status === "ACTIVE") where.isActive = true;
     if (status === "INACTIVE") where.isActive = false;
 

@@ -7,14 +7,14 @@ import {
   Building2,
   ListFilter,
   PlusCircle,
-  Users,
   MessageSquare,
   Calendar,
-  Clock,
   TrendingUp,
   Sparkles,
   BarChart3,
   Settings,
+  Bell,
+  CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -42,17 +42,22 @@ const managerNavGroups: NavGroup[] = [
     ],
   },
   {
-    title: "CUSTOMERS & LEADS",
+    title: "CLIENTS & LEADS",
     items: [
-      { href: "/dashboard/inquiries", label: "Customer List", icon: Users },
       { href: "/dashboard/inquiries", label: "Inquiries & Leads", icon: MessageSquare },
+      { href: "/dashboard/notifications", label: "Alerts & Notifications", icon: Bell },
     ],
   },
   {
     title: "APPOINTMENTS",
     items: [
-      { href: "/dashboard/bookings", label: "My Appointments", icon: Calendar },
-      { href: "/dashboard/bookings", label: "Schedule", icon: Clock },
+      { href: "/dashboard/bookings", label: "Tour Appointments", icon: Calendar },
+    ],
+  },
+  {
+    title: "FINANCES",
+    items: [
+      { href: "/dashboard/payments", label: "Payments & Revenue", icon: CreditCard },
     ],
   },
   {
@@ -66,7 +71,7 @@ const managerNavGroups: NavGroup[] = [
   {
     title: "SYSTEM",
     items: [
-      { href: "/dashboard/profile", label: "Settings", icon: Settings },
+      { href: "/dashboard/profile", label: "Profile & Settings", icon: Settings },
     ],
   },
 ];

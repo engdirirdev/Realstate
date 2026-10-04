@@ -20,6 +20,7 @@ import PropertyActions from "@/components/PropertyActions";
 import PropertyReviews from "@/components/PropertyReviews";
 import MortgageCalculator from "@/components/MortgageCalculator";
 import PropertyShareAndReport from "@/components/PropertyShareAndReport";
+import OpenAIChatButton from "@/components/OpenAIChatButton";
 import { calculatePropertyScore, getSimilarProperties, getAreaMarketInsights } from "@/lib/recommendation-engine";
 import type { Metadata } from "next";
 
@@ -397,11 +398,12 @@ export default async function PropertyDetailPage({ params }: Props) {
             </div>
             <h4 className="font-bold font-serif text-[#FCFBF7] mb-1">Have Questions?</h4>
             <p className="text-[#94A3B8] text-xs mb-4">Ask our 24/7 AI assistant about this property, valuation, neighborhood safety, or financing options.</p>
-            <Link href={`/ai-assistant?q=Tell me about ${encodeURIComponent(property.title)}`}>
-              <Button className="w-full bg-gradient-to-r from-[#C89B3C] to-[#D9B45B] hover:brightness-105 text-[#07111F] font-bold rounded-xl text-xs py-2.5 shadow-md shadow-[#C89B3C]/20 border border-[#A97918]/30 cursor-pointer">
-                Ask AI Concierge
-              </Button>
-            </Link>
+            <OpenAIChatButton
+              prefillMessage={`Tell me more about ${property.title} in ${property.city} listed at $${property.price.toLocaleString()}`}
+              className="w-full bg-gradient-to-r from-[#C89B3C] to-[#D9B45B] hover:brightness-105 text-[#07111F] font-bold rounded-xl text-xs py-2.5 shadow-md shadow-[#C89B3C]/20 border border-[#A97918]/30 cursor-pointer flex items-center justify-center gap-2"
+            >
+              Ask AI Concierge
+            </OpenAIChatButton>
           </div>
         </div>
       </div>

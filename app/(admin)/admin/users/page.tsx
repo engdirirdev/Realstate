@@ -10,8 +10,9 @@
 // ================================================================
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Users, Search, Filter, Mail, Phone, Calendar, Shield, UserPlus,
   Eye, CheckCircle2, AlertTriangle, ShieldCheck, Loader2, UserX, UserCheck, Trash2, Sparkles
@@ -41,12 +42,27 @@ interface UserItem {
   };
 }
 
-export default function AdminUsersPage() {
+function UsersDirectoryContent() {
+  const searchParams = useSearchParams();
+  const roleParam = searchParams.get("role");
+
   const [users, setUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<"ALL" | "ADMIN" | "USER" | "CUSTOMER">("ALL");
+  type TabKey = "ALL" | "ADMIN" | "USER" | "CUSTOMER";
+  const tabFromParam = (p: string | null): TabKey => {
+    if (p === "CUSTOMER") return "CUSTOMER";
+    if (p === "ADMIN") return "ADMIN";
+    if (p === "USER") return "USER";
+    return "ALL"; // "USERS" or none → all admins & managers
+  };
+  const [activeTab, setActiveTab] = useState<TabKey>(() => tabFromParam(roleParam));
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const isCustomerView = activeTab === "CUSTOMER";
+
+  useEffect(() => {
+    setActiveTab(tabFromParam(roleParam));
+  }, [roleParam]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -68,7 +84,7 @@ export default function AdminUsersPage() {
     try {
       const params = new URLSearchParams();
       if (searchQuery) params.set("query", searchQuery);
-      if (activeTab !== "ALL") params.set("role", activeTab);
+      params.set("role", activeTab === "ALL" ? "USERS" : activeTab);
       if (statusFilter !== "ALL") params.set("status", statusFilter);
 
       const res = await fetch(`/api/admin/users-list?${params.toString()}`);
@@ -106,9 +122,9 @@ export default function AdminUsersPage() {
         toast({ title: "Error", description: data.error, variant: "destructive" });
         return;
       }
-      toast({ title: "Success! 🎉", description: `Created new ${form.role} account.` });
+      toast({ title: "Success! 🎉", description: form.role === "CUSTOMER" ? "New customer added." : `Created new ${form.role === "USER" ? "MANAGER" : form.role} account.` });
       setModalOpen(false);
-      setForm({ name: "", email: "", phone: "", password: "", role: "CUSTOMER" });
+      setForm({ name: "", email: "", phone: "", password: "", role: isCustomerView ? "CUSTOMER" : "USER" });
       fetchUsers();
     } catch {
       toast({ title: "Error", description: "Failed to create account.", variant: "destructive" });
@@ -171,35 +187,40 @@ export default function AdminUsersPage() {
             <Sparkles className="w-3.5 h-3.5 text-[#C89B3C]" /> Identity &amp; Access Governance
           </div>
           <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#07111F] flex items-center gap-2.5">
-            <Users className="h-7 w-7 text-[#C89B3C]" /> User Accounts &amp; Access Directory
+            <Users className="h-7 w-7 text-[#C89B3C]" /> {isCustomerView ? "Customers Directory" : "User Accounts & Access Directory"}
           </h1>
           <p className="text-[#6B7280] text-sm mt-1">
-            Search, filter by role, manage privileges, inspect account activity, or manage registrations.
+            {isCustomerView
+              ? "Search customers, inspect their favorites & bookings, or manage customer accounts."
+              : "Search, filter by role, manage privileges, inspect account activity, or manage registrations."}
           </p>
         </div>
 
         <Button
-          onClick={() => setModalOpen(true)}
+          onClick={() => {
+            setForm({ name: "", email: "", phone: "", password: "", role: isCustomerView ? "CUSTOMER" : activeTab === "ADMIN" ? "ADMIN" : "USER" });
+            setModalOpen(true);
+          }}
           className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] hover:brightness-105 gap-2 shadow-sm rounded-xl font-bold self-start sm:self-auto border-0"
         >
-          <UserPlus className="h-4 w-4" /> Create New Account
+          <UserPlus className="h-4 w-4" /> {isCustomerView ? "Add Customer" : "Create New Account"}
         </Button>
       </div>
 
-      {/* ── Role Filter Tabs ── */}
+      {/* ── Role Filter Tabs (Users view only: admins & managers) ── */}
+      {!isCustomerView && (
       <div className="flex items-center gap-2 overflow-x-auto pb-1">
         {[
           { key: "ALL", label: "All Users" },
           { key: "ADMIN", label: "Admins" },
-          { key: "USER", label: "Users / Managers" },
-          { key: "CUSTOMER", label: "Customers" },
+          { key: "USER", label: "Managers" },
         ].map((tab) => {
           const isActive = activeTab === tab.key;
           return (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key as any)}
-              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold uppercase tracking-wider transition-all shadow-xs border ${
+              className={`px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold uppercase tracking-wider transition-all shadow-xs border cursor-pointer ${
                 isActive
                   ? "bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] border-transparent"
                   : "bg-[#FCFBF7] text-[#6B7280] border-[#E8E1D4] hover:bg-[#F7F3EA] hover:text-[#07111F]"
@@ -210,6 +231,7 @@ export default function AdminUsersPage() {
           );
         })}
       </div>
+      )}
 
       {/* ── Search & Filter Controls ── */}
       <div className="bg-[#FCFBF7] p-4 rounded-2xl shadow-sm border border-[#E8E1D4] flex flex-col md:flex-row items-center justify-between gap-4">
@@ -380,14 +402,17 @@ export default function AdminUsersPage() {
         <DialogContent className="max-w-md bg-[#FCFBF7] rounded-2xl p-6 shadow-xl border border-[#E8E1D4]">
           <DialogHeader>
             <DialogTitle className="text-xl font-serif font-bold text-[#07111F] flex items-center gap-2">
-              <UserPlus className="h-5 w-5 text-[#C89B3C]" /> Create New Account
+              <UserPlus className="h-5 w-5 text-[#C89B3C]" /> {isCustomerView ? "Add Customer" : "Create New Account"}
             </DialogTitle>
             <DialogDescription className="text-xs text-[#6B7280]">
-              Register an account directly with assigned role and credentials.
+              {isCustomerView
+                ? "Register a new customer account with login credentials."
+                : "Register an admin or manager account with assigned role and credentials."}
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleCreateUser} className="space-y-4 mt-2">
+            {!isCustomerView && (
             <div className="space-y-1.5">
               <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">Account Role</Label>
               <Select value={form.role} onValueChange={(val) => setForm((p) => ({ ...p, role: val as any }))}>
@@ -395,12 +420,12 @@ export default function AdminUsersPage() {
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent className="bg-[#FCFBF7] border-[#E8E1D4]">
-                  <SelectItem value="CUSTOMER">CUSTOMER (End Buyer / Renter)</SelectItem>
-                  <SelectItem value="USER">USER / MANAGER (Property Agent)</SelectItem>
+                  <SelectItem value="USER">MANAGER (Property Agent)</SelectItem>
                   <SelectItem value="ADMIN">ADMIN (System Administrator)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            )}
 
             <div className="space-y-1.5">
               <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">Full Name</Label>
@@ -495,5 +520,20 @@ export default function AdminUsersPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function AdminUsersPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-16 text-center text-[#6B7280] flex flex-col items-center justify-center gap-3 min-h-screen bg-[#F7F3EA]">
+          <Loader2 className="h-8 w-8 animate-spin text-[#C89B3C]" />
+          <p className="text-sm font-medium">Loading User Directory...</p>
+        </div>
+      }
+    >
+      <UsersDirectoryContent />
+    </Suspense>
   );
 }

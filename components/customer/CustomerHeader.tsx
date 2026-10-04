@@ -47,7 +47,6 @@ export default function CustomerHeader({
       <div className="flex items-center gap-3 sm:gap-4">
         <Link
           href="/"
-          target="_blank"
           className="hidden md:inline-flex items-center gap-1.5 text-xs font-semibold text-[#64748B] hover:text-[#1677FF] bg-[#FAF7F2] hover:bg-white border border-[#E2DDD1] px-3 py-1.5 rounded-xl transition-colors"
         >
           <ExternalLink className="h-3.5 w-3.5" />

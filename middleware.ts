@@ -12,9 +12,9 @@ export default auth((req) => {
   const isAuthRoute =
     nextUrl.pathname === "/login" || nextUrl.pathname === "/register";
 
-  // Auth pages (redirect if already logged in)
+  // Auth pages (redirect if already logged in, unless switch=true)
   if (isAuthRoute) {
-    if (isLoggedIn) {
+    if (isLoggedIn && nextUrl.searchParams.get("switch") !== "true") {
       if (role === "ADMIN") {
         return NextResponse.redirect(new URL("/admin", nextUrl));
       }

@@ -5,6 +5,7 @@ import { LogOut, User } from "lucide-react";
 import CustomerSidebarNav from "./CustomerSidebarNav";
 import CustomerHeader from "@/components/customer/CustomerHeader";
 import BrandLogo from "@/components/layout/BrandLogo";
+import SidebarSignOutButton from "@/components/layout/SidebarSignOutButton";
 import { prisma } from "@/lib/prisma";
 
 export default async function CustomerLayout({ children }: { children: React.ReactNode }) {
@@ -50,13 +51,7 @@ export default async function CustomerLayout({ children }: { children: React.Rea
             </div>
           </div>
 
-          <Link
-            href="/api/auth/signout"
-            className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-[#F87171] hover:bg-[#EF4444]/20 hover:text-white transition-all w-full"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            <span>Sign Out</span>
-          </Link>
+          <SidebarSignOutButton />
         </div>
       </aside>
 

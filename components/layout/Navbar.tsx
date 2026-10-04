@@ -41,9 +41,13 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const isAdmin = session?.user?.role === "ADMIN";
-  const isCustomer = session?.user?.role === "CUSTOMER";
-  const isManager = session?.user?.role === "USER";
+  const userEmail = session?.user?.email?.toLowerCase() || "";
+  const userRole = (session?.user?.role || "").toUpperCase();
+
+  const isAdmin = userRole === "ADMIN" || userEmail === "admin@realestate.so";
+  const isCustomer = (userRole === "CUSTOMER" || userEmail === "customer@realestate.so") && !isAdmin;
+  const isManager = !isAdmin && !isCustomer && (userRole === "USER" || userRole === "MANAGER" || userRole === "AGENT" || userEmail === "manager@realestate.so");
+  const roleLabel = isAdmin ? "Admin" : isManager ? "Manager" : isCustomer ? "Customer" : "User";
 
   const initials = session?.user?.name
     ? session.user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
@@ -96,26 +100,52 @@ export default function Navbar() {
             {status === "loading" ? (
               <div className="h-9 w-24 rounded-xl bg-[#F1F5F9] animate-pulse" />
             ) : session ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-[#F8FAFC] border border-transparent hover:border-[#DCE6F2] transition-all group">
-                    <Avatar className="h-8 w-8 ring-2 ring-[#BFDBFE]">
-                      <AvatarImage src={session.user?.image || ""} />
-                      <AvatarFallback className="text-xs bg-[#EFF6FF] text-[#1677FF] font-bold">
-                        {initials}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex flex-col items-start text-left">
-                      <span className="text-xs font-bold text-[#0F172A] leading-none">
-                        {session.user?.name?.split(" ")[0]}
-                      </span>
-                      <span className="text-[10px] text-[#1677FF] font-semibold capitalize mt-0.5">
-                        {session.user?.role?.toLowerCase()}
-                      </span>
-                    </div>
-                    <ChevronDown className="h-3.5 w-3.5 text-[#94A3B8]" />
-                  </button>
-                </DropdownMenuTrigger>
+              <div className="flex items-center gap-2">
+                {/* Direct Dashboard Link */}
+                <Link
+                  href={isAdmin ? "/admin" : isCustomer ? "/customer" : "/dashboard"}
+                  className={cn(
+                    "hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs",
+                    isAdmin
+                      ? "bg-[#EFF6FF] text-[#1677FF] hover:bg-[#1677FF] hover:text-white border border-[#BFDBFE]"
+                      : isCustomer
+                      ? "bg-[#F5F3FF] text-[#7C3AED] hover:bg-[#7C3AED] hover:text-white border border-[#DDD6FE]"
+                      : "bg-[#ECFDF5] text-[#059669] hover:bg-[#10B981] hover:text-white border border-[#A7F3D0]"
+                  )}
+                >
+                  <LayoutDashboard className="w-3.5 h-3.5" />
+                  <span>{isAdmin ? "Admin Dashboard" : isCustomer ? "Customer Portal" : "Manager Dashboard"}</span>
+                </Link>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-[#F8FAFC] border border-transparent hover:border-[#DCE6F2] transition-all group cursor-pointer">
+                      <Avatar className="h-8 w-8 ring-2 ring-[#BFDBFE]">
+                        <AvatarImage src={session.user?.image || ""} />
+                        <AvatarFallback className="text-xs bg-[#EFF6FF] text-[#1677FF] font-bold">
+                          {initials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col items-start text-left">
+                        <span className="text-xs font-bold text-[#0F172A] leading-none">
+                          {session.user?.name?.split(" ")[0]}
+                        </span>
+                        <span
+                          className={cn(
+                            "text-[10px] font-bold px-1.5 py-0.5 rounded-md mt-0.5 uppercase tracking-wide",
+                            isAdmin
+                              ? "bg-[#EFF6FF] text-[#1677FF]"
+                              : isCustomer
+                              ? "bg-[#F5F3FF] text-[#7C3AED]"
+                              : "bg-[#ECFDF5] text-[#059669]"
+                          )}
+                        >
+                          {roleLabel}
+                        </span>
+                      </div>
+                      <ChevronDown className="h-3.5 w-3.5 text-[#94A3B8]" />
+                    </button>
+                  </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 border-[#DCE6F2] shadow-card-hover p-1.5">
                   <DropdownMenuLabel className="font-normal px-2 py-1.5">
                     <div className="flex flex-col space-y-0.5">
@@ -163,6 +193,11 @@ export default function Navbar() {
                     </>
                   )}
                   <DropdownMenuSeparator className="bg-[#EDF3FA]" />
+                  <DropdownMenuItem asChild>
+                    <Link href="/login?switch=true" className="flex items-center gap-2 text-[#475569] hover:text-[#1677FF] cursor-pointer">
+                      <User className="h-4 w-4 text-[#1677FF]" /> Switch Account
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     className="text-[#EF4444] focus:text-[#DC2626] focus:bg-[#FEE2E2] cursor-pointer"
                     onClick={() => signOut({ callbackUrl: "/" })}
@@ -171,19 +206,13 @@ export default function Navbar() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Link href="/login">
-                  <Button variant="ghost" size="sm" className="text-[#0F172A] hover:bg-[#F5F8FC] font-semibold text-sm px-3.5">
-                    Login
-                  </Button>
-                </Link>
-                <Link href="/register">
-                  <Button size="sm" className="bg-[#1677FF] hover:bg-[#0F5ED7] text-white font-semibold rounded-xl text-sm px-4 shadow-xs">
-                    Sign Up
-                  </Button>
-                </Link>
-              </div>
+            </div>
+          ) : (
+              <Link href="/login">
+                <Button size="sm" className="bg-[#1677FF] hover:bg-[#0F5ED7] text-white font-bold rounded-xl text-sm px-5 py-2 shadow-xs transition-all">
+                  Login
+                </Button>
+              </Link>
             )}
           </div>
 
@@ -221,14 +250,13 @@ export default function Navbar() {
                     Go to Portal
                   </Link>
                 ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    <Link href="/login" onClick={() => setMobileOpen(false)} className="btn-secondary text-center text-sm py-2">
-                      Login
-                    </Link>
-                    <Link href="/register" onClick={() => setMobileOpen(false)} className="btn-primary text-center text-sm py-2">
-                      Sign Up
-                    </Link>
-                  </div>
+                  <Link
+                    href="/login"
+                    onClick={() => setMobileOpen(false)}
+                    className="btn-primary text-center text-sm py-2.5 rounded-xl font-bold"
+                  >
+                    Login
+                  </Link>
                 )}
               </div>
             </div>

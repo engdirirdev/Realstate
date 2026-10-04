@@ -1,0 +1,266 @@
+﻿Fixed Input Payload: {
+  "city": "Mogadishu",
+  "type": "HOUSE",
+  "bedrooms": 3,
+  "bathrooms": 2,
+  "area": 150,
+  "parking": 1,
+  "isFurnished": false,
+  "askingPrice": 70000
+}
+
+--- Calling POST http://localhost:3000/api/price-prediction ---
+Status: 200
+Raw Response 1 (price-prediction): {
+  "success": true,
+  "prediction": {
+    "predictedPrice": 63962,
+    "minPrice": 61876,
+    "maxPrice": 66048,
+    "confidence": 85,
+    "insights": [
+      "Premium location in Mogadishu"
+    ],
+    "comparables": 4,
+    "comparableList": [
+      {
+        "id": "cmus03vk50008hy5wqk1naxrv",
+        "title": "Spacious Modern House in Mogadishu",
+        "city": "Mogadishu",
+        "type": "HOUSE",
+        "price": 65000,
+        "bedrooms": 1,
+        "bathrooms": 1,
+        "area": 50,
+        "similarityScore": 76,
+        "priceVariancePercent": 1.6
+      },
+      {
+        "id": "cmus03vt0001shy5whjof9p2x",
+        "title": "Modern 3-Bedroom Home near Ocean & Liido Beach",
+        "city": "Mogadishu",
+        "type": "TOWNHOUSE",
+        "price": 45000,
+        "bedrooms": 3,
+        "bathrooms": 2,
+        "area": 170,
+        "similarityScore": 69,
+        "priceVariancePercent": -29.6
+      },
+      {
+        "id": "cmus03vw8002khy5w3hj9sksw",
+        "title": "Retail Shop Space in Busy Mogadishu Market",
+        "city": "Mogadishu",
+        "type": "COMMERCIAL",
+        "price": 45000,
+        "bedrooms": 2,
+        "bathrooms": 1,
+        "area": 80,
+        "similarityScore": 55,
+        "priceVariancePercent": -29.6
+      },
+      {
+        "id": "cmus03vpq0010hy5w25q4x0d4",
+        "title": "Modern Compact Studio, Mogadishu",
+        "city": "Mogadishu",
+        "type": "STUDIO",
+        "price": 45000,
+        "bedrooms": 1,
+        "bathrooms": 1,
+        "area": 260,
+        "similarityScore": 45,
+        "priceVariancePercent": -29.6
+      }
+    ],
+    "pricePosition": "FAIRLY_PRICED",
+    "positionDetails": {
+      "askingPrice": 70000,
+      "differenceUSD": 6038,
+      "percentageDifference": 9.4,
+      "explanation": "The asking price ($70,000) is aligned with current market conditions (within ┬▒10% of estimated $63,962)."
+    },
+    "featureContributions": [
+      {
+        "feature": "type_house",
+        "label": "Property Type (HOUSE)",
+        "value": "HOUSE",
+        "impactUSD": 3780,
+        "relativePercent": 20
+      },
+      {
+        "feature": "type_land",
+        "label": "Property Type (LAND)",
+        "value": "HOUSE",
+        "impactUSD": 3435,
+        "relativePercent": 18
+      },
+      {
+        "feature": "city_berbera",
+        "label": "Location (BERBERA)",
+        "value": "Mogadishu",
+        "impactUSD": 3262,
+        "relativePercent": 17
+      },
+      {
+        "feature": "city_mogadishu",
+        "label": "Location (MOGADISHU)",
+        "value": "Mogadishu",
+        "impactUSD": 2571,
+        "relativePercent": 13
+      },
+      {
+        "feature": "city_hargeisa",
+        "label": "Location (HARGEISA)",
+        "value": "Mogadishu",
+        "impactUSD": 1765,
+        "relativePercent": 9
+      }
+    ],
+    "modelMetadata": {
+      "modelId": "valuation-ridgeregression-v1",
+      "modelVersion": "1.0.0",
+      "modelType": "RidgeRegression",
+      "trainedAt": "2026-10-04T11:30:00.147Z",
+      "datasetSize": 28,
+      "testMetrics": {
+        "mae": 39574.45,
+        "rmse": 54387.85,
+        "r2": -1.382,
+        "mape": 29.15,
+        "sampleCount": 6
+      },
+      "readinessVerdict": "RESEARCH_EXPERIMENTAL"
+    }
+  }
+}
+
+--- Calling POST http://localhost:3000/api/ai/price-estimate ---
+Status: 200
+Raw Response 2 (ai/price-estimate): {
+  "success": true,
+  "estimatedPrice": 63962,
+  "currency": "USD",
+  "priceRange": {
+    "lower": 61876,
+    "upper": 66048,
+    "marginPercent": 3
+  },
+  "reliability": "HIGH",
+  "pricePosition": "FAIRLY_PRICED",
+  "positionDetails": {
+    "askingPrice": 70000,
+    "differenceUSD": 6038,
+    "percentageDifference": 9.4,
+    "explanation": "The asking price ($70,000) is aligned with current market conditions (within ┬▒10% of estimated $63,962)."
+  },
+  "featureContributions": [
+    {
+      "feature": "type_house",
+      "label": "Property Type (HOUSE)",
+      "value": "HOUSE",
+      "impactUSD": 3780,
+      "relativePercent": 20
+    },
+    {
+      "feature": "type_land",
+      "label": "Property Type (LAND)",
+      "value": "HOUSE",
+      "impactUSD": 3435,
+      "relativePercent": 18
+    },
+    {
+      "feature": "city_berbera",
+      "label": "Location (BERBERA)",
+      "value": "Mogadishu",
+      "impactUSD": 3262,
+      "relativePercent": 17
+    },
+    {
+      "feature": "city_mogadishu",
+      "label": "Location (MOGADISHU)",
+      "value": "Mogadishu",
+      "impactUSD": 2571,
+      "relativePercent": 13
+    },
+    {
+      "feature": "city_hargeisa",
+      "label": "Location (HARGEISA)",
+      "value": "Mogadishu",
+      "impactUSD": 1765,
+      "relativePercent": 9
+    }
+  ],
+  "topDrivers": [
+    "Premium location in Mogadishu"
+  ],
+  "comparables": [
+    {
+      "id": "cmus03vk50008hy5wqk1naxrv",
+      "title": "Spacious Modern House in Mogadishu",
+      "city": "Mogadishu",
+      "type": "HOUSE",
+      "price": 65000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "area": 50,
+      "similarityScore": 76,
+      "priceVariancePercent": 1.6
+    },
+    {
+      "id": "cmus03vt0001shy5whjof9p2x",
+      "title": "Modern 3-Bedroom Home near Ocean & Liido Beach",
+      "city": "Mogadishu",
+      "type": "TOWNHOUSE",
+      "price": 45000,
+      "bedrooms": 3,
+      "bathrooms": 2,
+      "area": 170,
+      "similarityScore": 69,
+      "priceVariancePercent": -29.6
+    },
+    {
+      "id": "cmus03vw8002khy5w3hj9sksw",
+      "title": "Retail Shop Space in Busy Mogadishu Market",
+      "city": "Mogadishu",
+      "type": "COMMERCIAL",
+      "price": 45000,
+      "bedrooms": 2,
+      "bathrooms": 1,
+      "area": 80,
+      "similarityScore": 55,
+      "priceVariancePercent": -29.6
+    },
+    {
+      "id": "cmus03vpq0010hy5w25q4x0d4",
+      "title": "Modern Compact Studio, Mogadishu",
+      "city": "Mogadishu",
+      "type": "STUDIO",
+      "price": 45000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "area": 260,
+      "similarityScore": 45,
+      "priceVariancePercent": -29.6
+    }
+  ],
+  "modelMetadata": {
+    "modelId": "valuation-ridgeregression-v1",
+    "modelVersion": "1.0.0",
+    "modelType": "RidgeRegression",
+    "trainedAt": "2026-10-04T11:30:00.147Z",
+    "datasetSize": 28,
+    "testMetrics": {
+      "mae": 39574.45,
+      "rmse": 54387.85,
+      "r2": -1.382,
+      "mape": 29.15,
+      "sampleCount": 6
+    },
+    "readinessVerdict": "RESEARCH_EXPERIMENTAL"
+  }
+}
+
+--- Prediction Price Comparison ---
+Endpoint 1 (price-prediction) predictedPrice: 63962
+Endpoint 2 (ai/price-estimate) estimatedPrice: 63962
+State: IDENTICAL

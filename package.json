@@ -12,7 +12,13 @@
     "db:push": "prisma db push",
     "db:seed": "ts-node prisma/seed.ts",
     "db:studio": "prisma studio",
-    "db:reset": "prisma migrate reset --force"
+    "db:reset": "prisma migrate reset --force",
+    "test:phase1": "node tests/phase1-verification.mjs",
+    "test:phase2a": "node tests/phase2a-semantic-search.mjs",
+    "test:phase2b": "node tests/phase2b-hybrid-search.mjs",
+    "test:phase2c": "npx tsx tests/phase2c-personalized-recommendations.mjs",
+    "test:phase3": "npx tsx tests/phase3-valuation-ml.mjs",
+    "test": "node tests/phase1-verification.mjs && node tests/phase2a-semantic-search.mjs && node tests/phase2b-hybrid-search.mjs && npx tsx tests/phase2c-personalized-recommendations.mjs && npx tsx tests/phase3-valuation-ml.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.2",

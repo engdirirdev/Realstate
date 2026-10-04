@@ -17,6 +17,20 @@ interface PredictionResult {
   minPrice: number;
   maxPrice: number;
   confidence: number;
+  calibration?: {
+    status: string;
+    basis: string;
+    outOfSampleMAE: number;
+    n: number;
+    note: string;
+  };
+  pairCoverage?: {
+    trainRowsForPair: number;
+    cityTrainRows: number;
+    typeTrainRows: number;
+  };
+  positionSuppressed?: boolean;
+  suppressReason?: string;
   insights: string[];
 }
 
@@ -56,7 +70,10 @@ export default function PricePredictionPage() {
         body: JSON.stringify(form),
       });
       const data = await res.json();
-      if (data.success) {
+      if (data.status === "INSUFFICIENT_DATA") {
+        setError(`Insufficient training data: The model has zero training records for ${form.city} / ${form.type}. Numeric estimates are blocked.`);
+        setResult(null);
+      } else if (data.success) {
         setResult(data.prediction);
       } else {
         setError(data.error || "Prediction failed. Please try again.");
@@ -82,7 +99,7 @@ export default function PricePredictionPage() {
           </div>
           <h1 className="font-display text-3xl font-bold text-[#0F172A]">AI Price Prediction</h1>
           <p className="text-[#64748B] mt-2">
-            Enter property details to get an estimated market price using our TensorFlow.js ML model
+            Enter property details to get an estimated market price using our supervised regression ML model
           </p>
         </div>
 
@@ -180,18 +197,30 @@ export default function PricePredictionPage() {
                   <div className="text-[#64748B] text-sm">
                     Range: {formatPrice(result.minPrice)} – {formatPrice(result.maxPrice)}
                   </div>
-                  <div className="mt-4 flex items-center gap-2">
-                    <div className="flex-1 bg-[#E2E8F0] rounded-full h-2">
-                      <div
-                        className="h-2 rounded-full bg-gradient-to-r from-[#10B981] to-[#059669] transition-all duration-1000"
-                        style={{ width: `${result.confidence}%` }}
-                      />
+                  {result.pairCoverage && result.pairCoverage.trainRowsForPair === 0 && (
+                    <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 flex items-start gap-2">
+                      <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                      <span>This city and property type combination has no training examples in the dataset. The estimate is an additive extrapolation.</span>
                     </div>
-                    <span className={`text-sm font-bold text-[#06B6D4] px-2 py-0.5`}>
-                      {result.confidence}%
-                    </span>
-                  </div>
-                  <p className="text-[#94A3B8] text-xs mt-1">Model confidence</p>
+                  )}
+
+                  {result.calibration && (
+                    <div className="mt-4 pt-3 border-t border-[#E2E8F0] text-xs text-[#64748B] space-y-1">
+                      <div className="flex justify-between items-center">
+                        <span>Uncertainty Margin:</span>
+                        <span className="font-semibold text-[#0F172A]">
+                          ±${((result.maxPrice - result.minPrice) / 2).toLocaleString()} ({result.calibration.basis})
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-[11px] text-[#94A3B8]">
+                        <span>Calibration Status:</span>
+                        <span className="font-mono text-amber-600">{result.calibration.status}</span>
+                      </div>
+                      <p className="text-[11px] text-[#94A3B8] italic">
+                        {result.calibration.note}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Insights */}

@@ -1,0 +1,335 @@
+
+========================================
+[A6: Existing user_interactions in DB]
+========================================
+{
+  "totalRows": 9,
+  "distinctUsersCount": 1,
+  "distinctUsers": [
+    {
+      "_count": {
+        "id": 9
+      },
+      "userId": "cmus03vjn0004hy5wc77ofx2p"
+    }
+  ]
+}
+
+========================================
+[D1: Existing UserPreferenceProfile in DB]
+========================================
+[
+  {
+    "userId": "cmus03vjn0004hy5wc77ofx2p",
+    "confidence": 0.6,
+    "totalWeight": 8.98,
+    "totalInteractions": 9,
+    "updatedAt": "2026-10-04T12:45:01.494Z"
+  }
+]
+
+========================================
+[E1: Embedding Provider Mix in DB]
+========================================
+[
+  {
+    "model": "text-embedding-004",
+    "count": "28"
+  }
+]
+
+========================================
+[E3: De-index Live Check]
+========================================
+{
+  "propertyId": "cmus03vk50008hy5wqk1naxrv",
+  "title": "Spacious Modern House in Mogadishu",
+  "embeddingBeforePresent": true,
+  "inSearchBefore": true,
+  "embeddingAfterStatusRejected": true,
+  "inSearchAfterStatusRejected": false,
+  "verdict": "EMBEDDING_PERSISTS_IN_DB"
+}
+
+========================================
+[F1: Signal Netting Test]
+========================================
+{
+  "afterFavorite": {
+    "totalInteractions": 1,
+    "totalWeight": 4,
+    "confidence": 0.27
+  },
+  "afterUnfavorite": {
+    "totalInteractions": 2,
+    "totalWeight": 4,
+    "confidence": 0.27
+  },
+  "netted": false,
+  "analysis": "NEGATIVE_SIGNAL_SKIPPED_ENTIRELY"
+}
+
+========================================
+[F3: Rapid Deduplication Test (6 consecutive VIEWs)]
+========================================
+{
+  "attempts": [
+    {
+      "attempt": 1,
+      "recorded": true
+    },
+    {
+      "attempt": 2,
+      "recorded": false,
+      "reason": "Throttled: Duplicate interaction within deduplication window"
+    },
+    {
+      "attempt": 3,
+      "recorded": false,
+      "reason": "Throttled: Duplicate interaction within deduplication window"
+    },
+    {
+      "attempt": 4,
+      "recorded": false,
+      "reason": "Throttled: Duplicate interaction within deduplication window"
+    },
+    {
+      "attempt": 5,
+      "recorded": false,
+      "reason": "Throttled: Duplicate interaction within deduplication window"
+    },
+    {
+      "attempt": 6,
+      "recorded": false,
+      "reason": "Throttled: Duplicate interaction within deduplication window"
+    }
+  ],
+  "rowsCreatedInDB": 1
+}
+
+========================================
+[F5: User Retention / Cascade Test]
+========================================
+{
+  "beforeDelete": {
+    "interactions": 1,
+    "profile": 1
+  },
+  "afterDelete": {
+    "interactions": 0,
+    "profile": 0
+  },
+  "behavioralDataRemoved": "YES"
+}
+
+========================================
+[D2: Cross-User Vector Distinctness (3x3 Matrix)]
+========================================
+{
+  "norms": {
+    "aptNorm": 1.0000000000000002,
+    "villaNorm": 1,
+    "landNorm": 0.9999999999999994
+  },
+  "pairwiseCosineSimilarity": [
+    {
+      "pair": "Apt vs Apt",
+      "cosine": 1.0000000000000002
+    },
+    {
+      "pair": "Apt vs Villa",
+      "cosine": 0.6292095203737018
+    },
+    {
+      "pair": "Apt vs Land",
+      "cosine": 0.6735478816453454
+    },
+    {
+      "pair": "Villa vs Villa",
+      "cosine": 1.0000000000000002
+    },
+    {
+      "pair": "Villa vs Land",
+      "cosine": 0.7249897090455845
+    },
+    {
+      "pair": "Land vs Land",
+      "cosine": 1.0000000000000002
+    }
+  ]
+}
+
+========================================
+[D3: Global-Profile Degeneracy Test]
+========================================
+{
+  "ownRankTop5": [
+    "cmus03vlh000chy5wgnzu5esl",
+    "cmus03vqo0018hy5wox1t0sl6",
+    "cmus03vuf0024hy5wy56cidix",
+    "cmus03vy10030hy5wkorfgsbh",
+    "cmus03vzt003ghy5wvhspsjxg"
+  ],
+  "unionRankTop5": [
+    "cmus03vy10030hy5wkorfgsbh",
+    "cmus03vuf0024hy5wy56cidix",
+    "cmus03vos000shy5w7xb0yfpn",
+    "cmus03vqo0018hy5wox1t0sl6",
+    "cmus03vsk001ohy5why7qfzyb"
+  ],
+  "areIdentical": false
+}
+
+========================================
+[D5: Cold-Start Activation Threshold]
+========================================
+{
+  "initialOrdering": [
+    "cmus03vk50008hy5wqk1naxrv",
+    "cmus03vlh000chy5wgnzu5esl",
+    "cmus03vsk001ohy5why7qfzyb",
+    "cmus03vt0001shy5whjof9p2x",
+    "cmus03vvs002ghy5wg2rkpdu4"
+  ],
+  "orderingChanged": true,
+  "interactionCountAtFirstChange": 2,
+  "accumulatedWeightAtChange": 2,
+  "confidenceAtChange": 0.13,
+  "documentedMinWeight": 2
+}
+
+========================================
+[B3: LLO Per-User Raw Results (N=5)]
+========================================
+[
+  {
+    "userId": "cmutts0ii0026f3z7g8wiv88c",
+    "heldOutPropertyId": "cmus03vpa000why5wqt1t9y4f",
+    "personalizedRank": 24,
+    "hr5": 0,
+    "reciprocalRank": 0.042,
+    "ndcg5": 0,
+    "baselines": {
+      "randomRank": 18,
+      "popRank": 5,
+      "semRank": 26,
+      "structRank": 25
+    }
+  },
+  {
+    "userId": "cmutts0jf002hf3z7tswv7eya",
+    "heldOutPropertyId": "cmus03vpa000why5wqt1t9y4f",
+    "personalizedRank": 24,
+    "hr5": 0,
+    "reciprocalRank": 0.042,
+    "ndcg5": 0,
+    "baselines": {
+      "randomRank": 6,
+      "popRank": 5,
+      "semRank": 26,
+      "structRank": 25
+    }
+  },
+  {
+    "userId": "cmutts0jz002sf3z79r4cj7b7",
+    "heldOutPropertyId": "cmus03vpa000why5wqt1t9y4f",
+    "personalizedRank": 24,
+    "hr5": 0,
+    "reciprocalRank": 0.042,
+    "ndcg5": 0,
+    "baselines": {
+      "randomRank": 19,
+      "popRank": 5,
+      "semRank": 26,
+      "structRank": 25
+    }
+  },
+  {
+    "userId": "cmutts0km0033f3z7dein0v5u",
+    "heldOutPropertyId": "cmus03vpa000why5wqt1t9y4f",
+    "personalizedRank": 24,
+    "hr5": 0,
+    "reciprocalRank": 0.042,
+    "ndcg5": 0,
+    "baselines": {
+      "randomRank": 14,
+      "popRank": 5,
+      "semRank": 26,
+      "structRank": 25
+    }
+  },
+  {
+    "userId": "cmutts0l7003ef3z7fwn1eo2k",
+    "heldOutPropertyId": "cmus03vpa000why5wqt1t9y4f",
+    "personalizedRank": 24,
+    "hr5": 0,
+    "reciprocalRank": 0.042,
+    "ndcg5": 0,
+    "baselines": {
+      "randomRank": 27,
+      "popRank": 5,
+      "semRank": 26,
+      "structRank": 25
+    }
+  }
+]
+
+========================================
+[B4: Baselines vs Personalized (N=5)]
+========================================
+{
+  "random": {
+    "hr5": 0,
+    "mrr": 0.077,
+    "ndcg5": 0
+  },
+  "popularity": {
+    "hr5": 1,
+    "mrr": 0.2,
+    "ndcg5": 0.387
+  },
+  "semanticOnly": {
+    "hr5": 0,
+    "mrr": 0.038,
+    "ndcg5": 0
+  },
+  "additiveStructural": {
+    "hr5": 0,
+    "mrr": 0.04,
+    "ndcg5": 0
+  },
+  "personalized": {
+    "hr5": 0,
+    "mrr": 0.042,
+    "ndcg5": 0
+  }
+}
+
+========================================
+[C3: Route Ordering Equality (/api/user/recs vs /api/ai/recs)]
+========================================
+{
+  "legacyOrdering": [
+    "cmus03vzt003ghy5wvhspsjxg",
+    "cmus03vos000shy5w7xb0yfpn",
+    "cmus03vy10030hy5wkorfgsbh",
+    "cmus03vw8002khy5w3hj9sksw",
+    "cmus03vs3001khy5wp6krwgk7"
+  ],
+  "aiOrdering": [
+    "cmus03vos000shy5w7xb0yfpn",
+    "cmus03vzt003ghy5wvhspsjxg",
+    "cmus03vs3001khy5wp6krwgk7",
+    "cmus03vw8002khy5w3hj9sksw",
+    "cmus03vy10030hy5wkorfgsbh"
+  ],
+  "isEqual": false
+}
+
+========================================
+[CLEANUP: Final DB Row Counts]
+========================================
+{
+  "userInteractionsCount": 9,
+  "userPreferenceProfilesCount": 1
+}

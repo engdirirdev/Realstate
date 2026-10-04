@@ -9,7 +9,7 @@
  *   Area        : 10%
  */
 
-import { prisma } from "@/lib/prisma";
+import { prisma } from "./prisma";
 
 export interface RecommendationInput {
   userId: string;
@@ -154,44 +154,49 @@ function scoreProperty(
 }
 
 /**
- * Generate and store recommendations for a user.
- * Returns the top N properties with scores and reasons.
+ * Generate and store personalized recommendations for a user.
+ * Combines explicit user preferences, learned behavioral profile,
+ * Phase 2A semantic vector embeddings, and property listing quality.
  */
 export async function generateRecommendations(
   input: RecommendationInput,
   topN = 10
 ) {
-  // Fetch all approved properties
+  // 1. Fetch or synthesize user's dynamic behavioral preference profile
+  const { buildUserProfile } = await import("@/lib/ai/behavior/profile-builder");
+  const { rankPropertiesPersonalized } = await import("@/lib/ai/recommendation/personalized-ranker");
+
+  const learnedProfile = await buildUserProfile(input.userId);
+
+  // 2. Fetch all approved properties with their embeddings and images
   const properties = await prisma.property.findMany({
     where: { status: "APPROVED" },
-    include: { images: { orderBy: { order: "asc" }, take: 1 } },
-    take: 200, // score from latest 200
+    include: {
+      images: { orderBy: { order: "asc" }, take: 1 },
+      embedding: true,
+    },
+    take: 200,
     orderBy: { createdAt: "desc" },
   });
 
   if (properties.length === 0) return [];
 
-  // Compute global min/max for normalization
-  const prices = properties.map((p) => p.price);
-  const areas = properties.map((p) => p.area);
-  const priceMin = Math.min(...prices);
-  const priceMax = Math.max(...prices);
-  const areaMin = Math.min(...areas);
-  const areaMax = Math.max(...areas);
+  // 3. Execute personalized ranking
+  const explicitPrefs = {
+    location: input.location,
+    minBudget: input.minBudget,
+    maxBudget: input.maxBudget,
+    preferredType: input.preferredType,
+    preferredBedrooms: input.preferredBedrooms,
+    preferredBathrooms: input.preferredBathrooms,
+    preferredMinArea: input.preferredMinArea,
+    preferredMaxArea: input.preferredMaxArea,
+  };
 
-  // Score every property
-  const scored: ScoredProperty[] = properties.map((p) =>
-    scoreProperty(p, input, priceMin, priceMax, areaMin, areaMax)
-  );
+  const ranked = rankPropertiesPersonalized(properties, learnedProfile, explicitPrefs, { topN });
 
-  // Sort by score descending, take top N
-  const top = scored
-    .filter((s) => s.score > 20) // filter irrelevant ones
-    .sort((a, b) => b.score - a.score)
-    .slice(0, topN);
-
-  // Save to database (upsert to avoid duplicates)
-  for (const rec of top) {
+  // 4. Save to database (upsert to avoid duplicates)
+  for (const rec of ranked) {
     await prisma.recommendation.upsert({
       where: {
         userId_propertyId: { userId: input.userId, propertyId: rec.propertyId },
@@ -209,14 +214,15 @@ export async function generateRecommendations(
     });
   }
 
-  // Return enriched results
-  const topIds = top.map((t) => t.propertyId);
+  // 5. Return enriched results
   const propertiesMap = new Map(properties.map((p) => [p.id, p]));
 
-  return top.map((rec) => ({
+  return ranked.map((rec) => ({
     property: propertiesMap.get(rec.propertyId)!,
     score: rec.score,
     reasons: rec.reasons,
+    reasonCodes: rec.reasonCodes,
+    compositeScoreBreakdown: rec.compositeScoreBreakdown,
   }));
 }
 

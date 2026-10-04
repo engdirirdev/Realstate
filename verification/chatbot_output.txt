@@ -1,0 +1,81 @@
+﻿Chatbot Prompt: Can you value my property? It is a 3-bedroom house in Mogadishu with 150 sqm.
+Status: 200
+Chatbot Response: {
+  "sessionId": "cmuts3xzd000todftatczr3gu",
+  "reply": "Found **1 matching property** in our database in **Mogadishu**, type **HOUSE**.\n\nThese properties match your requested criteria:",
+  "properties": [
+    {
+      "id": "cmus03vk50008hy5wqk1naxrv",
+      "title": "Spacious Modern House in Mogadishu",
+      "description": "A prime house property located in the heart of Mogadishu. Features 1 bedrooms, 1 bathrooms, and 50m┬▓ total area. Complete with high-speed internet, secure compound walls, 24/7 water supply, and backup generator connection.",
+      "price": 65000,
+      "formattedPrice": "$65,000",
+      "currency": "USD ($)",
+      "city": "Mogadishu",
+      "district": "Mogadishu Central",
+      "location": "Mogadishu Central",
+      "address": "Street 1, Mogadishu",
+      "type": "HOUSE",
+      "typeLabel": "House",
+      "listingType": "For Sale",
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "livingRooms": 1,
+      "kitchen": "Standard Equipped Kitchen",
+      "parkingSpaces": 1,
+      "areaSize": 50,
+      "landSize": 62.5,
+      "floorNumber": "Ground + 1",
+      "yearBuilt": 2018,
+      "furnished": false,
+      "swimmingPool": false,
+      "garden": false,
+      "security": false,
+      "water": true,
+      "electricity": true,
+      "internet": true,
+      "status": "APPROVED",
+      "statusLabel": "Available",
+      "statusColor": "text-[#10B981] bg-[#10B981]/10 border-[#A7F3D0]",
+      "statusEmoji": "≡ƒƒó Available",
+      "isAvailable": true,
+      "imageUrl": "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800",
+      "images": [
+        "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800",
+        "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800"
+      ],
+      "features": [
+        "Generator Backup",
+        "24/7 Water Supply",
+        "Compound Wall",
+        "Parking Space",
+        "Solar Power"
+      ],
+      "managerName": "Jaamac Maxamed",
+      "isVerified": true,
+      "aiMatchScore": 93,
+      "similarProperties": [
+        {
+          "id": "cmus03vpq0010hy5w25q4x0d4",
+          "title": "Modern Compact Studio, Mogadishu",
+          "city": "Mogadishu",
+          "price": 45000,
+          "formattedPrice": "$45,000",
+          "imageUrl": "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=800"
+        },
+        {
+          "id": "cmus03vt0001shy5whjof9p2x",
+          "title": "Modern 3-Bedroom Home near Ocean & Liido Beach",
+          "city": "Mogadishu",
+          "price": 45000,
+          "formattedPrice": "$45,000",
+          "imageUrl": "https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=800"
+        }
+      ]
+    }
+  ],
+  "intent": "PROPERTY_SEARCH",
+  "confidence": 0.95,
+  "explanation": "User requested property records from the database.",
+  "totalMatches": 1
+}

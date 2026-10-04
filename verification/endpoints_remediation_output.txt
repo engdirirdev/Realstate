@@ -1,0 +1,550 @@
+
+=== POST /api/price-prediction (Covered: Mogadishu HOUSE) ===
+{
+  "success": true,
+  "prediction": {
+    "predictedPrice": 75508,
+    "minPrice": 73804,
+    "maxPrice": 77212,
+    "confidence": 98,
+    "confidenceBasis": "1 - (LOOCV_MAE / estimatedPrice)",
+    "calibration": {
+      "status": "NOT_CALIBRATED",
+      "basis": "LOOCV MAE",
+      "outOfSampleMAE": 1703.92,
+      "n": 28,
+      "note": "synthetic seed data; asking prices, not transaction prices"
+    },
+    "positionSuppressed": false,
+    "insights": [
+      "Derived via trained RidgeRegression ML valuation model.",
+      "Based on 4 verified comparable properties in database."
+    ],
+    "comparables": 4,
+    "comparableList": [
+      {
+        "id": "cmus03vk50008hy5wqk1naxrv",
+        "title": "Spacious Modern House in Mogadishu",
+        "city": "Mogadishu",
+        "type": "HOUSE",
+        "price": 65000,
+        "bedrooms": 1,
+        "bathrooms": 1,
+        "area": 50,
+        "similarityScore": 76,
+        "priceVariancePercent": -13.9
+      },
+      {
+        "id": "cmus03vt0001shy5whjof9p2x",
+        "title": "Modern 3-Bedroom Home near Ocean & Liido Beach",
+        "city": "Mogadishu",
+        "type": "TOWNHOUSE",
+        "price": 45000,
+        "bedrooms": 3,
+        "bathrooms": 2,
+        "area": 170,
+        "similarityScore": 69,
+        "priceVariancePercent": -40.4
+      },
+      {
+        "id": "cmus03vw8002khy5w3hj9sksw",
+        "title": "Retail Shop Space in Busy Mogadishu Market",
+        "city": "Mogadishu",
+        "type": "COMMERCIAL",
+        "price": 45000,
+        "bedrooms": 2,
+        "bathrooms": 1,
+        "area": 80,
+        "similarityScore": 55,
+        "priceVariancePercent": -40.4
+      },
+      {
+        "id": "cmus03vpq0010hy5w25q4x0d4",
+        "title": "Modern Compact Studio, Mogadishu",
+        "city": "Mogadishu",
+        "type": "STUDIO",
+        "price": 45000,
+        "bedrooms": 1,
+        "bathrooms": 1,
+        "area": 260,
+        "similarityScore": 46,
+        "priceVariancePercent": -40.4
+      }
+    ],
+    "pricePosition": "FAIRLY_PRICED",
+    "positionDetails": {
+      "askingPrice": 75000,
+      "differenceUSD": -508,
+      "percentageDifference": -0.7,
+      "explanation": "The asking price ($75,000) is aligned with current market conditions (within ±10% of estimated $75,508)."
+    },
+    "featureContributions": [
+      {
+        "feature": "type_villa",
+        "label": "Property Type (VILLA)",
+        "value": "HOUSE",
+        "impactUSD": 5482,
+        "relativePercent": 24
+      },
+      {
+        "feature": "type_land",
+        "label": "Property Type (LAND)",
+        "value": "HOUSE",
+        "impactUSD": 1903,
+        "relativePercent": 8
+      },
+      {
+        "feature": "type_house",
+        "label": "Property Type (HOUSE)",
+        "value": "HOUSE",
+        "impactUSD": 1518,
+        "relativePercent": 7
+      },
+      {
+        "feature": "type_office",
+        "label": "Property Type (OFFICE)",
+        "value": "HOUSE",
+        "impactUSD": 1382,
+        "relativePercent": 6
+      },
+      {
+        "feature": "type_townhouse",
+        "label": "Property Type (TOWNHOUSE)",
+        "value": "HOUSE",
+        "impactUSD": 1314,
+        "relativePercent": 6
+      }
+    ],
+    "modelMetadata": {
+      "modelId": "valuation-ridgeregression-v2",
+      "modelVersion": "2.0.0",
+      "modelType": "RidgeRegression",
+      "trainedAt": "2026-10-04T12:45:13.538Z",
+      "datasetSize": 28,
+      "testMetrics": {
+        "mae": 6424.1,
+        "rmse": 7638.25,
+        "r2": 0.957,
+        "mape": 12.26,
+        "sampleCount": 6
+      },
+      "readinessVerdict": "RESEARCH_EXPERIMENTAL"
+    }
+  }
+}
+
+=== POST /api/ai/price-estimate (Covered: Mogadishu HOUSE) ===
+{
+  "success": true,
+  "estimatedPrice": 75508,
+  "currency": "USD",
+  "priceRange": {
+    "lower": 73804,
+    "upper": 77212,
+    "marginPercent": 2
+  },
+  "reliability": "HIGH",
+  "pricePosition": "FAIRLY_PRICED",
+  "positionDetails": {
+    "askingPrice": 75000,
+    "differenceUSD": -508,
+    "percentageDifference": -0.7,
+    "explanation": "The asking price ($75,000) is aligned with current market conditions (within ±10% of estimated $75,508)."
+  },
+  "positionSuppressed": false,
+  "calibration": {
+    "status": "NOT_CALIBRATED",
+    "basis": "LOOCV MAE",
+    "outOfSampleMAE": 1703.92,
+    "n": 28,
+    "note": "synthetic seed data; asking prices, not transaction prices"
+  },
+  "featureContributions": [
+    {
+      "feature": "type_villa",
+      "label": "Property Type (VILLA)",
+      "value": "HOUSE",
+      "impactUSD": 5482,
+      "relativePercent": 24
+    },
+    {
+      "feature": "type_land",
+      "label": "Property Type (LAND)",
+      "value": "HOUSE",
+      "impactUSD": 1903,
+      "relativePercent": 8
+    },
+    {
+      "feature": "type_house",
+      "label": "Property Type (HOUSE)",
+      "value": "HOUSE",
+      "impactUSD": 1518,
+      "relativePercent": 7
+    },
+    {
+      "feature": "type_office",
+      "label": "Property Type (OFFICE)",
+      "value": "HOUSE",
+      "impactUSD": 1382,
+      "relativePercent": 6
+    },
+    {
+      "feature": "type_townhouse",
+      "label": "Property Type (TOWNHOUSE)",
+      "value": "HOUSE",
+      "impactUSD": 1314,
+      "relativePercent": 6
+    }
+  ],
+  "topDrivers": [],
+  "comparables": [
+    {
+      "id": "cmus03vk50008hy5wqk1naxrv",
+      "title": "Spacious Modern House in Mogadishu",
+      "city": "Mogadishu",
+      "type": "HOUSE",
+      "price": 65000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "area": 50,
+      "similarityScore": 76,
+      "priceVariancePercent": -13.9
+    },
+    {
+      "id": "cmus03vt0001shy5whjof9p2x",
+      "title": "Modern 3-Bedroom Home near Ocean & Liido Beach",
+      "city": "Mogadishu",
+      "type": "TOWNHOUSE",
+      "price": 45000,
+      "bedrooms": 3,
+      "bathrooms": 2,
+      "area": 170,
+      "similarityScore": 69,
+      "priceVariancePercent": -40.4
+    },
+    {
+      "id": "cmus03vw8002khy5w3hj9sksw",
+      "title": "Retail Shop Space in Busy Mogadishu Market",
+      "city": "Mogadishu",
+      "type": "COMMERCIAL",
+      "price": 45000,
+      "bedrooms": 2,
+      "bathrooms": 1,
+      "area": 80,
+      "similarityScore": 55,
+      "priceVariancePercent": -40.4
+    },
+    {
+      "id": "cmus03vpq0010hy5w25q4x0d4",
+      "title": "Modern Compact Studio, Mogadishu",
+      "city": "Mogadishu",
+      "type": "STUDIO",
+      "price": 45000,
+      "bedrooms": 1,
+      "bathrooms": 1,
+      "area": 260,
+      "similarityScore": 46,
+      "priceVariancePercent": -40.4
+    }
+  ],
+  "modelMetadata": {
+    "modelId": "valuation-ridgeregression-v2",
+    "modelVersion": "2.0.0",
+    "modelType": "RidgeRegression",
+    "trainedAt": "2026-10-04T12:45:13.538Z",
+    "datasetSize": 28,
+    "testMetrics": {
+      "mae": 6424.1,
+      "rmse": 7638.25,
+      "r2": 0.957,
+      "mape": 12.26,
+      "sampleCount": 6
+    },
+    "readinessVerdict": "RESEARCH_EXPERIMENTAL"
+  }
+}
+
+=== POST /api/price-prediction (Unseen Individually: Burao HOUSE) ===
+{
+  "status": "INSUFFICIENT_DATA",
+  "reason": "NO_TRAINING_EXAMPLES",
+  "missing": {
+    "city": "Burao"
+  }
+}
+
+=== POST /api/ai/price-estimate (Unseen Individually: Burao HOUSE) ===
+{
+  "status": "INSUFFICIENT_DATA",
+  "reason": "NO_TRAINING_EXAMPLES",
+  "missing": {
+    "city": "Burao"
+  }
+}
+
+=== POST /api/price-prediction (Unseen Pair: Berbera VILLA) ===
+{
+  "success": true,
+  "prediction": {
+    "predictedPrice": 143956,
+    "minPrice": 137532,
+    "maxPrice": 150380,
+    "confidence": 99,
+    "confidenceBasis": "1 - (LOOCV_MAE / estimatedPrice)",
+    "calibration": {
+      "status": "NOT_CALIBRATED",
+      "basis": "LOOCV MAE",
+      "outOfSampleMAE": 1703.92,
+      "n": 28,
+      "note": "synthetic seed data; asking prices, not transaction prices"
+    },
+    "pairCoverage": {
+      "trainRowsForPair": 0,
+      "cityTrainRows": 3,
+      "typeTrainRows": 2
+    },
+    "positionSuppressed": true,
+    "suppressReason": "UNSEEN_PAIR_EXTRAPOLATION",
+    "insights": [
+      "Derived via trained RidgeRegression ML valuation model.",
+      "Based on 4 verified comparable properties in database."
+    ],
+    "comparables": 4,
+    "comparableList": [
+      {
+        "id": "cmus03vyx0038hy5wy2qtxi1y",
+        "title": "Prime Office Space in Berbera",
+        "city": "Berbera",
+        "type": "OFFICE",
+        "price": 75000,
+        "bedrooms": 4,
+        "bathrooms": 3,
+        "area": 260,
+        "similarityScore": 69,
+        "priceVariancePercent": -47.9
+      },
+      {
+        "id": "cmus03vpa000why5wqt1t9y4f",
+        "title": "Modern Townhouse in Berbera",
+        "city": "Berbera",
+        "type": "TOWNHOUSE",
+        "price": 75000,
+        "bedrooms": 3,
+        "bathrooms": 2,
+        "area": 230,
+        "similarityScore": 58,
+        "priceVariancePercent": -47.9
+      },
+      {
+        "id": "cmus03vuw0028hy5w0gjfjss3",
+        "title": "Exclusive Villa with Private Yard, Garowe",
+        "city": "Garowe",
+        "type": "VILLA",
+        "price": 140000,
+        "bedrooms": 3,
+        "bathrooms": 2,
+        "area": 290,
+        "similarityScore": 50,
+        "priceVariancePercent": -2.7
+      },
+      {
+        "id": "cmus03vyh0034hy5wf337kwmb",
+        "title": "Grand Estate Villa, Baydhabo",
+        "city": "Baydhabo",
+        "type": "VILLA",
+        "price": 145000,
+        "bedrooms": 3,
+        "bathrooms": 2,
+        "area": 230,
+        "similarityScore": 48,
+        "priceVariancePercent": 0.7
+      }
+    ],
+    "pricePosition": null,
+    "positionDetails": null,
+    "featureContributions": [
+      {
+        "feature": "type_villa",
+        "label": "Property Type (VILLA)",
+        "value": "VILLA",
+        "impactUSD": 10451,
+        "relativePercent": 24
+      },
+      {
+        "feature": "type_land",
+        "label": "Property Type (LAND)",
+        "value": "VILLA",
+        "impactUSD": 3628,
+        "relativePercent": 8
+      },
+      {
+        "feature": "type_house",
+        "label": "Property Type (HOUSE)",
+        "value": "VILLA",
+        "impactUSD": 2894,
+        "relativePercent": 7
+      },
+      {
+        "feature": "type_office",
+        "label": "Property Type (OFFICE)",
+        "value": "VILLA",
+        "impactUSD": 2634,
+        "relativePercent": 6
+      },
+      {
+        "feature": "type_townhouse",
+        "label": "Property Type (TOWNHOUSE)",
+        "value": "VILLA",
+        "impactUSD": 2505,
+        "relativePercent": 6
+      }
+    ],
+    "modelMetadata": {
+      "modelId": "valuation-ridgeregression-v2",
+      "modelVersion": "2.0.0",
+      "modelType": "RidgeRegression",
+      "trainedAt": "2026-10-04T12:45:13.538Z",
+      "datasetSize": 28,
+      "testMetrics": {
+        "mae": 6424.1,
+        "rmse": 7638.25,
+        "r2": 0.957,
+        "mape": 12.26,
+        "sampleCount": 6
+      },
+      "readinessVerdict": "RESEARCH_EXPERIMENTAL"
+    }
+  }
+}
+
+=== POST /api/ai/price-estimate (Unseen Pair: Berbera VILLA) ===
+{
+  "success": true,
+  "estimatedPrice": 143956,
+  "currency": "USD",
+  "priceRange": {
+    "lower": 137532,
+    "upper": 150380,
+    "marginPercent": 4
+  },
+  "reliability": "HIGH",
+  "pricePosition": null,
+  "positionDetails": null,
+  "positionSuppressed": true,
+  "suppressReason": "UNSEEN_PAIR_EXTRAPOLATION",
+  "pairCoverage": {
+    "trainRowsForPair": 0,
+    "cityTrainRows": 3,
+    "typeTrainRows": 2
+  },
+  "calibration": {
+    "status": "NOT_CALIBRATED",
+    "basis": "LOOCV MAE",
+    "outOfSampleMAE": 1703.92,
+    "n": 28,
+    "note": "synthetic seed data; asking prices, not transaction prices"
+  },
+  "featureContributions": [
+    {
+      "feature": "type_villa",
+      "label": "Property Type (VILLA)",
+      "value": "VILLA",
+      "impactUSD": 10451,
+      "relativePercent": 24
+    },
+    {
+      "feature": "type_land",
+      "label": "Property Type (LAND)",
+      "value": "VILLA",
+      "impactUSD": 3628,
+      "relativePercent": 8
+    },
+    {
+      "feature": "type_house",
+      "label": "Property Type (HOUSE)",
+      "value": "VILLA",
+      "impactUSD": 2894,
+      "relativePercent": 7
+    },
+    {
+      "feature": "type_office",
+      "label": "Property Type (OFFICE)",
+      "value": "VILLA",
+      "impactUSD": 2634,
+      "relativePercent": 6
+    },
+    {
+      "feature": "type_townhouse",
+      "label": "Property Type (TOWNHOUSE)",
+      "value": "VILLA",
+      "impactUSD": 2505,
+      "relativePercent": 6
+    }
+  ],
+  "topDrivers": [],
+  "comparables": [
+    {
+      "id": "cmus03vyx0038hy5wy2qtxi1y",
+      "title": "Prime Office Space in Berbera",
+      "city": "Berbera",
+      "type": "OFFICE",
+      "price": 75000,
+      "bedrooms": 4,
+      "bathrooms": 3,
+      "area": 260,
+      "similarityScore": 69,
+      "priceVariancePercent": -47.9
+    },
+    {
+      "id": "cmus03vpa000why5wqt1t9y4f",
+      "title": "Modern Townhouse in Berbera",
+      "city": "Berbera",
+      "type": "TOWNHOUSE",
+      "price": 75000,
+      "bedrooms": 3,
+      "bathrooms": 2,
+      "area": 230,
+      "similarityScore": 58,
+      "priceVariancePercent": -47.9
+    },
+    {
+      "id": "cmus03vuw0028hy5w0gjfjss3",
+      "title": "Exclusive Villa with Private Yard, Garowe",
+      "city": "Garowe",
+      "type": "VILLA",
+      "price": 140000,
+      "bedrooms": 3,
+      "bathrooms": 2,
+      "area": 290,
+      "similarityScore": 50,
+      "priceVariancePercent": -2.7
+    },
+    {
+      "id": "cmus03vyh0034hy5wf337kwmb",
+      "title": "Grand Estate Villa, Baydhabo",
+      "city": "Baydhabo",
+      "type": "VILLA",
+      "price": 145000,
+      "bedrooms": 3,
+      "bathrooms": 2,
+      "area": 230,
+      "similarityScore": 48,
+      "priceVariancePercent": 0.7
+    }
+  ],
+  "modelMetadata": {
+    "modelId": "valuation-ridgeregression-v2",
+    "modelVersion": "2.0.0",
+    "modelType": "RidgeRegression",
+    "trainedAt": "2026-10-04T12:45:13.538Z",
+    "datasetSize": 28,
+    "testMetrics": {
+      "mae": 6424.1,
+      "rmse": 7638.25,
+      "r2": 0.957,
+      "mape": 12.26,
+      "sampleCount": 6
+    },
+    "readinessVerdict": "RESEARCH_EXPERIMENTAL"
+  }
+}

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { formatPrice, getPropertyTypeLabel } from "@/lib/utils";
+import { executeSemanticSearch } from "./ai/semantic-search/semantic-search-service";
 
 export type ChatIntentType =
   | "GREETING"
@@ -30,6 +31,7 @@ export interface ParsedChatIntent {
   cheap?: boolean;
   status?: string;
   sortBy?: "best_match" | "price_asc" | "price_desc" | "newest";
+  rawMessage?: string;
 }
 
 export interface GroundedPropertyResult {
@@ -205,7 +207,11 @@ export function classifyUserIntent(
   const explicitCityMatch = SOMALI_CITIES.find((c) => text.includes(c));
   const hasExplicitCity = !!explicitCityMatch;
 
-  const propertyTypeKeywords = ["villa", "apartment", "flat", "studio", "office", "land", "plot", "commercial", "warehouse", "building", "shop", "townhouse", "house", "home"];
+  const propertyTypeKeywords = [
+    "villa", "apartment", "flat", "studio", "office", "land", "plot", "commercial", "warehouse", "building", "shop", "townhouse", "house", "home",
+    "guri", "guryo", "qol", "qolal", "dabaq", "dhul", "boos",
+    "منزل", "بيت", "شقة", "فيلا", "عقار", "أرض"
+  ];
   const hasExplicitType = propertyTypeKeywords.some((k) => text.includes(k));
 
   // A message is ONLY a follow-up refinement if it modifies attributes without changing city or starting a brand new search
@@ -222,8 +228,8 @@ export function classifyUserIntent(
       text.startsWith("with ") ||
       text.startsWith("must have") ||
       text.startsWith("make it") ||
-      text.match(/^\d+\s*(?:bed|bedroom|bds|br)/) ||
-      text.match(/^(?:furnished|unfurnished|parking|pool|garden|security|cheap|luxury)/)
+      text.match(/^\d+\s*(?:bed|bedroom|bds|br|qol)/) ||
+      text.match(/^(?:furnished|unfurnished|parking|baarkin|pool|garden|security|cheap|luxury)/)
     );
 
   // Determine context scope: If follow-up, inherit previous search filters from the last property search.
@@ -250,22 +256,32 @@ export function classifyUserIntent(
   // Extract Property Type (Strictly check current message first; only check previous if follow-up and not overridden)
   let propertyType: string | undefined;
   const targetTypeContext = hasExplicitType ? text : contextForSearch;
-  if (targetTypeContext.includes("villa")) propertyType = "VILLA";
-  else if (targetTypeContext.includes("apartment") || targetTypeContext.includes("flat") || targetTypeContext.includes("studio")) propertyType = "APARTMENT";
-  else if (targetTypeContext.includes("office")) propertyType = "OFFICE";
-  else if (targetTypeContext.includes("land") || targetTypeContext.includes("plot")) propertyType = "LAND";
-  else if (targetTypeContext.includes("commercial") || targetTypeContext.includes("warehouse") || targetTypeContext.includes("building") || targetTypeContext.includes("shop")) propertyType = "COMMERCIAL";
+  if (targetTypeContext.includes("villa") || targetTypeContext.includes("فيلا")) propertyType = "VILLA";
+  else if (targetTypeContext.includes("apartment") || targetTypeContext.includes("flat") || targetTypeContext.includes("studio") || targetTypeContext.includes("dabaq") || targetTypeContext.includes("شقة")) propertyType = "APARTMENT";
+  else if (targetTypeContext.includes("office") || targetTypeContext.includes("xafiis") || targetTypeContext.includes("مكتب")) propertyType = "OFFICE";
+  else if (targetTypeContext.includes("land") || targetTypeContext.includes("plot") || targetTypeContext.includes("dhul") || targetTypeContext.includes("أرض")) propertyType = "LAND";
+  else if (targetTypeContext.includes("commercial") || targetTypeContext.includes("warehouse") || targetTypeContext.includes("building") || targetTypeContext.includes("shop") || targetTypeContext.includes("تجاري")) propertyType = "COMMERCIAL";
   else if (targetTypeContext.includes("townhouse")) propertyType = "TOWNHOUSE";
-  else if (targetTypeContext.includes("house") || targetTypeContext.includes("home")) propertyType = "HOUSE";
+  else if (targetTypeContext.includes("house") || targetTypeContext.includes("home") || targetTypeContext.includes("guri") || targetTypeContext.includes("منزل") || targetTypeContext.includes("بيت")) propertyType = "HOUSE";
 
   // Extract Bedrooms (check current message first)
   let bedrooms: number | undefined;
   const latestBed = text.match(/(\d+)\s*(?:bed|bedroom|bds|br)/);
+  const somaliBed = text.match(/(\d+|hal|kow|laba|saddex|seddex|afar|shan)\s*(?:qol|qolal)/);
+  const arabicBed = text.match(/(\d+|ثلاث|ثلاثة|أربع|أربعة|غرفتين)\s*(?:غرف|غرفة|نوم)/);
+
   if (latestBed) {
     bedrooms = parseInt(latestBed[1], 10);
-  } else if (isFollowUpPhrase) {
-    const pastBed = contextForSearch.match(/(\d+)\s*(?:bed|bedroom|bds|br)/);
-    if (pastBed) bedrooms = parseInt(pastBed[1], 10);
+  } else if (somaliBed) {
+    const val = somaliBed[1].toLowerCase();
+    const map: Record<string, number> = { hal: 1, kow: 1, laba: 2, saddex: 3, seddex: 3, afar: 4, shan: 5 };
+    bedrooms = map[val] || parseInt(val, 10);
+  } else if (arabicBed) {
+    const val = arabicBed[1];
+    if (val === "غرفتين") bedrooms = 2;
+    else if (val.includes("ثلاث")) bedrooms = 3;
+    else if (val.includes("أربع")) bedrooms = 4;
+    else bedrooms = parseInt(val, 10) || undefined;
   }
 
   // Extract Bathrooms
@@ -293,11 +309,11 @@ export function classifyUserIntent(
 
   const cheap = targetPriceContext.includes("cheap") || targetPriceContext.includes("affordable") || targetPriceContext.includes("budget");
   const luxury = targetPriceContext.includes("luxury") || targetPriceContext.includes("high-end") || targetPriceContext.includes("expensive");
-  const furnished = targetPriceContext.includes("furnished");
-  const parking = targetPriceContext.includes("parking") || targetPriceContext.includes("garage");
-  const pool = targetPriceContext.includes("pool") || targetPriceContext.includes("swimming");
-  const garden = targetPriceContext.includes("garden") || targetPriceContext.includes("yard");
-  const security = targetPriceContext.includes("security") || targetPriceContext.includes("guarded");
+  const furnished = targetPriceContext.includes("furnished") || targetPriceContext.includes("alaab leh") || targetPriceContext.includes("مفروش");
+  const parking = targetPriceContext.includes("parking") || targetPriceContext.includes("garage") || targetPriceContext.includes("baarkin") || targetPriceContext.includes("موقف");
+  const pool = targetPriceContext.includes("pool") || targetPriceContext.includes("swimming") || targetPriceContext.includes("dabaal") || targetPriceContext.includes("مسبح");
+  const garden = targetPriceContext.includes("garden") || targetPriceContext.includes("yard") || targetPriceContext.includes("beero") || targetPriceContext.includes("حديقة");
+  const security = targetPriceContext.includes("security") || targetPriceContext.includes("guarded") || targetPriceContext.includes("ilaalo") || targetPriceContext.includes("أمن");
 
   let status: string | undefined;
   if (targetPriceContext.includes("sold")) status = "SOLD";
@@ -333,16 +349,37 @@ export function classifyUserIntent(
     cheap,
     status,
     sortBy,
+    rawMessage: currentMessage,
   };
+}
+
+export interface ChatAuthContext {
+  role: string;
+  userId?: string | null;
+}
+
+/**
+ * Sanitize untrusted property text or user query to prevent prompt injection delimiter escapes.
+ */
+export function sanitizeUntrustedText(text: string): string {
+  if (!text) return "";
+  return text
+    .replace(/<\/?[a-zA-Z0-9_\-]+(?:\s+[^>]*)?>/g, (tag) =>
+      tag.replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    )
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
+    .trim();
 }
 
 /**
  * STEP 2 & 3 — STRICT Database Search
  * Never return unrelated cities or fabricated listings.
+ * Strictly enforces authorization: non-admin/non-manager requests ONLY receive APPROVED listings.
  */
 export async function searchDatabaseProperties(
   intent: ParsedChatIntent,
-  limit = 4
+  limit = 4,
+  authContext?: ChatAuthContext
 ): Promise<{
   properties: GroundedPropertyResult[];
   totalMatches: number;
@@ -354,10 +391,27 @@ export async function searchDatabaseProperties(
   };
 }> {
   const where: any = {};
+  const role = authContext?.role || "PUBLIC";
+  const userId = authContext?.userId;
 
-  if (intent.status) {
-    where.status = intent.status;
+  // STRICT AUTHORIZATION & PROPERTY VISIBILITY
+  if (role === "ADMIN") {
+    // Admin can view specific status if explicitly requested, otherwise default to APPROVED
+    if (intent.status) {
+      where.status = intent.status;
+    } else {
+      where.status = "APPROVED";
+    }
+  } else if (role === "USER" && userId) {
+    // Managers can view APPROVED, or their own managed listings if explicitly asking about pending/draft
+    if (intent.status && ["PENDING", "DRAFT", "REJECTED"].includes(intent.status)) {
+      where.status = intent.status;
+      where.managerId = userId;
+    } else {
+      where.status = "APPROVED";
+    }
   } else {
+    // PUBLIC and CUSTOMER users can ONLY EVER view APPROVED properties
     where.status = "APPROVED";
   }
 
@@ -425,6 +479,47 @@ export async function searchDatabaseProperties(
     }),
     prisma.property.count({ where }),
   ]);
+
+  // Attempt multilingual semantic search if rigid SQL filters yielded no results for a descriptive query
+  if (
+    rawProperties.length === 0 &&
+    intent.rawMessage &&
+    !intent.propertyIdentifier &&
+    intent.intent !== "AVAILABILITY" &&
+    intent.intent !== "BOOKING"
+  ) {
+    try {
+      const semanticRes = await executeSemanticSearch({
+        query: intent.rawMessage,
+        limit,
+        threshold: 0.35,
+        authContext: {
+          role: (authContext?.role as any) || "PUBLIC",
+          userId: authContext?.userId,
+        },
+      });
+
+      if (semanticRes.results.length > 0) {
+        const matchedIds = semanticRes.results.map((r) => r.propertyId);
+        const semanticProps = await prisma.property.findMany({
+          where: { id: { in: matchedIds }, status: "APPROVED" },
+          include: {
+            images: { orderBy: { order: "asc" }, take: 4 },
+            manager: { select: { name: true } },
+          },
+        });
+
+        // Retain semantic similarity rank order
+        semanticProps.sort((a, b) => matchedIds.indexOf(a.id) - matchedIds.indexOf(b.id));
+
+        if (semanticProps.length > 0) {
+          rawProperties.push(...semanticProps);
+        }
+      }
+    } catch (e) {
+      console.warn("Semantic search chat fallback error:", e);
+    }
+  }
 
   // STEP 6: IF NOTHING EXISTS — Return zero and formulate verified suggestions
   if (rawProperties.length === 0) {
@@ -580,21 +675,41 @@ export async function searchDatabaseProperties(
 
   return {
     properties: grounded,
-    totalMatches,
+    totalMatches: Math.max(totalMatches, rawProperties.length),
   };
 }
 
 /**
  * Query a specific property for Property Details or Availability intent
+ * Strictly enforces authorization so non-admin users cannot access unapproved properties.
  */
 export async function getPropertyDetailsByIdOrTitle(
-  identifier: string
+  identifier: string,
+  authContext?: ChatAuthContext
 ): Promise<GroundedPropertyResult | null> {
+  const role = authContext?.role || "PUBLIC";
+  const userId = authContext?.userId;
+
+  // Determine visibility condition
+  let visibilityCondition: any = { status: "APPROVED" };
+  if (role === "ADMIN") {
+    visibilityCondition = {};
+  } else if (role === "USER" && userId) {
+    visibilityCondition = {
+      OR: [{ status: "APPROVED" }, { managerId: userId }],
+    };
+  }
+
   const property = await prisma.property.findFirst({
     where: {
-      OR: [
-        { id: identifier },
-        { title: { contains: identifier } },
+      AND: [
+        {
+          OR: [
+            { id: identifier },
+            { title: { contains: identifier } },
+          ],
+        },
+        visibilityCondition,
       ],
     },
     include: {
@@ -605,12 +720,16 @@ export async function getPropertyDetailsByIdOrTitle(
 
   if (!property) return null;
 
-  const res = await searchDatabaseProperties({
-    intent: "PROPERTY_DETAILS",
-    confidence: 1,
-    explanation: "Specific lookup",
-    city: property.city,
-  }, 1);
+  const res = await searchDatabaseProperties(
+    {
+      intent: "PROPERTY_DETAILS",
+      confidence: 1,
+      explanation: "Specific lookup",
+      city: property.city,
+    },
+    1,
+    authContext
+  );
 
   // Return formatted single property
   const result = res.properties.find((p) => p.id === property.id) || res.properties[0];

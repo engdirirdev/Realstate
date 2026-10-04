@@ -1,0 +1,60 @@
+﻿=== V2 SPLIT MEMBERSHIP TABLE (N=28) ===
+Property ID			City		Type		Split	Price
+--------------------------------------------------------------------------------
+cmus03vk50008hy5wqk1naxrv	Mogadishu   	HOUSE       	TRAIN	$65,000
+cmus03vq70014hy5wkf4sqbko	Hargeisa    	HOUSE       	TRAIN	$70,000
+cmus03vlh000chy5wgnzu5esl	Hargeisa    	APARTMENT   	TRAIN	$50,000
+cmus03vqo0018hy5wox1t0sl6	Bosaso      	APARTMENT   	TRAIN	$55,000
+cmus03vob000ohy5wa6oqhm7b	Garowe      	LAND        	TRAIN	$45,000
+cmus03vs3001khy5wp6krwgk7	Baydhabo    	LAND        	TRAIN	$50,000
+cmus03vvs002ghy5wg2rkpdu4	Berbera     	LAND        	TRAIN	$55,000
+cmus03vos000shy5w7xb0yfpn	Baydhabo    	COMMERCIAL  	TRAIN	$70,000
+cmus03vsk001ohy5why7qfzyb	Berbera     	COMMERCIAL  	TRAIN	$75,000
+cmus03vpa000why5wqt1t9y4f	Berbera     	TOWNHOUSE   	TRAIN	$75,000
+cmus03vt0001shy5whjof9p2x	Mogadishu   	TOWNHOUSE   	TRAIN	$45,000
+cmus03vwp002ohy5wgsole3wh	Hargeisa    	TOWNHOUSE   	TRAIN	$50,000
+cmus03vpq0010hy5w25q4x0d4	Mogadishu   	STUDIO      	TRAIN	$45,000
+cmus03vth001why5w0xjiirv2	Hargeisa    	STUDIO      	TRAIN	$50,000
+cmus03vx6002shy5ws8011uo3	Bosaso      	STUDIO      	TRAIN	$55,000
+cmus03vr5001chy5wzoyran5v	Kismayo     	VILLA       	TRAIN	$135,000
+cmus03vuw0028hy5w0gjfjss3	Garowe      	VILLA       	TRAIN	$140,000
+cmus03vrm001ghy5w7j79a9tn	Garowe      	OFFICE      	TRAIN	$65,000
+cmus03vvc002chy5w3nmnqksi	Baydhabo    	OFFICE      	TRAIN	$70,000
+cmus03vtx0020hy5wg41aisr2	Bosaso      	HOUSE       	VAL	$75,000
+cmus03vuf0024hy5wy56cidix	Kismayo     	APARTMENT   	VAL	$60,000
+cmus03vw8002khy5w3hj9sksw	Mogadishu   	COMMERCIAL  	VAL	$45,000
+cmus03vxl002why5wj7bj4pa5	Kismayo     	HOUSE       	TEST	$80,000
+cmus03vy10030hy5wkorfgsbh	Garowe      	APARTMENT   	TEST	$65,000
+cmus03vzd003chy5ww1gckuxi	Mogadishu   	LAND        	TEST	$25,000
+cmus03vzt003ghy5wvhspsjxg	Hargeisa    	COMMERCIAL  	TEST	$50,000
+cmus03vyh0034hy5wf337kwmb	Baydhabo    	VILLA       	TEST	$145,000
+cmus03vyx0038hy5wy2qtxi1y	Berbera     	OFFICE      	TEST	$75,000
+
+=== CATEGORY COUNTS PER SPLIT ===
+APARTMENT     : Train=2, Val=1, Test=1, Total=4
+COMMERCIAL    : Train=2, Val=1, Test=1, Total=4
+HOUSE         : Train=2, Val=1, Test=1, Total=4
+LAND          : Train=3, Val=0, Test=1, Total=4
+OFFICE        : Train=2, Val=0, Test=1, Total=3
+STUDIO        : Train=3, Val=0, Test=0, Total=3
+TOWNHOUSE     : Train=3, Val=0, Test=0, Total=3
+VILLA         : Train=2, Val=0, Test=1, Total=3
+
+=== V2 MODEL EVALUATION ON NEW SPLIT ===
+Train Metrics (n=19): { mae: 1294.8, rmse: 1855.66, r2: 0.995, mape: 2.1, sampleCount: 19 }
+Val Metrics (n=3):    { mae: 6533.86, rmse: 7017.76, r2: 0.672, mape: 12.04, sampleCount: 3 }
+Test Metrics (n=6):   { mae: 6424.1, rmse: 7638.25, r2: 0.957, mape: 12.26, sampleCount: 6 }
+
+--- Coefficients for type_villa and type_office in v2 ---
+type_villa weight:  17391.487968265013
+type_office weight: -4380.063415749706
+
+=== LOOCV ACROSS ALL N=28 USABLE ROWS (v2 architecture) ===
+LOOCV MAE:  $1703.92
+LOOCV RMSE: $2086.94
+LOOCV MAPE: 2.81%
+LOOCV R┬▓:   0.9945
+Saved model-artifact.v2.json to: B:\B\dirir\Realstate\lib\ai\valuation\model-artifact.v2.json
+
+Model Artifact v1 SHA-256: 2adaf7609b6b4ab8166686a4d7c5aa35713d782e24b0bd52d899f24cba2b5a82
+Model Artifact v2 SHA-256: efc5ba2ff7333b099a3190e849629d2d62c4d1158c7fc2b6f50d4dedbe5d9f16

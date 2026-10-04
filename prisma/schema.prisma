@@ -76,6 +76,18 @@ enum NotificationType {
   PAYMENT
 }
 
+enum InteractionType {
+  VIEW
+  CLICK
+  FAVORITE
+  UNFAVORITE
+  INQUIRY
+  SEARCH_CLICK
+  SAVE
+  UNSAVE
+  SHARE
+}
+
 // =============================================
 // USERS
 // =============================================
@@ -110,6 +122,8 @@ model User {
   managerPayments   Payment[]         @relation("ManagerPayments")
   reviews           Review[]
   listingReports    ListingReport[]
+  interactions      UserInteraction[]
+  preferenceProfile UserPreferenceProfile?
 
   @@index([email])
   @@index([role])
@@ -186,6 +200,8 @@ model Property {
   bookings         Booking[]
   payments         Payment[]
   reports          ListingReport[]
+  embedding        PropertyEmbedding?
+  interactions     UserInteraction[]
 
   @@index([location])
   @@index([city])
@@ -196,6 +212,29 @@ model Property {
   @@index([isFeatured])
   @@index([managerId])
   @@map("properties")
+}
+
+// =============================================
+// PROPERTY EMBEDDINGS (PHASE 2A)
+// =============================================
+
+model PropertyEmbedding {
+  id          String   @id @default(cuid())
+  propertyId  String   @unique
+  embedding   String   @db.LongText
+  model       String   @default("text-embedding-004")
+  version     String   @default("v1")
+  dimension   Int      @default(768)
+  sourceHash  String   @db.VarChar(64)
+  sourceText  String   @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@index([model])
+  @@map("property_embeddings")
 }
 
 // =============================================
@@ -373,6 +412,54 @@ model Recommendation {
 }
 
 // =============================================
+// USER INTERACTIONS & BEHAVIORAL AI (PHASE 2C)
+// =============================================
+
+model UserInteraction {
+  id         String          @id @default(cuid())
+  userId     String
+  propertyId String?
+  eventType  InteractionType
+  weight     Float           @default(1.0)
+  metadata   String?         @db.Text
+  createdAt  DateTime        @default(now())
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property Property? @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([propertyId])
+  @@index([eventType])
+  @@map("user_interactions")
+}
+
+model UserPreferenceProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  confidence        Float    @default(0.0)
+  totalInteractions Int      @default(0)
+  totalWeight       Float    @default(0.0)
+  preferredCities   String?  @db.Text
+  preferredTypes    String?  @db.Text
+  minPrice          Float?
+  maxPrice          Float?
+  avgPrice          Float?
+  preferredBeds     Float?
+  preferredBaths    Float?
+  amenities         String?  @db.Text
+  semanticVector    String?  @db.LongText
+  lastActiveAt      DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([confidence])
+  @@map("user_preference_profiles")
+}
+
+// =============================================
 // PRICE PREDICTIONS
 // =============================================
 
@@ -411,13 +498,13 @@ model PricePrediction {
 
 model ChatSession {
   id        String   @id @default(cuid())
-  userId    String
+  userId    String?
   title     String   @default("New Conversation")
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages ChatMessage[]
 
   @@index([userId])

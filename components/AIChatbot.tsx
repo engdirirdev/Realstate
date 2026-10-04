@@ -44,6 +44,7 @@ export default function AIChatbot() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [isOpen, setIsOpen] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -149,12 +150,20 @@ export default function AIChatbot() {
       const res = await fetch("/api/ai-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: query, role, history: chatHistory }),
+        body: JSON.stringify({ message: query, sessionId, history: chatHistory }),
       });
 
       const data = await res.json();
       if (!res.ok) {
+        if (res.status === 429) {
+          setError(data.error || "Too many requests. Please wait a moment before asking again.");
+          return;
+        }
         throw new Error(data.error || "Failed to get response");
+      }
+
+      if (data.sessionId && !sessionId) {
+        setSessionId(data.sessionId);
       }
 
       const botMsg: Message = {

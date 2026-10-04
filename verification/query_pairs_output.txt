@@ -1,0 +1,33 @@
+﻿city		type		count
+-----------------------------------------
+Baydhabo      	VILLA         	1
+Baydhabo      	OFFICE        	1
+Baydhabo      	LAND          	1
+Baydhabo      	COMMERCIAL    	1
+Berbera       	OFFICE        	1
+Berbera       	LAND          	1
+Berbera       	COMMERCIAL    	1
+Berbera       	TOWNHOUSE     	1
+Bosaso        	HOUSE         	1
+Bosaso        	APARTMENT     	1
+Bosaso        	STUDIO        	1
+Garowe        	APARTMENT     	1
+Garowe        	VILLA         	1
+Garowe        	OFFICE        	1
+Garowe        	LAND          	1
+Hargeisa      	HOUSE         	1
+Hargeisa      	APARTMENT     	1
+Hargeisa      	COMMERCIAL    	1
+Hargeisa      	TOWNHOUSE     	1
+Hargeisa      	STUDIO        	1
+Kismayo       	HOUSE         	1
+Kismayo       	APARTMENT     	1
+Kismayo       	VILLA         	1
+Mogadishu     	HOUSE         	1
+Mogadishu     	LAND          	1
+Mogadishu     	COMMERCIAL    	1
+Mogadishu     	TOWNHOUSE     	1
+Mogadishu     	STUDIO        	1
+-----------------------------------------
+Total distinct (city, type) pairs: 28
+Maximum count in any single pair: 1

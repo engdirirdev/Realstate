@@ -1,0 +1,203 @@
+﻿================================================================================
+  PHASE 3: EVIDENCE-ONLY AUDIT & BENCHMARK HARNESS
+  Date & Time: 2026-10-04T12:08:21.691Z
+================================================================================
+
+=== SECTION C: DATASET QUERY & TARGET AUDIT ===
+Total properties in DB: 30
+Status distribution: {"APPROVED":28,"REJECTED":1,"PENDING":1}
+Approved properties usable (N): 28
+
+Earliest createdAt: 2026-10-03T06:18:33.989Z
+Latest createdAt:   2026-10-03T06:18:34.553Z
+Unique creation dates (YYYY-MM-DD): [ '2026-10-03' ]
+
+=== SECTION E: SPLIT INTEGRITY & REPRODUCIBILITY ===
+Train count: 19, Val count: 3, Test count: 6
+Test set IDs: [
+  'cmus03vyx0038hy5wy2qtxi1y',
+  'cmus03vvc002chy5w3nmnqksi',
+  'cmus03vrm001ghy5w7j79a9tn',
+  'cmus03vyh0034hy5wf337kwmb',
+  'cmus03vuw0028hy5w0gjfjss3',
+  'cmus03vr5001chy5wzoyran5v'
+]
+
+Train distinct cities: [
+  'mogadishu',
+  'hargeisa',
+  'bosaso',
+  'kismayo',
+  'garowe',
+  'baydhabo',
+  'berbera'
+]
+Test distinct cities: [ 'berbera', 'baydhabo', 'garowe', 'kismayo' ]
+Unseen cities in test: None
+
+Train distinct types: [ 'house', 'apartment', 'land', 'commercial', 'townhouse', 'studio' ]
+Test distinct types: [ 'office', 'villa' ]
+Unseen types in test: [ 'office', 'villa' ]
+
+--- Full Training Set (n=19) ---
+ID	City	Type	Beds	Baths	Area	Price
+cmus03vk50008hy5wqk1naxrv	Mogadishu	HOUSE	1	1	50	$65,000
+cmus03vq70014hy5wkf4sqbko	Hargeisa	HOUSE	1	1	290	$70,000
+cmus03vtx0020hy5wg41aisr2	Bosaso	HOUSE	1	1	230	$75,000
+cmus03vlh000chy5wgnzu5esl	Hargeisa	APARTMENT	2	1	80	$50,000
+cmus03vqo0018hy5wox1t0sl6	Bosaso	APARTMENT	2	1	320	$55,000
+cmus03vuf0024hy5wy56cidix	Kismayo	APARTMENT	2	1	260	$60,000
+cmus03vob000ohy5wa6oqhm7b	Garowe	LAND	1	1	170	$45,000
+cmus03vs3001khy5wp6krwgk7	Baydhabo	LAND	1	1	110	$50,000
+cmus03vvs002ghy5wg2rkpdu4	Berbera	LAND	1	1	50	$55,000
+cmus03vos000shy5w7xb0yfpn	Baydhabo	COMMERCIAL	2	1	200	$70,000
+cmus03vsk001ohy5why7qfzyb	Berbera	COMMERCIAL	2	1	140	$75,000
+cmus03vw8002khy5w3hj9sksw	Mogadishu	COMMERCIAL	2	1	80	$45,000
+cmus03vzt003ghy5wvhspsjxg	Hargeisa	COMMERCIAL	2	1	320	$50,000
+cmus03vpa000why5wqt1t9y4f	Berbera	TOWNHOUSE	3	2	230	$75,000
+cmus03vt0001shy5whjof9p2x	Mogadishu	TOWNHOUSE	3	2	170	$45,000
+cmus03vwp002ohy5wgsole3wh	Hargeisa	TOWNHOUSE	3	2	110	$50,000
+cmus03vpq0010hy5w25q4x0d4	Mogadishu	STUDIO	1	1	260	$45,000
+cmus03vth001why5w0xjiirv2	Hargeisa	STUDIO	1	1	200	$50,000
+cmus03vx6002shy5ws8011uo3	Bosaso	STUDIO	1	1	140	$55,000
+
+--- Full Test Set (n=6) ---
+ID	City	Type	Beds	Baths	Area	Price
+cmus03vyx0038hy5wy2qtxi1y	Berbera	OFFICE	4	3	260	$75,000
+cmus03vvc002chy5w3nmnqksi	Baydhabo	OFFICE	4	3	320	$70,000
+cmus03vrm001ghy5w7j79a9tn	Garowe	OFFICE	4	3	80	$65,000
+cmus03vyh0034hy5wf337kwmb	Baydhabo	VILLA	3	2	230	$145,000
+cmus03vuw0028hy5w0gjfjss3	Garowe	VILLA	3	2	290	$140,000
+cmus03vr5001chy5wzoyran5v	Kismayo	VILLA	3	2	50	$135,000
+
+--- Full Validation Set (n=3) ---
+ID	City	Type	Beds	Baths	Area	Price
+cmus03vxl002why5wj7bj4pa5	Kismayo	HOUSE	1	1	170	$80,000
+cmus03vy10030hy5wkorfgsbh	Garowe	APARTMENT	2	1	200	$65,000
+cmus03vzd003chy5ww1gckuxi	Mogadishu	LAND	1	1	290	$25,000
+
+=== SECTION A: COMPLETE THE METRIC SET (n=6) ===
+Number of features p: 22
+Number of training rows n: 19
+Test set target prices: [ 75000, 70000, 65000, 145000, 140000, 135000 ]
+Test set mean: $105000.00
+Test set target variance (sample var): $1490000000.00
+Test set SST (sum of squared deviations from test mean): $7450000000.00
+Test set standard deviation: $38600.52
+
+Ridge Test Predictions: [ 73667, 68375, 61068, 67721, 61198, 60524 ]
+Ridge SSE: $17748228598.27
+Ridge R┬▓ arithmetic: 1 - (17748228598.27 / 7450000000.00) = -1.3823
+Reported Ridge Metrics: MAE=$39574.45, RMSE=$54387.85, MAPE=29.15%, R┬▓=-1.382
+
+Train price mean: $57105.26
+Constant Train-Mean Baseline Metrics on Test: MAE=$47894.74, RMSE=$59460.68, MAPE=38.66%, R┬▓=-1.8474
+Ridge vs Constant Train-Mean: MAE difference = $-8320.29, RMSE difference = $-5072.83
+
+=== SECTION B: CANDIDATE MODELS & BASELINES (n=6) ===
+
+Table B2: All 4 Candidate ML Models on Held-out Test Set (n=6):
+Model			MAE		RMSE		MAPE (%)	R┬▓
+Ridge Regression	$39574.45	$54387.85	29.15%		-1.382
+Decision Tree		$42833.33	$57426.76	32.82%		-1.656
+Random Forest		$44792.50	$57093.45	35.61%		-1.625
+Gradient Boosting	$46028.67	$58877.44	36.41%		-1.792
+
+Table B3: All 3 Baselines on Held-out Test Set (n=6):
+Baseline			MAE		RMSE		MAPE (%)	R┬▓
+Global Median			$50000.00	$61169.16	40.92%		-2.013
+Location/Type Median		$50000.00	$61169.16	40.92%		-2.013
+Price per m┬▓			$52862.32	$63037.92	48.44%		-2.200
+
+Table B4: Paired Per-Sample Absolute Errors on Test Set (n=6):
+Row	Actual		Ridge Pred	|Err_Ridge|	GlobalMed	|Err_GMed|	LocTypeMed	|Err_LTMed|	Price/m┬▓	|Err_P/m┬▓|
+1	$75,000	$73,667	$1,333	$55,000	$20,000	$55,000	$20,000	$84,783	$9,783
+2	$70,000	$68,375	$1,625	$55,000	$15,000	$55,000	$15,000	$104,348	$34,348
+3	$65,000	$61,068	$3,932	$55,000	$10,000	$55,000	$10,000	$26,087	$38,913
+4	$145,000	$67,721	$77,279	$55,000	$90,000	$55,000	$90,000	$75,000	$70,000
+5	$140,000	$61,198	$78,802	$55,000	$85,000	$55,000	$85,000	$94,565	$45,435
+6	$135,000	$60,524	$74,476	$55,000	$80,000	$55,000	$80,000	$16,304	$118,696
+
+Paired Differences (GlobalMedian_Err - Ridge_Err): [ 18667, 13375, 6068, 12721, 6198, 5524 ]
+Mean paired difference (MAE gap): $10425.55
+Standard deviation of paired differences: $5343.42
+Is MAE gap ($10425.55) larger than spread (std = $5343.42)? YES
+
+=== SECTION B5: LEAVE-ONE-OUT CROSS-VALIDATION (LOOCV, N=28) ===
+Fold	City	Type	Actual		Ridge Pred	|Ridge Err|	Ridge MAPE	Base Pred	|Base Err|	Base MAPE
+1	Mogadishu	HOUSE     	$ 65,000	$ 65,151	$    151	0.2%	$ 60,000	$  5,000	7.7%
+2	Hargeisa 	APARTMENT 	$ 50,000	$ 49,617	$    383	0.8%	$ 65,000	$ 15,000	30.0%
+3	Garowe   	LAND      	$ 45,000	$ 46,805	$  1,805	4.0%	$ 65,000	$ 20,000	44.4%
+4	Baydhabo 	COMMERCIAL	$ 70,000	$ 69,669	$    331	0.5%	$ 60,000	$ 10,000	14.3%
+5	Berbera  	TOWNHOUSE 	$ 75,000	$ 73,760	$  1,240	1.7%	$ 60,000	$ 15,000	20.0%
+6	Mogadishu	STUDIO    	$ 45,000	$ 44,319	$    681	1.5%	$ 65,000	$ 20,000	44.4%
+7	Hargeisa 	HOUSE     	$ 70,000	$ 67,022	$  2,978	4.3%	$ 60,000	$ 10,000	14.3%
+8	Bosaso   	APARTMENT 	$ 55,000	$ 56,207	$  1,207	2.2%	$ 65,000	$ 10,000	18.2%
+9	Kismayo  	VILLA     	$135,000	$132,567	$  2,433	1.8%	$ 60,000	$ 75,000	55.6%
+10	Garowe   	OFFICE    	$ 65,000	$ 66,653	$  1,653	2.5%	$ 60,000	$  5,000	7.7%
+11	Baydhabo 	LAND      	$ 50,000	$ 51,131	$  1,131	2.3%	$ 65,000	$ 15,000	30.0%
+12	Berbera  	COMMERCIAL	$ 75,000	$ 72,621	$  2,379	3.2%	$ 60,000	$ 15,000	20.0%
+13	Mogadishu	TOWNHOUSE 	$ 45,000	$ 46,652	$  1,652	3.7%	$ 65,000	$ 20,000	44.4%
+14	Hargeisa 	STUDIO    	$ 50,000	$ 49,808	$    192	0.4%	$ 65,000	$ 15,000	30.0%
+15	Bosaso   	HOUSE     	$ 75,000	$ 73,376	$  1,624	2.2%	$ 60,000	$ 15,000	20.0%
+16	Kismayo  	APARTMENT 	$ 60,000	$ 62,345	$  2,345	3.9%	$ 65,000	$  5,000	8.3%
+17	Garowe   	VILLA     	$140,000	$136,481	$  3,519	2.5%	$ 60,000	$ 80,000	57.1%
+18	Baydhabo 	OFFICE    	$ 70,000	$ 72,559	$  2,559	3.7%	$ 60,000	$ 10,000	14.3%
+19	Berbera  	LAND      	$ 55,000	$ 54,827	$    173	0.3%	$ 65,000	$ 10,000	18.2%
+20	Mogadishu	COMMERCIAL	$ 45,000	$ 47,004	$  2,004	4.5%	$ 65,000	$ 20,000	44.4%
+21	Hargeisa 	TOWNHOUSE 	$ 50,000	$ 53,817	$  3,817	7.6%	$ 65,000	$ 15,000	30.0%
+22	Bosaso   	STUDIO    	$ 55,000	$ 56,227	$  1,227	2.2%	$ 65,000	$ 10,000	18.2%
+23	Kismayo  	HOUSE     	$ 80,000	$ 80,382	$    382	0.5%	$ 60,000	$ 20,000	25.0%
+24	Garowe   	APARTMENT 	$ 65,000	$ 63,931	$  1,069	1.6%	$ 60,000	$  5,000	7.7%
+25	Baydhabo 	VILLA     	$145,000	$140,230	$  4,770	3.3%	$ 60,000	$ 85,000	58.6%
+26	Berbera  	OFFICE    	$ 75,000	$ 74,721	$    279	0.4%	$ 60,000	$ 15,000	20.0%
+27	Mogadishu	LAND      	$ 25,000	$ 27,757	$  2,757	11.0%	$ 65,000	$ 40,000	160.0%
+28	Hargeisa 	COMMERCIAL	$ 50,000	$ 52,970	$  2,970	5.9%	$ 65,000	$ 15,000	30.0%
+
+--- LOOCV Summary Comparison (N=28) ---
+Ridge Regression LOOCV MAE:  $1703.92 ┬▒ $1227.10
+Ridge Regression LOOCV RMSE: $2086.94
+Ridge Regression LOOCV MAPE: 2.81%
+Ridge Regression LOOCV R┬▓:   0.9945 (Method: 1 - SSE_cv / SST_all)
+
+Global Median LOOCV MAE:     $21250.00 ┬▒ $21884.59
+Global Median LOOCV RMSE:    $30222.39
+Global Median LOOCV MAPE:    31.89%
+Global Median LOOCV R┬▓:      -0.1560
+
+--- Section B6: Statistical Significance ---
+Number of pairs N = 28
+Ridge wins: 28, Median Baseline wins: 0, Ties: 0
+Wilcoxon signed-rank test: W+ = 406, W- = 0, Test Statistic W = 0, n = 28
+
+=== SECTION D: PRICE POSITION LABELS: GO / NO-GO ===
+Typical property median estimate: $65,000
+┬▒10% band margin: ┬▒$6,500 (from $58,500 to $71,500)
+Total width of ┬▒10% band: $13,000
+Reported Model Test MAE: $39,574.45
+Reported Model Test RMSE: $54,387.85
+Band width ($13,000) vs Model MAE ($39,574.45): Band is 3.0x SMALLER than MAE!
+
+Table D3: Misclassification Analysis on Test Set (n=6):
+Row	Actual		Estimate	Difference	PctDiff	Model Label	True Label	Match?
+1	$ 75,000	$ 73,667	$  1,333	   1.8%	FAIRLY_PRICED 	FAIRLY_PRICED 	YES
+2	$ 70,000	$ 68,375	$  1,625	   2.4%	FAIRLY_PRICED 	FAIRLY_PRICED 	YES
+3	$ 65,000	$ 61,068	$  3,932	   6.4%	FAIRLY_PRICED 	FAIRLY_PRICED 	YES
+4	$145,000	$ 67,721	$ 77,279	 114.1%	ABOVE_MARKET  	FAIRLY_PRICED 	NO (MISCLASSIFIED)
+5	$140,000	$ 61,198	$ 78,802	 128.8%	ABOVE_MARKET  	FAIRLY_PRICED 	NO (MISCLASSIFIED)
+6	$135,000	$ 60,524	$ 74,476	 123.1%	ABOVE_MARKET  	FAIRLY_PRICED 	NO (MISCLASSIFIED)
+Mislabeled fraction against baseline assumption: 3 / 6 (50.0%)
+
+=== SECTION E7: MODEL ARTIFACT FILE HASH & METADATA ===
+Artifact path: B:\B\dirir\Realstate\lib\ai\valuation\model-artifact.json
+Artifact SHA-256: b005c8a9d263428b25fb6e7c4a2a65664c7b489cfc14e9b0e14868f14e3dc4ae
+Artifact Last Modified: 2026-10-04T11:30:00.150Z
+Artifact Size: 5065 bytes
+
+=== SECTION F6: USER-FACING COPY CLAIMS AUDIT ===
+Found in app/(public)/price-prediction/page.tsx:
+Enter property details to get an estimated market price using our TensorFlow.js ML model
+
+================================================================================
+  AUDIT MEASUREMENTS COMPLETE
+================================================================================

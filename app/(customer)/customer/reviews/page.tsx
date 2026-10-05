@@ -95,7 +95,7 @@ export default function CustomerReviewsPage() {
             Share your verified experience on toured properties to guide fellow buyers and tenants.
           </p>
           <Button asChild className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] hover:brightness-105 rounded-xl text-xs font-bold border-0 shadow-sm">
-            <Link href="/properties">Browse Properties to Review</Link>
+            <Link href="/customer/properties">Browse Properties to Review</Link>
           </Button>
         </div>
       ) : (
@@ -126,7 +126,7 @@ export default function CustomerReviewsPage() {
                     <span className="text-xs font-bold text-[#07111F] ml-1.5">{r.rating}/5</span>
                   </div>
                   <Link
-                    href={`/properties/${r.property.id}`}
+                    href={`/customer/properties/${r.property.id}`}
                     className="font-serif font-bold text-[#07111F] text-base hover:text-[#A97918] transition-colors block"
                   >
                     {r.property.title}

@@ -169,33 +169,35 @@ export default async function AdminPage() {
     return { month, revenue: sum };
   });
 
-  // Property Types Pie Data matching Kiro-Maal palette
+  // Property Types Pie Data matching Kiro-Maal luxury palette
   const typeColorPalette: Record<string, string> = {
-    APARTMENT: "#C89B3C",
-    VILLA: "#07111F",
-    HOUSE: "#D9B45B",
-    COMMERCIAL: "#A97918",
-    LAND: "#8F6412",
-    OFFICE: "#142642",
-    TOWNHOUSE: "#E2C37D",
-    STUDIO: "#6B7280",
+    VILLA: "#C89B3C",      // Luxury Gold
+    APARTMENT: "#1D4ED8",  // Royal Blue
+    HOUSE: "#D97706",      // Warm Amber
+    COMMERCIAL: "#059669", // Emerald Green
+    OFFICE: "#0F172A",     // Deep Navy
+    LAND: "#7C3AED",       // Royal Purple
+    TOWNHOUSE: "#EA580C",  // Terracotta Orange
+    STUDIO: "#0284C7",     // Sky Azure
   };
 
-  const propertyTypesData = propertiesByType.map((item) => {
-    const count = item._count.id;
-    const percentage =
-      totalProperties > 0 ? Math.round((count / totalProperties) * 100) : 0;
-    const readableName =
-      item.type.charAt(0) +
-      item.type.slice(1).toLowerCase() +
-      (item.type.endsWith("S") ? "" : "s");
-    return {
-      name: readableName,
-      value: count,
-      percentage,
-      color: typeColorPalette[item.type] || "#1E60D5",
-    };
-  });
+  const propertyTypesData = propertiesByType
+    .sort((a, b) => b._count.id - a._count.id)
+    .map((item) => {
+      const count = item._count.id;
+      const rawPct = totalProperties > 0 ? (count / totalProperties) * 100 : 0;
+      const percentage = Number(rawPct.toFixed(1));
+      const readableName =
+        item.type.charAt(0) +
+        item.type.slice(1).toLowerCase() +
+        (item.type.endsWith("S") ? "" : "s");
+      return {
+        name: readableName,
+        value: count,
+        percentage,
+        color: typeColorPalette[item.type] || "#C89B3C",
+      };
+    });
 
   // Helper for human-friendly relative time
   function formatRelativeTime(date: Date) {

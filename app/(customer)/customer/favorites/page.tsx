@@ -52,7 +52,7 @@ export default async function CustomerFavoritesPage() {
             Browse our verified luxury collection across Somalia and bookmark properties to easily revisit them here.
           </p>
           <Link
-            href="/properties"
+            href="/customer/properties"
             className="inline-flex items-center gap-2 bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] px-6 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm hover:brightness-105"
           >
             <Building2 className="h-4 w-4" /> Browse Verified Properties
@@ -99,7 +99,7 @@ export default async function CustomerFavoritesPage() {
                 </div>
 
                 <Link
-                  href={`/properties/${property.id}`}
+                  href={`/customer/properties/${property.id}`}
                   className="w-full inline-flex items-center justify-center gap-2 bg-[#F7F3EA] hover:bg-gradient-to-r hover:from-[#C89B3C] hover:via-[#D9B45B] hover:to-[#C89B3C] hover:text-[#07111F] border border-[#E8E1D4] hover:border-transparent text-[#07111F] font-bold py-2.5 rounded-xl text-xs transition-all shadow-xs"
                 >
                   View Details <ArrowRight className="h-3.5 w-3.5" />

@@ -70,7 +70,7 @@ export default function CustomerSavedSearchesPage() {
     if (s.minPrice) params.set("minPrice", String(s.minPrice));
     if (s.maxPrice) params.set("maxPrice", String(s.maxPrice));
     if (s.bedrooms) params.set("bedrooms", String(s.bedrooms));
-    return `/properties?${params.toString()}`;
+    return `/customer/properties?${params.toString()}`;
   };
 
   return (
@@ -87,7 +87,7 @@ export default function CustomerSavedSearchesPage() {
         </div>
 
         <Button asChild className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] hover:brightness-105 rounded-xl shadow-sm text-xs font-bold border-0">
-          <Link href="/properties">Create New Search</Link>
+          <Link href="/customer/properties">Create New Search</Link>
         </Button>
       </div>
 
@@ -106,7 +106,7 @@ export default function CustomerSavedSearchesPage() {
             When browsing properties, save your search criteria to get instant inventory alerts and rerun queries anytime.
           </p>
           <Button asChild className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] hover:brightness-105 rounded-xl text-xs font-bold border-0 shadow-sm">
-            <Link href="/properties">Browse &amp; Save a Search</Link>
+            <Link href="/customer/properties">Browse &amp; Save a Search</Link>
           </Button>
         </div>
       ) : (

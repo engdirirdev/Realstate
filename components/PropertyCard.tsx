@@ -28,12 +28,14 @@ interface PropertyCardProps {
   property: PropertyCardData;
   className?: string;
   onFavoriteToggle?: (id: string, favorited: boolean) => void;
+  href?: string;
 }
 
 export default function PropertyCard({
   property,
   className,
   onFavoriteToggle,
+  href,
 }: PropertyCardProps) {
   const { data: session } = useSession();
   const { toast } = useToast();
@@ -93,7 +95,7 @@ export default function PropertyCard({
         className
       )}
     >
-      <Link href={`/properties/${property.id}`} className="block relative aspect-[16/10] overflow-hidden bg-[#F7F3EA]">
+      <Link href={href || `/properties/${property.id}`} className="block relative aspect-[16/10] overflow-hidden bg-[#F7F3EA]">
         <img
           src={imageUrl}
           alt={property.title}

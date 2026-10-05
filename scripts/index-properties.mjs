@@ -11,7 +11,7 @@ const prisma = new PrismaClient();
 
 // Configuration
 const DIMENSIONS = 768;
-const MODEL_NAME = "text-embedding-004";
+const MODEL_NAME = process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-2";
 const VERSION = "v1";
 
 const MULTILINGUAL_CONCEPTS = [

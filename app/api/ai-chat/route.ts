@@ -17,10 +17,10 @@ import {
   RATE_LIMIT_PRESETS,
 } from "@/lib/rate-limiter";
 import { processConversationalTurn } from "@/lib/ai/conversation/chat-engine";
+import { GEMINI_CONFIG, getGeminiApiKey } from "@/lib/ai/gemini-config";
 
-const genAI = process.env.GOOGLE_AI_API_KEY
-  ? new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY)
-  : null;
+const apiKey = getGeminiApiKey();
+const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 
 /**
  * Generate a dynamic, context-grounded response using Gemini with strict prompt injection guardrails.
@@ -39,7 +39,7 @@ async function generateGroundedAIResponse(params: {
   if (!genAI) return null;
 
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: GEMINI_CONFIG.CHAT_MODEL });
     const sanitizedUserMessage = sanitizeUntrustedText(params.userMessage);
 
     let systemContext = `You are the AI Real Estate Assistant for Somalia's premier real estate platform.
@@ -80,9 +80,9 @@ Detected Intent: ${params.intent} (${params.explanation})
 
     const prompt = `${systemContext}\n\n<user_input>\n${sanitizedUserMessage}\n</user_input>\n\nPlease generate a direct, helpful, and concise response to the user's specific inquiry now:`;
 
-    // Timeout after 4 seconds to guarantee fast response time
+    // Timeout after configured milliseconds to guarantee fast response time
     const responsePromise = model.generateContent(prompt);
-    const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000));
+    const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), GEMINI_CONFIG.CHAT_TIMEOUT_MS));
 
     const result: any = await Promise.race([responsePromise, timeoutPromise]);
     if (result && result.response) {
@@ -213,12 +213,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create a new persistent session only for authenticated users with a userId
-    if (userId && !activeSessionId) {
+    // Create a new persistent session if none exists
+    if (!activeSessionId) {
       try {
         const newSession = await prisma.chatSession.create({
           data: {
-            userId: userId,
+            userId: userId || null,
             title: message.slice(0, 45).trim() || "New Conversation",
           },
         });
@@ -277,23 +277,7 @@ export async function POST(request: NextRequest) {
       userId,
     });
 
-    let finalReply = turnResult.reply;
-
-    // Optional LLM enhancement if GOOGLE_AI_API_KEY is configured
-    if (genAI && turnResult.properties.length > 0) {
-      const aiEnhanced = await generateGroundedAIResponse({
-        userMessage: message,
-        intent: turnResult.intent,
-        properties: turnResult.properties as any,
-        totalMatches: turnResult.totalMatches,
-        userName,
-        userRole,
-        explanation: `Topic: ${turnResult.topic}, Language: ${turnResult.language}`,
-      });
-      if (aiEnhanced) {
-        finalReply = aiEnhanced;
-      }
-    }
+    const finalReply = turnResult.reply;
 
     // 7. Persist ASSISTANT message with full conversation state in metadata (authenticated sessions only)
     if (activeSessionId) await prisma.chatMessage.create({

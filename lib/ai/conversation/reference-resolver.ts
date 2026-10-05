@@ -81,18 +81,35 @@ export function resolveConversationalReference(
     }
   }
 
-  // 2. Comparative Inquiries ("which one is cheaper?", "the cheaper one", "cheapest", "kan ugu jaban", "الأرخص")
+  // 1b. Active Search / Best-Property query bypass
+  // If the query is an active search or ranking request ("ii raadi...", "find the best one", "kan ugu fiican ii raadi"),
+  // it is NOT an entity reference to an already-inspected single property card.
+  const isExplicitSearch =
+    /\b(raadi|ii raadi|search|find|soo saar)\b/i.test(text) ||
+    /\b(kan|kii|midka)\s+ugu\s+(?:fiican|wanaagsan)\b/i.test(text) ||
+    /\b(the\s+best\s+one|best\s+property|the\s+best)\b/i.test(text);
+
+  if (isExplicitSearch) {
+    return {
+      type: "NONE",
+      explanation: "Active search or ranking request detected, bypassing in-set entity reference.",
+    };
+  }
+
+  // 2. Comparative Inquiries ("which one is cheaper?", "the cheaper one", "cheapest", "kan ugu jaban", "midka ugu jaban", "الأرخص")
+  const isSuperlativeCheapest =
+    text.includes("ugu jaban") || text.includes("cheapest") || text.includes("الأرخص");
+
   const isSearchCheaper =
+    !isSuperlativeCheapest &&
     /\b(find|search|show|show me|ii raadi|raadi|i tus|keen|ابحث|اعرض)\b/i.test(text);
 
   const isCheaperQuery =
-    !isSearchCheaper &&
-    (text.includes("cheaper") ||
-    text.includes("cheapest") ||
-    text.includes("ka jaban") ||
-    text.includes("ugu jaban") ||
-    text.includes("الأرخص") ||
-    text.includes("rahisi zaidi"));
+    isSuperlativeCheapest ||
+    (!isSearchCheaper &&
+      (text.includes("cheaper") ||
+        text.includes("ka jaban") ||
+        text.includes("rahisi zaidi")));
 
   if (isCheaperQuery) {
     const sortedByPrice = [...activeResultSet].sort((a, b) => a.price - b.price);
@@ -156,11 +173,15 @@ export function resolveConversationalReference(
       const target = activeResultSet.find((p) => p.rank === ord.rank);
       if (target) {
         // Detect attribute questioned
-        let attr: "price" | "bedrooms" | "bathrooms" | "area" | "status" | "location" | "parking" | "furnished" | "all" = "all";
+        let attr: "price" | "bedrooms" | "bathrooms" | "area" | "status" | "location" | "parking" | "furnished" | "pool" | "gym" | "all" = "all";
         if (text.includes("parking") || text.includes("baarkin") || text.includes("garaash") || text.includes("موقف")) {
           attr = "parking";
         } else if (text.includes("furnish") || text.includes("alaab") || text.includes("qalab") || text.includes("مفروش")) {
           attr = "furnished";
+        } else if (text.includes("pool") || text.includes("barkad") || text.includes("swimming") || text.includes("مسبح")) {
+          attr = "pool";
+        } else if (text.includes("gym") || text.includes("jimicsi") || text.includes("fitness") || text.includes("لياقة")) {
+          attr = "gym";
         } else if (text.includes("price") || text.includes("cost") || text.includes("qiimo") || text.includes("qiimihiisu") || text.includes("سعر") || text.includes("bei")) {
           attr = "price";
         } else if (text.includes("bed") || text.includes("qol") || text.includes("غرف") || text.includes("vyumba")) {
@@ -192,23 +213,27 @@ export function resolveConversationalReference(
     }
   }
 
-  // 6. Pronoun Reference to Previous Single Property ("how many bedrooms does it have?", "is it furnished?", "can i buy it?", "parking?", "qiimihiisu?", "bedrooms?", "bathrooms?", "price?", "location?", "availability?")
+  // 6. Pronoun Reference to Previous Single Property ("how many bedrooms does it have?", "is it furnished?", "can i buy it?", "parking?", "qiimihiisu?", "bedrooms?", "bathrooms?", "price?", "location?", "availability?", "kan furnished baa?", "Ma leeyahay swimming pool?")
+  const effectiveTarget = previousReferencedProperty || (activeResultSet.length > 0 ? activeResultSet[0] : undefined);
   const isDirectAttributeQuery =
-    previousReferencedProperty &&
-    (text.match(/\b(parking\??|baarkin\??|furnished\??|alaab\??|qiimaha\??|qiimihiisu\??|price\??|bedrooms?\??|qolal?\??|bathrooms?\??|musqul\??|location\??|availability\??|ma\s+bannaan\s+yahay\??)\b/i) ||
-     text.includes("parking ma leeyahay") || text.includes("ma furnished baa") || text.includes("ma leeyahay parking") ||
-     text.includes("ma bannaan yahay") || text.includes("meesha ay ku taal") || text.includes("intee qol"));
+    Boolean(effectiveTarget) &&
+    (text.match(/\b(parking\??|baarkin\??|furnished\??|furnshed\??|alaab\??|qiimaha\??|qiimihiisu\??|price\??|bedrooms?\??|qolal?\??|bathrooms?\??|musqul\??|location\??|availability\??|ma\s+bannaan\s+yahay\??|swimming\??|pool\??|barkad\??|gym\??|jimicsi\??)\b/i) ||
+      text.includes("parking ma leeyahay") || text.includes("ma leedahay parking") || text.includes("ma furnished baa") || text.includes("furnished baa") || text.includes("ma leeyahay parking") ||
+      text.includes("swimming pool") || text.includes("ma leeyahay swimming") || text.includes("barkad ma leeyahay") || text.includes("gym ma leeyahay") ||
+      text.includes("ma bannaan yahay") || text.includes("meesha ay ku taal") || text.includes("intee qol"));
 
   const isPronounQuery =
     ((text.includes("it") || text.includes("that one") || text.includes("that property") || text.includes("that house") ||
       text.includes("this property") || text.includes("this house") || text.includes("the property") || text.includes("the house") ||
-      text.includes("kan") || text.includes("kaas") || text.includes("ذلك") || text.includes("هذا") || text.includes("hiki")) &&
-     previousReferencedProperty) || isDirectAttributeQuery;
+      /\b(kan|kaas|ذلك|هذا|hiki)\b/i.test(text)) &&
+     Boolean(effectiveTarget)) || isDirectAttributeQuery;
 
-  if (isPronounQuery && previousReferencedProperty) {
-    let attr: "price" | "bedrooms" | "bathrooms" | "area" | "status" | "location" | "parking" | "furnished" | "all" = "all";
+  if (isPronounQuery && effectiveTarget) {
+    let attr: "price" | "bedrooms" | "bathrooms" | "area" | "status" | "location" | "parking" | "furnished" | "pool" | "gym" | "all" = "all";
     if (text.includes("parking") || text.includes("baarkin") || text.includes("garaash") || text.includes("موقف")) attr = "parking";
     else if (text.includes("furnish") || text.includes("alaab") || text.includes("qalab") || text.includes("مفروش")) attr = "furnished";
+    else if (text.includes("pool") || text.includes("barkad") || text.includes("swimming") || text.includes("مسبح")) attr = "pool";
+    else if (text.includes("gym") || text.includes("jimicsi") || text.includes("fitness") || text.includes("لياقة")) attr = "gym";
     else if (text.includes("bed") || text.includes("qol") || text.includes("غرف")) attr = "bedrooms";
     else if (text.includes("bath") || text.includes("musqul") || text.includes("حمامات") || text.includes("حمام")) attr = "bathrooms";
     else if (text.includes("price") || text.includes("cost") || text.includes("qiimo") || text.includes("qiimihiisu") || text.includes("سعر")) attr = "price";
@@ -217,10 +242,10 @@ export function resolveConversationalReference(
 
     return {
       type: "PRONOUN",
-      targetRank: previousReferencedProperty.rank,
-      targetProperty: previousReferencedProperty,
+      targetRank: effectiveTarget.rank,
+      targetProperty: effectiveTarget,
       attributeQueried: attr,
-      explanation: `Resolved pronoun reference to previously focused Property #${previousReferencedProperty.rank} ("${previousReferencedProperty.title}").`,
+      explanation: `Resolved pronoun reference to Property #${effectiveTarget.rank} ("${effectiveTarget.title}").`,
     };
   }
 

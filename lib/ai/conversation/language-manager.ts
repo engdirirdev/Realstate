@@ -960,7 +960,13 @@ export function generateNaturalDialogResponse(params: {
         return `Got it. Do you have a preferred neighborhood in mind, or should I search across all of ${city}?`;
       }
       if (params.missingSlot === "city") {
-        if (lang === "so") return `Waad heli kartaa. Magaalo noocee ah ayaad ka raadinaysaa?`;
+        if (lang === "so") {
+          const isRental = params.slots?.purpose === "RENT" || (!params.slots?.purpose && params.slots?.propertyType === "APARTMENT");
+          const isSale = params.slots?.purpose === "SALE";
+          if (isRental) return `Waad heli kartaa! Magaaladee ayaad rabtaa inaad ka kireysato?`;
+          if (isSale) return `Waad heli kartaa! Magaaladee ayaad rabtaa inaad ka iibsato?`;
+          return `Waad heli kartaa! Magaaladee ayaad ka raadinaysaa?`;
+        }
         if (lang === "ar") return `بالتأكيد. في أي مدينة تبحث عن العقار؟`;
         return `Certainly. Which city are you looking to find a property in?`;
       }

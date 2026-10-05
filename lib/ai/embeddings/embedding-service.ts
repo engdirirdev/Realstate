@@ -1,11 +1,11 @@
 /**
  * Multilingual Embedding Service
  *
- * Primary Model: Google AI "text-embedding-004" (768 dimensions) via @google/generative-ai
+ * Primary Model: Google AI "gemini-embedding-2" (768 dimensions) via @google/generative-ai
  * Fallback: Deterministic Multilingual Semantic Encoder (768 dimensions)
  *
  * Guarantees:
- * - Constant 768 dimensions across all vectors
+ * - Constant 768 dimensions across all vectors (MRL projection)
  * - Cross-lingual semantic alignment across Somali, Arabic, and English
  * - Graceful fallback without crashing if API key is missing or service is unavailable
  * - High-speed in-memory vector cache for frequent queries
@@ -13,11 +13,12 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import crypto from "crypto";
 import { normalizeVector } from "./vector-math";
+import { GEMINI_CONFIG, getGeminiApiKey } from "../gemini-config";
 
 export const EMBEDDING_CONFIG = {
-  MODEL_NAME: "text-embedding-004",
+  MODEL_NAME: GEMINI_CONFIG.EMBEDDING_MODEL,
   PROVIDER: "google",
-  DIMENSIONS: 768,
+  DIMENSIONS: GEMINI_CONFIG.EMBEDDING_DIMENSIONS,
   VERSION: "v1",
 };
 
@@ -240,8 +241,8 @@ export function generateLocalMultilingualEmbedding(text: string): number[] {
 
 /**
  * Generates an embedding vector for a given text.
- * Prioritizes Google AI "text-embedding-004" when GOOGLE_AI_API_KEY is configured;
- * gracefully falls back to the local multilingual semantic embedder on failure or missing key.
+ * Prioritizes Google AI "gemini-embedding-2" (768-d MRL) when GOOGLE_AI_API_KEY/GEMINI_API_KEY is configured;
+ * gracefully falls back to the local multilingual semantic embedder on failure, timeout, or missing key.
  */
 export async function generateEmbedding(
   text: string,
@@ -252,7 +253,7 @@ export async function generateEmbedding(
   dimension: number;
   provider: "google" | "local-multilingual";
 }> {
-  if (!text || text.trim().length === 0) {
+  if (!text || typeof text !== "string" || text.trim().length === 0) {
     return {
       embedding: new Array(EMBEDDING_CONFIG.DIMENSIONS).fill(0),
       model: EMBEDDING_CONFIG.MODEL_NAME,
@@ -274,24 +275,34 @@ export async function generateEmbedding(
     }
   }
 
-  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  const apiKey = getGeminiApiKey();
 
-  if (apiKey && apiKey.trim().length > 0) {
+  if (process.env.EMBEDDING_PROVIDER !== "local" && apiKey && apiKey.trim().length > 0) {
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: EMBEDDING_CONFIG.MODEL_NAME });
 
-      // Embed content with timeout (3.5 seconds)
-      const embedPromise = model.embedContent(text);
+      // Embed content with timeout (configured in GEMINI_CONFIG)
+      // gemini-embedding-2 natively supports outputDimensionality for MRL-based 768-d output
+      let embedPromise: Promise<any>;
+      try {
+        embedPromise = (model as any).embedContent({
+          content: { parts: [{ text }] },
+          outputDimensionality: EMBEDDING_CONFIG.DIMENSIONS,
+        });
+      } catch {
+        embedPromise = model.embedContent(text);
+      }
+
       const timeoutPromise = new Promise<null>((_, reject) =>
-        setTimeout(() => reject(new Error("Embedding API timeout")), 3500)
+        setTimeout(() => reject(new Error("Embedding API timeout")), GEMINI_CONFIG.EMBEDDING_TIMEOUT_MS)
       );
 
       const result = (await Promise.race([embedPromise, timeoutPromise])) as any;
 
       if (result && result.embedding && Array.isArray(result.embedding.values)) {
         const rawVector = result.embedding.values;
-        // Ensure 768 dimensions and unit normalization
+        // Ensure exactly 768 dimensions and unit normalization
         const normalizedVector = normalizeVector(rawVector.slice(0, EMBEDDING_CONFIG.DIMENSIONS));
 
         if (type === "query") {

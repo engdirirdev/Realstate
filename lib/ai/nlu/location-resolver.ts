@@ -28,7 +28,7 @@ export const SOMALI_CITY_DIRECTORY: CityDefinition[] = [
     dbCityName: "Mogadishu",
     hasApprovedInventory: true,
     aliases: [
-      "mogadishu", "muqdisho", "muqdisho ah", "muqdishu", "hamar", "xamar",
+      "mogadishu", "mogadisho", "muqdisho", "muqdisho ah", "muqdishu", "hamar", "xamar",
       "banaadir", "banadir", "magaalada muqdisho", "magaalada xamar", "magaaladda muqdisho",
       "mogadiscio", "mogadishu city", "مقديشو", "مدينة مقديشو", "بندر"
     ],

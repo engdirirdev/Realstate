@@ -136,8 +136,16 @@ export async function executeSemanticSearch(
   for (const prop of candidateProperties) {
     if (!prop.embedding || !prop.embedding.embedding) continue;
 
+    // Safety: reject vector space mismatch (e.g. dimension mismatch)
+    if (prop.embedding.dimension && prop.embedding.dimension !== queryVector.length) {
+      continue;
+    }
+
     try {
       const propVector: number[] = JSON.parse(prop.embedding.embedding);
+      if (!Array.isArray(propVector) || propVector.length !== queryVector.length) {
+        continue;
+      }
       const similarity = cosineSimilarity(queryVector, propVector);
 
       if (similarity >= threshold) {

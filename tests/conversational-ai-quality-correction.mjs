@@ -123,7 +123,7 @@ async function runQualitySuite() {
       res.responseType === "CLARIFICATION" &&
       res.shouldRenderPropertyCards === false &&
       res.properties.length === 0 &&
-      res.reply.includes("Magaalo");
+      (res.reply.includes("Magaalo") || res.reply.includes("Magaala"));
     record("3. Missing city information triggers clarification interview", ok, `reply=${res.reply}`);
   } catch (e) {
     record("3. Missing city information triggers clarification interview", false, e.message);

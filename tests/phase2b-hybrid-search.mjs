@@ -18,6 +18,11 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 const API_BASE = "http://localhost:3000";
+const TEST_IP = `198.51.100.${Math.floor(Math.random() * 100) + 100}`;
+const TEST_HEADERS = {
+  "Content-Type": "application/json",
+  "X-Forwarded-For": TEST_IP,
+};
 
 let totalTests = 0;
 let passedTests = 0;
@@ -46,7 +51,7 @@ async function run() {
   try {
     const resEmpty = await fetch(`${API_BASE}/api/ai/hybrid-search`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+    headers: TEST_HEADERS,
       body: JSON.stringify({}),
     });
     const dataEmpty = await resEmpty.json();
@@ -55,7 +60,7 @@ async function run() {
 
     const resLarge = await fetch(`${API_BASE}/api/ai/hybrid-search`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+    headers: TEST_HEADERS,
       body: JSON.stringify({ query: "a".repeat(501) }),
     });
     const dataLarge = await resLarge.json();
@@ -84,7 +89,7 @@ async function run() {
   for (const tc of intentTestCases) {
     const res = await fetch(`${API_BASE}/api/ai/hybrid-search`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+    headers: TEST_HEADERS,
       body: JSON.stringify({ query: tc.query }),
     });
     const data = await res.json();
@@ -137,7 +142,7 @@ async function run() {
   for (const ec of extractionCases) {
     const res = await fetch(`${API_BASE}/api/ai/hybrid-search`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+    headers: TEST_HEADERS,
       body: JSON.stringify({ query: ec.query }),
     });
     const data = await res.json();
@@ -163,7 +168,7 @@ async function run() {
   const complexQuery = "Waxaan rabaa guri 3 qol ah oo Muqdisho ah, $80,000 ka yar, parking leh, meel degan oo xeebta u dhow.";
   const complexRes = await fetch(`${API_BASE}/api/ai/hybrid-search`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: TEST_HEADERS,
     body: JSON.stringify({ query: complexQuery }),
   });
   const complexData = await complexRes.json();
@@ -184,7 +189,7 @@ async function run() {
   // Exact 3-bedroom query
   const res3Bed = await fetch(`${API_BASE}/api/ai/hybrid-search`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: TEST_HEADERS,
     body: JSON.stringify({ query: "3 bedroom house in Mogadishu under $80,000" }),
   });
   const data3Bed = await res3Bed.json();
@@ -210,7 +215,7 @@ async function run() {
   const beachQuery = "3-bedroom house in Mogadishu under $80k near the beach with solar";
   const resBeach = await fetch(`${API_BASE}/api/ai/hybrid-search`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: TEST_HEADERS,
     body: JSON.stringify({ query: beachQuery }),
   });
   const dataBeach = await resBeach.json();
@@ -234,7 +239,7 @@ async function run() {
   const tightQuery = "3-bedroom house in Mogadishu under $20,000";
   const resTight = await fetch(`${API_BASE}/api/ai/hybrid-search`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: TEST_HEADERS,
     body: JSON.stringify({ query: tightQuery }),
   });
   const dataTight = await resTight.json();
@@ -261,7 +266,7 @@ async function run() {
   // Verify client role spoofing doesn't bypass approved filter
   const spoofRes = await fetch(`${API_BASE}/api/ai/hybrid-search`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: TEST_HEADERS,
     body: JSON.stringify({
       query: "3-bedroom house in Mogadishu",
       role: "ADMIN", // Spoofing attempt
@@ -307,7 +312,7 @@ async function run() {
     const item = benchmarkSuite[i];
     const bRes = await fetch(`${API_BASE}/api/ai/hybrid-search`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+    headers: TEST_HEADERS,
       body: JSON.stringify({ query: item.query, limit: 5 }),
     });
     const bData = await bRes.json();

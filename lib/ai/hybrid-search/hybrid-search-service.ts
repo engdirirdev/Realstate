@@ -228,8 +228,10 @@ export async function executeHybridSearch(
   const semanticCandidates: CandidateProperty[] = [];
   for (const prop of vectorCandidatePool) {
     if (!prop.embedding || !prop.embedding.embedding) continue;
+    if (prop.embedding.dimension && prop.embedding.dimension !== queryVector.length) continue;
     try {
       const propVec: number[] = JSON.parse(prop.embedding.embedding);
+      if (!Array.isArray(propVec) || propVec.length !== queryVector.length) continue;
       const sim = cosineSimilarity(queryVector, propVec);
       if (sim >= threshold) {
         semanticCandidates.push(toCandidateProperty(prop, sim));

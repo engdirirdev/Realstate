@@ -52,7 +52,7 @@ export function cosineSimilarity(
   a: number[] | Float32Array,
   b: number[] | Float32Array
 ): number {
-  if (a.length === 0 || b.length === 0) return 0;
+  if (a.length === 0 || b.length === 0 || a.length !== b.length) return 0;
   const dot = dotProduct(a, b);
   const normA = l2Norm(a);
   const normB = l2Norm(b);

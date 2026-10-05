@@ -222,7 +222,7 @@ model PropertyEmbedding {
   id          String   @id @default(cuid())
   propertyId  String   @unique
   embedding   String   @db.LongText
-  model       String   @default("text-embedding-004")
+  model       String   @default("gemini-embedding-2")
   version     String   @default("v1")
   dimension   Int      @default(768)
   sourceHash  String   @db.VarChar(64)

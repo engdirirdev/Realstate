@@ -42,6 +42,10 @@ export interface ConversationSlotState {
   sortBy?: "best_match" | "price_asc" | "price_desc" | "newest";
   tradeOff?: "budget_over_location" | "location_over_budget" | "balanced";
   goalPriority?: "price" | "location" | "bedrooms" | "amenities" | "uncertain";
+  excludedLocations?: string[];
+  alternativeLocations?: string[];
+  softPreferences?: string[];
+  userReasoning?: string[];
 }
 
 export interface ResultItem {
@@ -73,7 +77,7 @@ export interface ReferenceResolution {
   targetRank?: number;
   targetProperty?: ResultItem;
   comparedProperties?: ResultItem[];
-  attributeQueried?: "price" | "bedrooms" | "bathrooms" | "area" | "status" | "location" | "parking" | "furnished" | "all";
+  attributeQueried?: "price" | "bedrooms" | "bathrooms" | "area" | "status" | "location" | "parking" | "furnished" | "pool" | "gym" | "all";
   explanation: string;
 }
 
@@ -157,6 +161,8 @@ export interface ConversationState {
   rejectedPropertyIds: string[];
   interviewStage?: InterviewStage;
   pendingQuestion?: string;
+  pendingSlot?: string;
+  expectedEntityType?: string;
   turnCount: number;
   lastUserMessage?: string;
   lastAssistantMessage?: string;

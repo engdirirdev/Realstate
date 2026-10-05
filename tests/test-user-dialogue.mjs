@@ -100,7 +100,7 @@ console.log('\n[TURN 3] User: "Haye, waxaan rabaa apartment 3 bedroom ah."');
   assert(res.state.slots.bedrooms === 3, `Extracted 3 bedrooms`);
   assert(res.responseType === 'CLARIFICATION', `Response type is CLARIFICATION (interview for missing slot)`);
   assert(res.missingSlots?.includes('city'), `Identifies missing location/city (got missingSlots: ${res.missingSlots?.join(', ')})`);
-  assert(res.reply.includes('Magaalo') || res.reply.includes('magaalo'), `Asks only for missing location`);
+  assert(res.reply.includes('Magaala') || res.reply.includes('magaala') || res.reply.includes('Magaalo') || res.reply.includes('magaalo'), `Asks only for missing location`);
   assert(!res.reply.includes('qol'), `Does NOT ask again for bedroom count`);
 }
 

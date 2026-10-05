@@ -2,9 +2,9 @@
   "modelId": "valuation-ridgeregression-v2",
   "modelVersion": "2.0.0",
   "modelType": "RidgeRegression",
-  "trainedAt": "2026-10-04T15:48:29.405Z",
-  "datasetHash": "3add7f972838515d",
-  "sampleCount": 28,
+  "trainedAt": "2026-10-05T03:25:43.247Z",
+  "datasetHash": "23864f6fd170356b",
+  "sampleCount": 30,
   "trainCount": 19,
   "valCount": 3,
   "testCount": 6,
@@ -212,11 +212,11 @@
   },
   "evaluation": {
     "loocv": {
-      "mae": 1703.92,
-      "rmse": 2086.94,
-      "mape": 2.81,
-      "r2cv": 0.9945,
-      "nFolds": 28
+      "mae": 8289.17,
+      "rmse": 15393.7,
+      "mape": 896.15,
+      "r2cv": 0.7668,
+      "nFolds": 30
     },
     "holdout": {
       "mae": 6424.1,
@@ -273,8 +273,8 @@
   "calibration": {
     "status": "NOT_CALIBRATED",
     "basis": "LOOCV MAE",
-    "outOfSampleMAE": 1703.92,
-    "n": 28,
+    "outOfSampleMAE": 8289.17,
+    "n": 30,
     "note": "synthetic seed data; asking prices, not transaction prices"
   },
   "featureImportances": {

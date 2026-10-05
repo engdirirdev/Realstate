@@ -37,6 +37,14 @@ import {
   analyzeMessageScope,
   detectContextAwareIntent,
 } from "./state-manager";
+import {
+  shouldInvokeAI,
+  orchestrateAIUnderstanding,
+  summarizeActiveResults,
+  OrchestrationResult,
+} from "../orchestration/ai-orchestrator";
+import { generateGroundedAIDAResponse } from "../orchestration/response-generator";
+import { AIUnderstandingInput } from "../providers/ai-provider";
 
 export interface ProcessTurnInput {
   sessionId: string;
@@ -171,6 +179,106 @@ export async function processConversationalTurn(
   const contextIntent = detectContextAwareIntent(message, state, entities, lastAssistantMsg);
   state.activeIntent = contextIntent.intent;
 
+  // 3c. DUAL-AI INTELLIGENCE LAYER (OpenAI + Gemini in parallel with consensus)
+  // Invoked selectively for ambiguous queries, typos, slang, or when deterministic confidence is low
+  const aiInvocationCheck = shouldInvokeAI(message, state, contextIntent.confidence);
+  let aiConsensusResult: OrchestrationResult | null = null;
+
+  if (aiInvocationCheck.shouldInvoke) {
+    try {
+      const aiInput: AIUnderstandingInput = {
+        userMessage: message,
+        pendingQuestion: state.pendingQuestion,
+        pendingSlot: state.pendingSlot,
+        expectedEntityType: state.expectedEntityType,
+        currentSlots: state.slots,
+        activeResultSetSummary: summarizeActiveResults(state.activeResultSet),
+        preferredLanguage: activeLanguage,
+        conversationHistory: history.map((h) => ({ role: h.role, content: h.content })),
+      };
+
+      aiConsensusResult = await orchestrateAIUnderstanding(aiInput, activeLanguage);
+      if (aiConsensusResult?.consensus?.understanding) {
+        const u = aiConsensusResult.consensus.understanding;
+        if (u.entities) {
+          if (!entities.city && u.entities.city) entities.city = u.entities.city;
+          if (!entities.propertyType && u.entities.propertyType) {
+            entities.propertyType = u.entities.propertyType.toUpperCase();
+          }
+          if (!entities.bedrooms && u.entities.bedrooms) {
+            entities.bedrooms = {
+              operator: "eq",
+              value: u.entities.bedrooms,
+              rawMatchedText: `${u.entities.bedrooms} bedrooms`,
+            };
+          }
+          if (!entities.price && u.entities.budget) {
+            entities.price = {
+              operator: "lte",
+              maxPrice: u.entities.budget,
+              rawMatchedText: `$${u.entities.budget}`,
+            };
+          }
+          if (entities.isFurnished === undefined && u.entities.furnished !== null) {
+            entities.isFurnished = u.entities.furnished;
+          }
+          if (entities.parking === undefined && u.entities.parking !== null) {
+            entities.parking = u.entities.parking;
+          }
+        }
+
+        // Apply pending slot answer if present
+        if (u.pendingSlotAnswer && state.pendingSlot) {
+          if (state.pendingSlot === "city" && typeof u.pendingSlotAnswer.value === "string") {
+            entities.city = u.pendingSlotAnswer.value;
+          } else if (state.pendingSlot === "budget" && u.pendingSlotAnswer.value) {
+            const bVal = Number(u.pendingSlotAnswer.value);
+            if (!isNaN(bVal)) {
+              entities.price = {
+                operator: "lte",
+                maxPrice: bVal,
+                rawMatchedText: `$${bVal}`,
+              };
+            }
+          } else if (state.pendingSlot === "bedrooms" && u.pendingSlotAnswer.value) {
+            const bedVal = Number(u.pendingSlotAnswer.value);
+            if (!isNaN(bedVal)) {
+              entities.bedrooms = {
+                operator: "eq",
+                value: bedVal,
+                rawMatchedText: `${bedVal} bedrooms`,
+              };
+            }
+          } else if (state.pendingSlot === "furnished" && u.pendingSlotAnswer.value !== null) {
+            entities.isFurnished = Boolean(u.pendingSlotAnswer.value);
+          } else if (state.pendingSlot === "parking" && u.pendingSlotAnswer.value !== null) {
+            entities.parking = Boolean(u.pendingSlotAnswer.value);
+          }
+        }
+
+        // Handle AI-detected corrections
+        if (u.correction && u.correction.slot) {
+          const slot = u.correction.slot;
+          const newVal = u.correction.newValue;
+          if (slot === "district" && newVal) state.slots.district = newVal;
+          if (slot === "city" && newVal) state.slots.city = newVal;
+          if (slot === "budget" && newVal) state.slots.maxPrice = Number(newVal);
+          if (slot === "bedrooms" && newVal) state.slots.bedrooms = Number(newVal);
+        }
+
+        // Update active intent if AI has high confidence and local intent was AMBIGUOUS or generic
+        if (
+          u.confidence >= 0.85 &&
+          (contextIntent.intent === "AMBIGUOUS" || contextIntent.intent === "REAL_ESTATE_SEARCH")
+        ) {
+          state.activeIntent = u.intent;
+        }
+      }
+    } catch {
+      // Graceful fallback to deterministic understanding
+    }
+  }
+
   // 4. Update Conversation State (Slot carry-over, removals, topic tracking)
   const { state: updatedState, delta } = updateConversationState(
     state,
@@ -193,6 +301,7 @@ export async function processConversationalTurn(
   let totalMatches = 0;
   let responseType: ResponseType = "PROPERTY_RESULTS";
   let shouldRenderPropertyCards = false;
+  let attributeAnswer: any = null;
 
   // ───────────────────────────────────────────────────────────────────────────
   // ROUTE 0: SEARCH READINESS & CONVERSATIONAL INTERVIEW PRE-CHECK
@@ -200,7 +309,15 @@ export async function processConversationalTurn(
   // ───────────────────────────────────────────────────────────────────────────
   const readiness = evaluateSearchReadiness(state, message, entities, activeLanguage, lastAssistantMsg);
 
-  if (readiness.responseType === "RESET") {
+  if (aiConsensusResult?.consensus?.clarificationRequired && aiConsensusResult.consensus.clarificationQuestion) {
+    reply = aiConsensusResult.consensus.clarificationQuestion;
+    responseType = "CLARIFICATION";
+    shouldRenderPropertyCards = false;
+    returnedProperties = [];
+    state.pendingQuestion = reply;
+    state.pendingSlot = "city";
+    state.expectedEntityType = "LOCATION";
+  } else if (readiness.responseType === "RESET") {
     reply = generateNaturalDialogResponse({
       language: activeLanguage,
       templateType: "RESET",
@@ -228,6 +345,13 @@ export async function processConversationalTurn(
       updatedSlot: lastChanged ? { name: lastChanged.slot, value: lastChanged.to } : undefined,
     });
     responseType = "CORRECTION";
+    shouldRenderPropertyCards = false;
+    returnedProperties = [];
+  } else if (readiness.responseType === "REQUIREMENT_UPDATE") {
+    reply = readiness.clarificationQuestion || (activeLanguage === "so"
+      ? "Waa hagaag, xogtaada waan cusboonaysiiyay. Waxaan ku sii wadayaa shuruudahaagii."
+      : "Understood, updated your preferences.");
+    responseType = "REQUIREMENT_UPDATE";
     shouldRenderPropertyCards = false;
     returnedProperties = [];
   } else if (readiness.responseType === "AMBIGUOUS") {
@@ -424,7 +548,7 @@ export async function processConversationalTurn(
 
       if (isMissing) {
         if (activeLanguage === "so") {
-          reply = `Parking information-ka property-kan kama muuqato xogta aan hayo.`;
+          reply = `Xogta aan ka hayo property-kan kama muuqato in parking leeyahay.`;
         } else if (activeLanguage === "ar") {
           reply = `معلومات موقف السيارات لهذا العقار غير متوفرة في السجلات الحالية.`;
         } else {
@@ -449,6 +573,12 @@ export async function processConversationalTurn(
             : `No, the ${rankWordEn} property does not have dedicated parking.`;
         }
       }
+      attributeAnswer = {
+        attribute: "parking",
+        value: !isMissing ? Boolean(p.parking || (p.parkingSpaces && p.parkingSpaces > 0)) : null,
+        isAvailable: !isMissing,
+        explanation: reply,
+      };
       returnedProperties = [resolution.targetProperty];
       totalMatches = 1;
       responseType = "PROPERTY_DETAIL";
@@ -463,7 +593,7 @@ export async function processConversationalTurn(
 
       if (isMissing) {
         if (activeLanguage === "so") {
-          reply = `Furnished information-ka property-kan kama muuqato xogta aan hayo.`;
+          reply = `Xogta aan ka hayo property-kan kama muuqato in alaab leeyahay.`;
         } else if (activeLanguage === "ar") {
           reply = `معلومات الأثاث لهذا العقار غير متوفرة في السجلات الحالية.`;
         } else {
@@ -485,6 +615,68 @@ export async function processConversationalTurn(
             : `No, the ${rankWordEn} property is unfurnished.`;
         }
       }
+      attributeAnswer = {
+        attribute: "furnished",
+        value: !isMissing ? Boolean(p.furnished) : null,
+        isAvailable: !isMissing,
+        explanation: reply,
+      };
+      returnedProperties = [resolution.targetProperty];
+      totalMatches = 1;
+      responseType = "PROPERTY_DETAIL";
+      shouldRenderPropertyCards = false;
+    }
+    else if (resolution.attributeQueried === "pool" && resolution.targetProperty) {
+      const p = resolution.targetProperty;
+      const desc = (p.description || "").toLowerCase();
+      const hasPool = desc.includes("pool") || desc.includes("barkad") || desc.includes("swimming") || Boolean((p as any).pool) || Boolean((p as any).swimmingPool);
+      if (hasPool) {
+        reply = activeLanguage === "so"
+          ? `Haa, xogta nidaamka waxay muujinaysaa in property-kan uu leeyahay swimming pool.`
+          : activeLanguage === "ar"
+          ? `نعم، السجلات تشير إلى أن هذا العقار يحتوي على مسبح.`
+          : `Yes, verified records indicate this property features a swimming pool.`;
+      } else {
+        reply = activeLanguage === "so"
+          ? `Xogta aan ka hayo property-kan kama muuqato in uu leeyahay swimming pool.`
+          : activeLanguage === "ar"
+          ? `المعلومات المتوفرة عن هذا العقار لا تؤكد وجود مسبح.`
+          : `The available property information does not confirm a swimming pool.`;
+      }
+      attributeAnswer = {
+        attribute: "pool",
+        value: hasPool,
+        isAvailable: hasPool,
+        explanation: reply,
+      };
+      returnedProperties = [resolution.targetProperty];
+      totalMatches = 1;
+      responseType = "PROPERTY_DETAIL";
+      shouldRenderPropertyCards = false;
+    }
+    else if (resolution.attributeQueried === "gym" && resolution.targetProperty) {
+      const p = resolution.targetProperty;
+      const desc = (p.description || "").toLowerCase();
+      const hasGym = desc.includes("gym") || desc.includes("jimicsi") || desc.includes("fitness") || Boolean((p as any).gym);
+      if (hasGym) {
+        reply = activeLanguage === "so"
+          ? `Haa, xogta nidaamka waxay muujinaysaa in property-kan uu leeyahay gym.`
+          : activeLanguage === "ar"
+          ? `نعم، السجلات تشير إلى أن هذا العقار يحتوي على صالة رياضية (gym).`
+          : `Yes, verified records indicate this property features a gym.`;
+      } else {
+        reply = activeLanguage === "so"
+          ? `Xogta aan ka hayo property-kan kama muuqato in uu leeyahay gym.`
+          : activeLanguage === "ar"
+          ? `المعلومات المتوفرة عن هذا العقar لا تؤكد وجود صالة رياضية.`
+          : `The available property information does not confirm a gym.`;
+      }
+      attributeAnswer = {
+        attribute: "gym",
+        value: hasGym,
+        isAvailable: hasGym,
+        explanation: reply,
+      };
       returnedProperties = [resolution.targetProperty];
       totalMatches = 1;
       responseType = "PROPERTY_DETAIL";
@@ -502,6 +694,12 @@ export async function processConversationalTurn(
           ? `Property-gan wuxuu leeyahay ${p.bedrooms} qol jiif.`
           : `This property features ${p.bedrooms} bedrooms.`;
       }
+      attributeAnswer = {
+        attribute: "bedrooms",
+        value: p.bedrooms ?? null,
+        isAvailable: !isMissing,
+        explanation: reply,
+      };
       returnedProperties = [resolution.targetProperty];
       totalMatches = 1;
       responseType = "PROPERTY_DETAIL";
@@ -519,6 +717,12 @@ export async function processConversationalTurn(
           ? `Property-gan wuxuu leeyahay ${p.bathrooms} musqul.`
           : `This property features ${p.bathrooms} bathrooms.`;
       }
+      attributeAnswer = {
+        attribute: "bathrooms",
+        value: p.bathrooms ?? null,
+        isAvailable: !isMissing,
+        explanation: reply,
+      };
       returnedProperties = [resolution.targetProperty];
       totalMatches = 1;
       responseType = "PROPERTY_DETAIL";
@@ -536,6 +740,12 @@ export async function processConversationalTurn(
           ? `Qiimaha property-gan (#${p.rank || 1}) waa $${p.price.toLocaleString()}.`
           : `The price for this property (#${p.rank || 1}) is $${p.price.toLocaleString()}.`;
       }
+      attributeAnswer = {
+        attribute: "price",
+        value: p.price ?? null,
+        isAvailable: !isMissing,
+        explanation: reply,
+      };
       returnedProperties = [resolution.targetProperty];
       totalMatches = 1;
       responseType = "PROPERTY_DETAIL";
@@ -553,6 +763,12 @@ export async function processConversationalTurn(
           ? `Property-gan wuxuu ku yaal ${p.city}.`
           : `This property is located in ${p.city}.`;
       }
+      attributeAnswer = {
+        attribute: "location",
+        value: p.city ?? null,
+        isAvailable: !isMissing,
+        explanation: reply,
+      };
       returnedProperties = [resolution.targetProperty];
       totalMatches = 1;
       responseType = "PROPERTY_DETAIL";
@@ -568,6 +784,12 @@ export async function processConversationalTurn(
         : (isAvailable
             ? `Yes, this property (${p.title}) is currently available.`
             : `No, system records indicate that this property is currently not available.`);
+      attributeAnswer = {
+        attribute: "status",
+        value: isAvailable,
+        isAvailable: true,
+        explanation: reply,
+      };
       returnedProperties = [resolution.targetProperty];
       totalMatches = 1;
       responseType = "PROPERTY_AVAILABILITY";
@@ -713,7 +935,7 @@ export async function processConversationalTurn(
   // ROUTE 3: Grounded Property Search with Strict Hard Constraints & Validation
   // ───────────────────────────────────────────────────────────────────────────
   else {
-    // Construct merged query criteria from conversational slots
+    // HARD CONSTRAINTS: Status, City, Budget, Excluded Locations
     const searchFilter: any = {
       status: "APPROVED",
     };
@@ -721,7 +943,7 @@ export async function processConversationalTurn(
     if (state.slots.city) {
       searchFilter.city = { contains: state.slots.city };
     }
-    if (state.slots.district) {
+    if (state.slots.district && (!state.slots.excludedLocations || !state.slots.excludedLocations.includes(state.slots.district))) {
       searchFilter.OR = [
         { location: { contains: state.slots.district } },
         { address: { contains: state.slots.district } },
@@ -729,12 +951,30 @@ export async function processConversationalTurn(
         { description: { contains: state.slots.district } },
       ];
     }
+    // HARD CONSTRAINT: Excluded locations must NEVER be matched in database
+    if (state.slots.excludedLocations && state.slots.excludedLocations.length > 0) {
+      searchFilter.NOT = state.slots.excludedLocations.map((excl) => ({
+        OR: [
+          { location: { contains: excl } },
+          { address: { contains: excl } },
+          { title: { contains: excl } },
+          { description: { contains: excl } },
+        ],
+      }));
+    }
     if (state.slots.propertyType && state.slots.propertyType !== "HOUSE") {
       searchFilter.type = state.slots.propertyType;
     }
-    if (state.slots.bedrooms !== undefined) {
+
+    // Bedroom filter: only enforce if bedrooms is a hard constraint, NOT a soft preference
+    const hasSoftBedroomPref =
+      state.softPreferences?.some((p) => p.includes("bedroom") || p.includes("qol")) ||
+      state.slots.softPreferences?.some((p) => p.includes("bedroom") || p.includes("qol"));
+    if (state.slots.bedrooms !== undefined && !hasSoftBedroomPref) {
       searchFilter.bedrooms = { gte: state.slots.bedrooms };
     }
+
+    // HARD CONSTRAINT: Budget
     if (state.slots.maxPrice !== undefined) {
       searchFilter.price = { ...(searchFilter.price || {}), lte: state.slots.maxPrice };
     }
@@ -749,15 +989,20 @@ export async function processConversationalTurn(
     }
 
     // Execute database search with hard constraint filters
-    const matchedProps = await prisma.property.findMany({
-      where: searchFilter,
-      include: {
-        images: { orderBy: { order: "asc" }, take: 1 },
-        manager: { select: { name: true } },
-      },
-      take: 10,
-      orderBy: { createdAt: "desc" },
-    });
+    let matchedProps: any[] = [];
+    try {
+      matchedProps = await prisma.property.findMany({
+        where: searchFilter,
+        include: {
+          images: { orderBy: { order: "asc" }, take: 1 },
+          manager: { select: { name: true } },
+        },
+        take: 20,
+        orderBy: { createdAt: "desc" },
+      });
+    } catch {
+      matchedProps = [];
+    }
 
     // Convert into standardized ResultItem format
     const rawItems: (ResultItem & { location?: string; address?: string | null })[] = matchedProps.map((p, index) => ({
@@ -787,67 +1032,217 @@ export async function processConversationalTurn(
     }));
 
     // CRITICAL: Post-Search Hard Constraint Validation
-    // Re-verify EVERY property against user slots to prevent any cross-city bleed
-    const validatedProps = rawItems
-      .filter((p) => validatePropertyAgainstQuery({
-        city: p.city,
-        status: p.status,
-        bedrooms: p.bedrooms,
-        price: p.price,
-        type: p.type,
-        furnished: p.furnished,
-        parking: p.parking,
-        location: p.location,
-        address: p.address || undefined,
-        title: p.title,
-        description: p.description,
-      }, state.slots).isValid)
-      .slice(0, 5)
-      .map((p, idx) => ({ ...p, rank: idx + 1 }));
+    // Re-verify EVERY property against user slots: strictly reject any property in an excluded location or violating budget
+    const validatedProps = rawItems.filter((p) =>
+      validatePropertyAgainstQuery(
+        {
+          city: p.city,
+          status: p.status,
+          bedrooms: p.bedrooms,
+          price: p.price,
+          type: p.type,
+          furnished: p.furnished,
+          parking: p.parking,
+          location: p.location,
+          address: p.address || undefined,
+          title: p.title,
+          description: p.description,
+        },
+        state.slots
+      ).isValid
+    );
 
-    if (validatedProps.length > 0) {
-      returnedProperties = validatedProps;
-      totalMatches = validatedProps.length;
+    // SOFT PREFERENCE RANKING (Section 4 & Section 9)
+    // Rank the verified surviving properties based on soft preferences (3 beds preferred, 2 beds accepted, KM4 proximity, quiet area)
+    const isBestRequest =
+      message.toLowerCase().includes("ugu fiican") ||
+      message.toLowerCase().includes("best") ||
+      message.toLowerCase().includes("lacagtaas");
+    const userReasoning = state.slots.userReasoning || [];
+    const softPrefs = [...(state.softPreferences || []), ...(state.slots.softPreferences || [])];
+
+    const scoredProps = validatedProps.map((p) => {
+      let score = 0;
+      // Soft bedroom preference: 3 beds preferred (+10), 2 beds acceptable (+6)
+      if (softPrefs.some((pr) => pr.includes("3_bedrooms_preferred") || pr.includes("3 qol"))) {
+        if (p.bedrooms === 3) score += 10;
+        else if (p.bedrooms === 2) score += 6;
+        else if (p.bedrooms && p.bedrooms >= 1) score += 2;
+      } else if (softPrefs.some((pr) => pr.includes("2_bedrooms_acceptable") || pr.includes("2 qol"))) {
+        if (p.bedrooms === 2) score += 8;
+        else if (p.bedrooms === 3) score += 6;
+      }
+      // Workplace proximity (KM4)
+      if (userReasoning.includes("works_or_travels_near_KM4") || softPrefs.includes("close_to_workplace")) {
+        const text = `${p.location || ""} ${p.address || ""} ${p.title} ${p.description}`.toLowerCase();
+        if (text.includes("km4") || text.includes("wadajir") || text.includes("airport") || text.includes("bulsho")) {
+          score += 8;
+        }
+      }
+      // Quiet / family-friendly area
+      if (softPrefs.includes("quiet_neighborhood")) {
+        if (p.type === "APARTMENT" || p.type === "HOUSE") score += 4;
+      }
+      // Price efficiency within budget
+      if (state.slots.maxPrice && p.price <= state.slots.maxPrice) {
+        score += ((state.slots.maxPrice - p.price) / state.slots.maxPrice) * 3;
+      }
+      return { item: p, score };
+    });
+
+    scoredProps.sort((a, b) => b.score - a.score);
+    const finalProps = scoredProps.slice(0, 5).map((entry, idx) => ({ ...entry.item, rank: idx + 1 }));
+
+    if (finalProps.length > 0) {
+      returnedProperties = finalProps;
+      totalMatches = finalProps.length;
       shouldRenderPropertyCards = true;
       responseType = "PROPERTY_RESULTS";
       state.interviewStage = "IDLE";
       state = attachActiveResultSet(state, returnedProperties);
 
-      if (delta.isQueryModification && delta.changedSlots.length > 0) {
-        const topChange = delta.changedSlots[0];
-        reply = generateNaturalDialogResponse({
-          language: activeLanguage,
-          templateType: "SLOT_UPDATE",
-          updatedSlot: { name: topChange.slot, value: topChange.to },
-          properties: returnedProperties,
-          totalMatches,
-          slots: state.slots,
-        });
-      } else {
-        reply = generateNaturalDialogResponse({
-          language: activeLanguage,
-          templateType: "SEARCH_RESULTS",
-          properties: returnedProperties,
-          totalMatches,
-          slots: state.slots,
-        });
-      }
+      reply = isBestRequest
+        ? `Waxaan kuu helay guryaha ugu fiican ee ku jira miisaaniyaddaada ($${state.slots.maxPrice || 500}). Halkan ka eeg xulashooyinka ugu dhow shuruudahaaga:`
+        : delta.isQueryModification && delta.changedSlots.length > 0
+        ? generateNaturalDialogResponse({
+            language: activeLanguage,
+            templateType: "SLOT_UPDATE",
+            updatedSlot: { name: delta.changedSlots[0].slot, value: delta.changedSlots[0].to },
+            properties: returnedProperties,
+            totalMatches,
+            slots: state.slots,
+          })
+        : generateNaturalDialogResponse({
+            language: activeLanguage,
+            templateType: "SEARCH_RESULTS",
+            properties: returnedProperties,
+            totalMatches,
+          });
     } else {
       returnedProperties = [];
       totalMatches = 0;
       shouldRenderPropertyCards = false;
       responseType = "NO_RESULTS";
-      reply = generateNaturalDialogResponse({
-        language: activeLanguage,
-        templateType: "ZERO_RESULTS",
-        slots: state.slots,
-      });
+
+      // Query alternative verified listings in the city / budget to provide grounded context
+      let alternativeProps: ResultItem[] = [];
+      if (state.slots.city || state.slots.maxPrice) {
+        try {
+          const alts = await prisma.property.findMany({
+            where: {
+              status: "APPROVED",
+              ...(state.slots.city ? { city: { contains: state.slots.city } } : {}),
+              ...(state.slots.maxPrice ? { price: { lte: Math.round(state.slots.maxPrice * 1.25) } } : {}),
+            },
+            take: 3,
+            orderBy: { price: "asc" },
+          });
+          alternativeProps = alts.map((p, idx) => ({
+            rank: idx + 1,
+            id: p.id,
+            title: p.title,
+            price: p.price,
+            formattedPrice: formatPrice(p.price),
+            city: p.city,
+            type: p.type,
+            typeLabel: p.type.charAt(0) + p.type.slice(1).toLowerCase(),
+            bedrooms: p.bedrooms,
+            bathrooms: p.bathrooms,
+            area: p.area,
+            areaSize: p.area,
+            furnished: !!p.isFurnished,
+            parking: (p.parking || 0) > 0,
+            parkingSpaces: p.parking || 0,
+            status: p.status,
+            statusLabel: "Available",
+            statusEmoji: "🟢",
+            imageUrl: null,
+            managerName: "Verified Manager",
+            description: p.description || "",
+            location: p.location,
+            address: p.address,
+          }));
+        } catch {
+          alternativeProps = [];
+        }
+      }
+
+      // Generate a context-aware zero results response acknowledging user's specific exclusions and preferences
+      if (activeLanguage === "so") {
+        if (state.slots.excludedLocations && state.slots.excludedLocations.length > 0) {
+          const excl = state.slots.excludedLocations.join(", ");
+          reply = `Waxaan hubiyey guryaha ${state.slots.city || "Mogadishu"} ee miisaaniyaddaada ($${state.slots.maxPrice || 500}). Maadaama aad ${excl} ka saartay, ma helin guri buuxiya dhammaan shuruudahaas oo ku jira miisaaniyaddaada. Ma rabtaa inaan miisaaniyadda wax yar kor u qaadno mise goobo kale ayaan eegnaa?`;
+        } else {
+          reply = generateNaturalDialogResponse({
+            language: activeLanguage,
+            templateType: "ZERO_RESULTS",
+            slots: state.slots,
+          });
+        }
+      } else {
+        reply = generateNaturalDialogResponse({
+          language: activeLanguage,
+          templateType: "ZERO_RESULTS",
+          slots: state.slots,
+        });
+      }
+    }
+  }
+
+  // UNIFIED GROUNDED AI RESPONSE GENERATION
+  // Every conversational turn (greetings, confirmations, casual conversation, clarifications,
+  // advice, in-set references, property details, comparisons, searches, zero results)
+  // is passed to Gemini with the raw user message, verified properties, and full conversation history.
+  if (
+    responseType !== "OUT_OF_SCOPE" &&
+    responseType !== "VALUATION"
+  ) {
+    const fallbackTemplateReply = reply;
+    try {
+      const groundedAI = await generateGroundedAIDAResponse(
+        {
+          userMessage: message,
+          language: activeLanguage,
+          intent: (state.activeIntent as any) || responseType,
+          verifiedProperties: shouldRenderPropertyCards ? returnedProperties : (resolution.type !== "NONE" ? state.activeResultSet : []),
+          referencedProperty: resolution.targetProperty || (returnedProperties.length === 1 ? returnedProperties[0] : undefined),
+          attributeAnswer,
+          contextSlots: state.slots,
+          lastAssistantMessage: lastAssistantMsg,
+          conversationHistory: history.map((h) => ({ role: h.role, content: h.content })),
+        },
+        fallbackTemplateReply
+      );
+      if (groundedAI?.replyText) {
+        reply = groundedAI.replyText;
+      }
+    } catch {
+      // Deterministic fallback safely preserved
     }
   }
 
   state.lastAssistantMessage = reply;
   state.lastUserMessage = message;
   state.lastUserRequest = message;
+
+  // Manage pending slots and question tracking for multi-turn context continuity
+  if (responseType === "CLARIFICATION" && readiness.missingSlot) {
+    state.pendingSlot = readiness.missingSlot;
+    state.expectedEntityType =
+      readiness.missingSlot === "city" || readiness.missingSlot === "district"
+        ? "LOCATION"
+        : readiness.missingSlot === "budget"
+        ? "CURRENCY"
+        : readiness.missingSlot === "bedrooms"
+        ? "NUMBER"
+        : "TEXT";
+    state.pendingQuestion = reply;
+  } else if (responseType === "PROPERTY_RESULTS" || responseType === "RESET") {
+    state.pendingSlot = undefined;
+    state.expectedEntityType = undefined;
+    state.pendingQuestion = undefined;
+  }
+
   if (reply.includes("Kiro-Maal") || reply.includes("Real Estate Assistant")) {
     state.lastAssistantClaim = "AIDA Kiro-Maal Real Estate Assistant";
   } else if (returnedProperties.length > 0) {

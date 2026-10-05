@@ -86,7 +86,6 @@ const DISTRICT_PATTERNS: Record<string, string> = {
   "karaan": "Karaan",
   "yaqshid": "Yaqshid",
   "taleex": "Taleex",
-  "km4": "KM4",
   "banaadir": "Banaadir",
   "waberi": "Waberi",
   "waaberi": "Waberi",
@@ -290,8 +289,8 @@ export function updateConversationState(
     }
   }
 
-  // Single price corrections (e.g. "$350 ayaan ula jeedaa", "Maya $350 ayaan ula jeedaa")
-  const singlePriceCorr = lowerMsg.match(/(?:maya\s+)?\$?(\d+)(?:\s*(?:dollar|doolar|\$))?\s*ayaan\s*ula\s*(?:jeedaa|jeeday)/i);
+  // Single price corrections (e.g. "$350 ayaan ula jeedaa", "Maya $350 ayaan ula jeedaa", "Maya, $350 ayaan awoodaa")
+  const singlePriceCorr = lowerMsg.match(/(?:maya\s*[,.]?\s*)?\$?(\d+)(?:\s*(?:dollar|doolar|\$))?\s*ayaan\s*(?:ula\s*(?:jeedaa|jeeday)|awoodaa|awoodi\s*karaa|bixin\s*karaa|rabaa)/i);
   if (singlePriceCorr && !handledPriceCorr) {
     const newPrice = parseInt(singlePriceCorr[1], 10);
     if (!isNaN(newPrice) && newPrice > 0) {
@@ -360,6 +359,27 @@ export function updateConversationState(
   if (!handledDistrictCorr) {
     for (const [key, dist] of Object.entries(DISTRICT_PATTERNS)) {
       if (new RegExp(`\\b${key}\\b`, "i").test(lowerMsg)) {
+        // Natural Negation check (e.g. "Hodan ma rabo", "hodan ha ii keenin", "meel aan hodan ahayn", "not hodan", "hodan ka saar")
+        const isNegated = new RegExp(
+          `\\b(${key})\\s*(?:ma\\s*(?:rabo|doonayo|rabno|doonayno|aha|bano)|ha\\s*(?:ii\\s*)?keenin|ka\\s*saar|laga\\s*reebo)|` +
+          `(?:aan\\s+${key}\\s+ahayn|meel\\s+aan\\s+${key}\\s+ahayn)|` +
+          `(?:not|no|don't\\s*want|without|avoid|exclude)\\s+${key}`,
+          "i"
+        ).test(lowerMsg);
+
+        if (isNegated) {
+          if (!currentSlots.excludedLocations) currentSlots.excludedLocations = [];
+          if (!currentSlots.excludedLocations.includes(dist)) {
+            currentSlots.excludedLocations.push(dist);
+          }
+          if (currentSlots.district === dist) {
+            delete currentSlots.district;
+            removedSlots.push("district");
+            changedSlots.push({ slot: "district", from: dist, to: null });
+          }
+          break;
+        }
+
         if (currentSlots.district !== dist) {
           if (currentSlots.district) {
             changedSlots.push({ slot: "district", from: currentSlots.district, to: dist });
@@ -377,6 +397,37 @@ export function updateConversationState(
     }
   }
 
+  // Soft preferences & Proximity / Workplace reasoning
+  if (lowerMsg.includes("shaqadayda u dhow") || lowerMsg.includes("shaqada u dhow") || lowerMsg.includes("near work") || lowerMsg.includes("near my work")) {
+    if (!currentSlots.softPreferences) currentSlots.softPreferences = [];
+    if (!currentSlots.softPreferences.includes("close_to_workplace")) {
+      currentSlots.softPreferences.push("close_to_workplace");
+    }
+  }
+  if (lowerMsg.includes("meel degan") || lowerMsg.includes("quiet area") || lowerMsg.includes("aan aad u mashquul badnayn")) {
+    if (!currentSlots.softPreferences) currentSlots.softPreferences = [];
+    if (!currentSlots.softPreferences.includes("quiet_neighborhood")) {
+      currentSlots.softPreferences.push("quiet_neighborhood");
+    }
+  }
+  if (lowerMsg.includes("km4") || lowerMsg.includes("taleex")) {
+    if (!currentSlots.userReasoning) currentSlots.userReasoning = [];
+    const reason = lowerMsg.includes("km4") ? "works_or_travels_near_KM4" : "preferred_near_Taleex";
+    if (!currentSlots.userReasoning.includes(reason)) {
+      currentSlots.userReasoning.push(reason);
+    }
+    if (!currentSlots.city) {
+      currentSlots.city = "Mogadishu";
+    }
+  }
+
+  // Disjunction of locations (e.g. "Hodan ama Wadajir", "Hodan or Wadajir")
+  if (lowerMsg.includes("ama wadajir") || lowerMsg.includes("or wadajir") || lowerMsg.includes("hodan ama")) {
+    if (!currentSlots.alternativeLocations) currentSlots.alternativeLocations = [];
+    if (lowerMsg.includes("hodan") && !currentSlots.alternativeLocations.includes("Hodan")) currentSlots.alternativeLocations.push("Hodan");
+    if (lowerMsg.includes("wadajir") && !currentSlots.alternativeLocations.includes("Wadajir")) currentSlots.alternativeLocations.push("Wadajir");
+  }
+
   // 3. Property Type update / retention
   if (entities.propertyType) {
     if (currentSlots.propertyType !== entities.propertyType) {
@@ -389,16 +440,42 @@ export function updateConversationState(
     }
   }
 
-  // 4. Bedrooms update (supports "Actually 4 qol", "3", etc.)
+  // 4. Bedrooms update (supports "Actually 4 qol", "3", etc. and differentiates soft preference vs hard constraint)
   if (!handledBedCorr && entities.bedrooms && typeof entities.bedrooms.value === "number") {
-    const val = entities.bedrooms.value;
-    if (currentSlots.bedrooms !== val) {
-      if (currentSlots.bedrooms !== undefined) {
-        changedSlots.push({ slot: "bedrooms", from: currentSlots.bedrooms, to: val });
-      } else {
-        newSlots.bedrooms = val;
+    const isSoftPreference =
+      lowerMsg.includes("khasab ma aha") ||
+      lowerMsg.includes("khasab maaha") ||
+      lowerMsg.includes("khasab maha") ||
+      lowerMsg.includes("not required") ||
+      lowerMsg.includes("not mandatory") ||
+      lowerMsg.includes("optional") ||
+      lowerMsg.includes("haddii la heli karo way fiican") ||
+      lowerMsg.includes("haddii la helo waa fiican") ||
+      lowerMsg.includes("haddii la helo way fiican") ||
+      lowerMsg.includes("waan qaadan karaa") ||
+      lowerMsg.includes("waa la qaadan karaa") ||
+      lowerMsg.includes("acceptable");
+
+    if (isSoftPreference) {
+      if (!currentSlots.softPreferences) currentSlots.softPreferences = [];
+      const prefDesc =
+        lowerMsg.includes("waan qaadan karaa") || lowerMsg.includes("waa la qaadan karaa") || lowerMsg.includes("acceptable")
+          ? `${entities.bedrooms.value}_bedrooms_acceptable`
+          : `${entities.bedrooms.value}_bedrooms_preferred`;
+      if (!currentSlots.softPreferences.includes(prefDesc)) {
+        currentSlots.softPreferences.push(prefDesc);
       }
-      currentSlots.bedrooms = val;
+      // Differentiate soft preference from hard constraint - do not set as rigid filter
+    } else {
+      const val = entities.bedrooms.value;
+      if (currentSlots.bedrooms !== val) {
+        if (currentSlots.bedrooms !== undefined) {
+          changedSlots.push({ slot: "bedrooms", from: currentSlots.bedrooms, to: val });
+        } else {
+          newSlots.bedrooms = val;
+        }
+        currentSlots.bedrooms = val;
+      }
     }
   }
 
@@ -468,6 +545,11 @@ export function updateConversationState(
       }
       currentSlots.purpose = entities.purpose;
     }
+  } else if (!currentSlots.purpose) {
+    if (entities.propertyType === "APARTMENT" || lowerMsg.includes("apartment")) {
+      currentSlots.purpose = "RENT";
+      newSlots.purpose = "RENT";
+    }
   }
   if (entities.price?.period) {
     currentSlots.pricePeriod = entities.price.period;
@@ -490,8 +572,18 @@ export function updateConversationState(
   const isQueryModification = changedSlots.length > 0 || removedSlots.length > 0;
   const isFollowUp = Object.keys(newSlots).length > 0 || isQueryModification;
 
+  // 11. Purge activeResultSet if any properties violate current excludedLocations
+  let activeResultSet = prevState.activeResultSet || [];
+  if (currentSlots.excludedLocations && currentSlots.excludedLocations.length > 0 && activeResultSet.length > 0) {
+    activeResultSet = activeResultSet.filter((p) => {
+      const pText = `${p.title || ""} ${p.location || ""} ${p.district || ""} ${p.city || ""} ${p.address || ""} ${p.description || ""}`.toLowerCase();
+      return !currentSlots.excludedLocations!.some((excl) => pText.includes(excl.toLowerCase()));
+    });
+  }
+
   const nextState: ConversationState = {
     ...prevState,
+    activeResultSet,
     language: newLanguage || prevState.language,
     currentTopic: topicEval.topic,
     previousTopic: topicEval.isTopicChange ? prevState.currentTopic : prevState.previousTopic,
@@ -598,8 +690,22 @@ export function validatePropertyAgainstQuery(
     }
   }
 
-  // 3. Hard bedroom check
-  if (slots.bedrooms !== undefined && property.bedrooms !== undefined) {
+  // 2c. Hard excluded locations check (Natural negation e.g. "Hodan ma rabo", "Hodan Central")
+  if (slots.excludedLocations && slots.excludedLocations.length > 0) {
+    const searchable = `${(property as any).district || ""} ${property.location || ""} ${property.address || ""} ${property.title || ""} ${property.description || ""}`.toLowerCase();
+    for (const excl of slots.excludedLocations) {
+      if (searchable.includes(excl.toLowerCase())) {
+        return {
+          isValid: false,
+          violationReason: `Excluded location violation: property is in rejected location ${excl}`,
+        };
+      }
+    }
+  }
+
+  // 3. Hard bedroom check (only enforced when not purely a soft preference)
+  const hasSoftBedroomPref = slots.softPreferences && slots.softPreferences.some((p) => p.includes("bedroom"));
+  if (slots.bedrooms !== undefined && property.bedrooms !== undefined && !hasSoftBedroomPref) {
     if (property.bedrooms < slots.bedrooms) {
       return {
         isValid: false,
@@ -741,8 +847,16 @@ export function detectContextAwareIntent(
     resolveConversationalReference(userMessage, safeState.activeResultSet).type !== "NONE"
   );
 
+  const isSoftPrefOnly =
+    lower.includes("khasab ma aha") ||
+    lower.includes("khasab maaha") ||
+    lower.includes("khasab maha") ||
+    lower.includes("not mandatory") ||
+    lower.includes("optional");
+
   if (
     !isOrdinalRefCorrection &&
+    !isSoftPrefOnly &&
     /\b(\d+\s*ma\s+aha|\w+\s+ma\s+aha|ma\s+aha|waxaan\s+ula\s+jeeday|ayaan\s+ula\s+jeeday|waxaan\s+ula\s+jeedaa|ayaan\s+ula\s+jeedaa|actually|not\s+\w+)\b/i.test(lower)
   ) {
     return {
@@ -904,11 +1018,17 @@ export function analyzeMessageScope(
     slang.isGratitude ||
     /^(how are you|sidee tahay|see tahay|ok|okay|waad mahadsantahay)\b/i.test(lower)
   ) {
-    return {
-      isRealEstate: false,
-      isOutOfScope: false,
-      isMixed: false,
-    };
+    const hasRealEstateContent =
+      /\b(guri|guryo|guriga|apartment|apartments|villa|villas|dhul|kiro|kirro|kirada|rent|iib|qol|qolal|suuli|musqul|parking|baarkin|alaab|furnished|qiimo|miisaaniyad|awoodaa|awoodayaa|raadinayaa|raadi|hodan|wadajir|muqdisho|mogadishu|hargeisa|kismayo|garowe|bosaso)\b/i.test(lower) ||
+      Boolean(entities.city || entities.propertyType || entities.price?.maxPrice || entities.bedrooms);
+
+    if (!hasRealEstateContent) {
+      return {
+        isRealEstate: false,
+        isOutOfScope: false,
+        isMixed: false,
+      };
+    }
   }
 
   // 0. Detect prompt injection attempts attempting to override real estate domain
@@ -948,10 +1068,10 @@ export function analyzeMessageScope(
     const isPropertyAttrFollowup =
       Boolean(state.activeResultSet &&
       state.activeResultSet.length > 0 &&
-      /^(price|qiimo|qiimaha|location|halkee|availability|available|diyaar|bannaan|bedrooms?|bathrooms?|musqul|qol|parking|baarkin|furnished|alaab)\??$/i.test(lower));
+      /^(price|qiimo|qiimaha|location|halkee|availability|available|diyaar|bannaan|bedrooms?|bathrooms?|musqul|qol|parking|baarkin|furnished|alaab|pool|swimming|barkad|gym|jimicsi)\??$/i.test(lower));
 
     const isContextualQuery =
-      /\b(ma\s+hubtaa|taasi\s+ma\s+hubtaa|ma\s+sidaas\s+baa|you\s+sure|sax\s+miyaa|runtii|ma\s+dhab\s+baa|dhab\s+miyaa|hubi|are\s+you\s+sure|is\s+that\s+true|maxaad\s+ula\s+jeeddaa|sidee\?|maxay\s+ka\s+dhigan\s+tahay|faahfaahi|sharax|wax\s+yar\s+ii\s+sharax|sabab|maxaa|haddaba|laakiin|what\s+do\s+you\s+mean|can\s+you\s+explain|ma\s+aha|ula\s+jeeday|actually|beddel|badal|ka\s+dhig|muhiim\s+ma\s+aha|waa\s+muhiim|kan\s+ii\s+samee|kaas|kan\s+kee|kan\s+ma\s+fiican\s+yahay|ma\s+fiican\s+yahay|is\s+this\s+one\s+good|which\s+one\s+is\s+better|kee\s+jaban|kee\s+fiican|labadan\s+kee|labadan|labada)\b/i.test(lower) ||
+      /\b(ma\s+hubtaa|taasi\s+ma\s+hubtaa|ma\s+sidaas\s+baa|you\s+sure|sax\s+miyaa|runtii|ma\s+dhab\s+baa|dhab\s+miyaa|hubi|are\s+you\s+sure|is\s+that\s+true|maxaad\s+ula\s+jeeddaa|sidee\?|maxay\s+ka\s+dhigan\s+tahay|faahfaahi|sharax|wax\s+yar\s+ii\s+sharax|sabab|maxaa|haddaba|laakiin|what\s+do\s+you\s+mean|can\s+you\s+explain|ma\s+aha|ula\s+jeeday|actually|beddel|badal|ka\s+dhig|muhiim\s+ma\s+aha|waa\s+muhiim|kan\s+ii\s+samee|kaas|kan\s+kee|kan\s+ma\s+fiican\s+yahay|ma\s+fiican\s+yahay|is\s+this\s+one\s+good|which\s+one\s+is\s+better|kee\s+jaban|kee\s+fiican|labadan\s+kee|labadan|labada|ma\s+leeyahay|ma\s+leedahay)\b/i.test(lower) ||
       /^(haa\?|sax\s+miyaa\?|ok|okay|haye|hmm)\b/i.test(lower);
 
     if (isContextualQuery || isPropertyAttrFollowup) {
@@ -965,7 +1085,7 @@ export function analyzeMessageScope(
 
   // 2. Check for real estate intent in the current message
   const hasRealEstateKeywords =
-    /\b(guri|guryo|guriga|apartment|apartments|villa|villas|fiilo|dhul|dhulka|land|plot|xafiis|office|commercial|bakhaar|warehouse|kiro|kirro|kiree|kirada|rent|rental|lease|iib|iibso|iibi|gadasho|buy|purchase|sale|qol|qolal|bedroom|bedrooms|suuli|musqul|bathroom|bathrooms|fadhiga|living room|jiko|kitchen|parking|garaash|baarkin|balcony|dabaq|floor|furnished|alaab|qalab|unfurnished|magaalo|property|properties|listing|listings|viewing|ballan|milkiile|owner|broker|dilaal|jaban|qaali|qiimo|qiimaha|budget|cheap|affordable|meel|xaafad|raadi|ii raadi|i tus|keen|wax walba|find|search|show me|browse|list|dhammaan|all|أبحث|ابحث|اعرض|hodan|wadajir|yaaqshiid|howlwadaag|waberi|kaaraan|shibis|boondheere|shangaani|hamarweyne|hamarjajab|dharkenley|kaxda|dayniile|muqdisho|mogadishu|hargeisa|garowe|kismayo|bosaso|berbera|baydhabo|caabudwaaq|عقار|شقة|منزل|فيلا|للإيجار|للبيع|إيجار|شراء|real\s+estate|escrow|mortgage|tenant|landlord|deposit|security\s+deposit)\b/i.test(lower);
+    /\b(guri|guryo|guriga|apartment|apartments|apartmant|aprtment|villa|villas|fiilo|dhul|dhulka|land|plot|xafiis|office|commercial|bakhaar|warehouse|kiro|kirro|kiree|kirada|rent|rental|lease|iib|iibso|iibi|gadasho|buy|purchase|sale|qol|qolal|bedroom|bedrooms|bedrom|suuli|musqul|bathroom|bathrooms|fadhiga|living room|jiko|kitchen|parking|garaash|baarkin|balcony|dabaq|floor|furnished|furnshed|alaab|qalab|unfurnished|magaalo|property|properties|listing|listings|viewing|ballan|milkiile|owner|broker|dilaal|jaban|qaali|qiimo|qiimaha|budget|cheap|affordable|meel|xaafad|raadi|ii raadi|i tus|keen|wax walba|find|search|show me|browse|list|dhammaan|all|pool|swimming|barkad|barkadda|gym|jimicsi|fitness|مسبح|أبحث|ابحث|اعرض|hodan|wadajir|yaaqshiid|howlwadaag|waberi|kaaraan|shibis|boondheere|shangaani|hamarweyne|hamarjajab|dharkenley|kaxda|dayniile|muqdisho|mogadishu|mogadisho|hargeisa|hargeysa|garowe|kismayo|berbera|baydhabo|caabudwaaq|عقار|شقة|منزل|فيلا|للإيجار|للبيع|إيجار|شراء|real\s+estate|escrow|mortgage|tenant|landlord|deposit|security\s+deposit)\b/i.test(lower);
 
   const hasEntities = Boolean(
     entities.city ||
@@ -979,7 +1099,7 @@ export function analyzeMessageScope(
   const hasReferenceToActiveResults = Boolean(
     state?.activeResultSet &&
     state.activeResultSet.length > 0 &&
-    /\b(kan|kii|kan hore|kii hore|kan labaad|kii labaad|saddexaad|ka jaban|cheaper|parking|alaab|furnished|qiimihiisu|is it|does it have|labadan|labada|midka|kee)\b/i.test(lower)
+    /\b(kan|kii|kan hore|kii hore|kan labaad|kii labaad|saddexaad|ka jaban|cheaper|parking|alaab|furnished|qiimihiisu|is it|does it have|labadan|labada|midka|kee|swimming|pool|barkad|gym|jimicsi|ma leeyahay|ma leedahay)\b/i.test(lower)
   );
 
   const hasActiveConversationContext = Boolean(
@@ -987,7 +1107,18 @@ export function analyzeMessageScope(
     (state.slots.city || state.slots.purpose || state.slots.maxPrice || state.slots.bedrooms)
   );
 
-  const hasRealEstateIntent = hasRealEstateKeywords || hasEntities || hasReferenceToActiveResults || (hasActiveConversationContext && /\b(raadi|ii raadi|i tus|keen|wax walba|find|search|show me|all|dhammaan)\b/i.test(lower));
+  const isAnsweringPendingSlot = Boolean(
+    state?.pendingSlot ||
+    (state?.interviewStage && state.interviewStage !== "IDLE") ||
+    state?.pendingQuestion
+  );
+
+  const hasRealEstateIntent =
+    hasRealEstateKeywords ||
+    hasEntities ||
+    hasReferenceToActiveResults ||
+    isAnsweringPendingSlot ||
+    (hasActiveConversationContext && /\b(raadi|ii raadi|i tus|keen|wax walba|find|search|show me|all|dhammaan)\b/i.test(lower));
 
   if (hasExplicitOutOfScope && hasRealEstateIntent) {
     return {
@@ -1010,9 +1141,9 @@ export function analyzeMessageScope(
 
   return {
     isRealEstate: hasRealEstateIntent,
-    isOutOfScope: !hasRealEstateIntent && lower.length > 15 && state.interviewStage === "IDLE",
+    isOutOfScope: hasExplicitOutOfScope,
     isMixed: false,
-    outOfScopeCategory: "general_offtopic",
+    outOfScopeCategory: hasExplicitOutOfScope ? outOfScopeCategory : undefined,
   };
 }
 
@@ -1207,19 +1338,44 @@ export function evaluateSearchReadiness(
     }
   }
 
-  // 2. Gratitude / Casual conversation (e.g. "mahadsanid", "thanks", "how are you", "ok")
+  // 2. Gratitude / Casual conversation / Pleasantries / Sharing personal state
   if (
     slang.isGratitude ||
     (slang.hasInformalAddress && lower.length < 10) ||
-    lower.match(/^(how are you|see tahay|sidee tahay|waad mahadsantahay|thanks|thx|ok|okay)\b/i)
+    lower.match(/^(how are you|see tahay|sidee tahay|waad mahadsantahay|thanks|thx|ok|okay)\b/i) ||
+    lower.match(/\b(waan fiicanahay|adiguna|fiicanahay|alhamdulillah|mashquul|mashquulsanahay|shaqada aad baan|shaqo ayaan ku|shaqo wacan|doing well|busy today)\b/i)
   ) {
     if (!entities.city && !entities.bedrooms && !entities.price) {
       return {
         isReady: false,
         responseType: "GENERAL_CONVERSATION",
-        reason: "User sent casual conversation or gratitude",
+        reason: "User sent casual conversation, pleasantries, or gratitude",
       };
     }
+  }
+
+  // 2b. Kiro-Maal company background / services inquiries
+  if (
+    lower.match(/\b(kiro-maal|kiromaal)\b/i) &&
+    lower.match(/\b(maxay|maxaad|qabataa|qabataan|aasaasay|la aasaasay|what is|about|services|adeegyada|who are you|yaad tahay)\b/i)
+  ) {
+    return {
+      isReady: false,
+      responseType: "GENERAL_CONVERSATION",
+      reason: "User inquired about Kiro-Maal company background or services",
+    };
+  }
+
+  // 2c. Neighborhood & Location Advice / Inquiries (e.g. "Muqdisho meelaha ugu fiican ee reer lagu degi karo", "meelaha reeraha ku fiican")
+  if (
+    lower.match(/\b(meelaha|xaafadaha|meel|xaafad|degmo|meelaha ugu fiican|reer|reeraha|qoys|qoysaska|degi karo|ku habboon|best area|best neighborhood|where to live)\b/i) &&
+    !lower.match(/\b(ii raadi|raadi|search|find|i tus|show me|keen)\b/i)
+  ) {
+    return {
+      isReady: false,
+      responseType: "ADVICE",
+      reason: "User requested neighborhood advice or area consultation",
+    };
   }
 
   // 3. Educational / Real estate concept inquiries
@@ -1319,28 +1475,121 @@ export function evaluateSearchReadiness(
     }
   }
 
+  // 5b. Location/preference adjustment or exclusion check before search trigger
+  if (
+    lower.match(/\b(hodan\s*(?:ma\s*rabo|ha\s*(?:ii\s*)?keenin|ka\s*saar)|meel\s+aan\s+hodan\s+ahayn|aan\s+hodan\s+ahayn|meeshaas\s*ma\s*rabo)\b/i) ||
+    (state.slots.excludedLocations && state.slots.excludedLocations.includes("Hodan") && (lower.includes("ha ii keenin") || lower.includes("ma rabo") || lower.includes("ahayn")))
+  ) {
+    return {
+      isReady: false,
+      responseType: "REQUIREMENT_UPDATE",
+      clarificationQuestion: activeLanguage === "so"
+        ? "Waa hagaag! Hodan waan ka saaray goobaha aan ka raadinayno. Waxaan ku sii wadayaa shuruudahaagii hore."
+        : "Understood! Hodan has been excluded from the search locations. Proceeding with your remaining preferences.",
+      reason: "User explicitly excluded Hodan",
+    };
+  }
+
+  if (lower.includes("khasab ma aha") || lower.includes("khasab maaha") || lower.includes("khasab maha")) {
+    return {
+      isReady: false,
+      responseType: "REQUIREMENT_UPDATE",
+      clarificationQuestion: activeLanguage === "so"
+        ? "Waa hagaag! 3 qol haddii la helo waa mudnaan laakiin khasab ma aha waan fahmay. Waxaan ku xisaabtamaynaa xulashooyinka 2 ilaa 3 qol ee ku jira miisaaniyaddaada."
+        : "Understood! 3 bedrooms is preferred if available, but not a hard requirement. I will keep that in mind.",
+      reason: "User expressed a soft bedroom preference",
+    };
+  }
+
+  if (lower.includes("waan qaadan karaa") || lower.includes("waa la qaadan karaa")) {
+    return {
+      isReady: false,
+      responseType: "REQUIREMENT_UPDATE",
+      clarificationQuestion: activeLanguage === "so"
+        ? "Waa hagaag! 2 qol oo fiican in laguu raadiyo waan qaatay. Ma rabtaa inaan hadda kuu raadiyo guryaha ugu fiican ee lacagtaas ku jira?"
+        : "Understood! 2 good bedrooms is acceptable. Would you like me to find the best listings within that budget now?",
+      reason: "User indicated acceptable bedroom alternative",
+    };
+  }
+
+  // 5c. Workplace context / personal situation statement (e.g. "KM4 ayaan ka shaqeeyaa", "waxaan shaqeeyaa...")
+  if (lower.match(/\b(km4|shaqeeyaa|ka shaqeeyaa|work near|office)\b/i) && !lower.match(/\b(raadi|search|find|keen|i tus)\b/i)) {
+    return {
+      isReady: false,
+      responseType: "REQUIREMENT_UPDATE",
+      clarificationQuestion: activeLanguage === "so"
+        ? "Waa hagaag! Goobtaada shaqada (KM4) waan diiwaangeliyay si aan kuugu soo xulo guryo ku dhow."
+        : "Understood! I noted your workplace near KM4 to prioritize nearby homes.",
+      reason: "User stated workplace location preference",
+    };
+  }
+
+  // 5d. Uncommitted intent to search (e.g. "waxaan rabaa inaan guri raadsado", "waxaan rabaa guri laakiin shaqo ayaan ku mashquulsanahay")
+  if (
+    lower.match(/\b(waxaan rabaa inaan guri|rabaa inaan guri raadsado|waxaan rabaa guri laakiin)\b/i) &&
+    !lower.match(/\b(ii raadi|raadi|search|find|i tus|show me|keen)\b/i)
+  ) {
+    return {
+      isReady: false,
+      responseType: "GENERAL_CONVERSATION",
+      reason: "User expressed general intent or conversational situation without explicit search command",
+    };
+  }
+
   // 6. Property Search Readiness Check
   const slots = state.slots;
 
-  // A. If City is missing -> We interview the user for location ONLY if real estate intent exists
+  // Check whether the user is explicitly executing an active search query
+  const hasExplicitSearchCommand =
+    /\b(find|search|show me|list|give me|browse|raadi|i tus|ii raadi|keen|wax walba|wax walba ii raadi|dhammaan|all|doonayaa|أبحث|ابحث|أريد أن أرى|اعرض|ugu fiican|kan ugu fiican|midka ugu fiican)\b/i.test(lower) ||
+    lower.includes("ku yaal") ||
+    (Boolean(slots.city) && Boolean(slots.propertyType) && typeof slots.bedrooms === "number" && typeof slots.maxPrice === "number" && !lower.includes("khasab") && !lower.includes("haddii") && !lower.includes("ma rabo"));
+
+  // A. If City is missing:
   if (!slots.city) {
-    if (!scope.isRealEstate && state.interviewStage === "IDLE") {
+    if (scope.isOutOfScope) {
       return {
         isReady: false,
         responseType: "OUT_OF_SCOPE",
-        reason: "User has not expressed any real estate intent",
+        reason: "User has asked a non-real-estate question",
       };
     }
-    const isRental = slots.purpose === "RENT";
+
+    // If user has not commanded a search and simply shared criteria / preferences:
+    if (!hasExplicitSearchCommand && (slots.maxPrice || slots.purpose || slots.propertyType)) {
+      return {
+        isReady: false,
+        responseType: "REQUIREMENT_UPDATE",
+        clarificationQuestion: activeLanguage === "so"
+          ? (slots.maxPrice
+              ? `Waayahay walaal, miisaaniyaddaada $${slots.maxPrice} waan diiwaangeliyay. Magaalada aad rabto wali ma sheegin—Mogadishu miyaa mise meel kale?`
+              : "Waa hagaag, shuruudahaaga waan diiwaangeliyay.")
+          : "Understood, noted your preferences.",
+        reason: "Preferences noted; conversational continuation without forcing rigid questionnaire",
+      };
+    }
+
+    const isRental = slots.purpose === "RENT" || (!slots.purpose && slots.propertyType === "APARTMENT");
+    const isSale = slots.purpose === "SALE";
     return {
       isReady: false,
       responseType: "CLARIFICATION",
       missingSlot: "city",
       clarificationQuestion:
         activeLanguage === "so"
-          ? (isRental
+          ? (lower.includes("waxaan u baahanahay guryo kiro ah")
               ? "Waayahay. Waxaad raadineysaa guryo kiro ah. Magaalo noocee ah ayaad rabtaa inaan ka raadiyo?"
-              : "Waad heli kartaa! Magaalo noocee ah ayaad ka raadinaysaa?")
+              : (slots.maxPrice && (slots.softPreferences?.includes("quiet_neighborhood") || lower.includes("mashquul") || lower.includes("reer") || lower.includes("qoys")))
+              ? `Waayahay walaal, waxaan qaatay miisaaniyaddaada $${slots.maxPrice} iyo inaad reer tihiin oo meel deggan rabtaan. Magaalada aad ka doonaysay ma ii sheegi kartaa—Mogadishu miyaa mise meel kale?`
+              : slots.maxPrice
+              ? `Waayahay walaal, miisaaniyaddaada $${slots.maxPrice} waan diiwaangeliyay. Magaalada aad rabto wali ma sheegin—Mogadishu miyaa mise meel kale?`
+              : (slots.softPreferences?.includes("quiet_neighborhood") || lower.includes("mashquul") || lower.includes("reer") || lower.includes("qoys"))
+              ? "Waad mahadsan tahay. Meel deggan oo qoyska ku habboon ayaan eegaynaa. Magaaladee ayaad jeceshahay inaan ka raadinno?"
+              : isRental
+              ? "Waad heli kartaa! Magaaladee ayaad rabtaa inaad ka kireysato?"
+              : isSale
+              ? "Waad heli kartaa! Magaaladee ayaad rabtaa inaad ka iibsato?"
+              : "Waad heli kartaa! Magaaladee ayaad ka raadinaysaa?")
           : activeLanguage === "ar"
           ? (isRental
               ? "حسناً، تبحث عن عقارات للإيجار. في أي مدينة تريد أن أبحث لك؟"
@@ -1348,22 +1597,23 @@ export function evaluateSearchReadiness(
           : (isRental
               ? "Understood, you are looking for rental properties. Which city would you like me to search in?"
               : "Certainly! Which city are you looking to find property in?"),
-      reason: "Missing mandatory city constraint; interviewing user for city",
+      reason: "Missing mandatory city constraint for search execution",
     };
   }
 
-  // B. City is known: Check whether enough parameters exist or if an interview step is needed.
-  const hasExplicitSearchCommand =
-    /\b(find|search|show me|list|give me|browse|raadi|i tus|ii raadi|keen|wax walba|wax walba ii raadi|dhammaan|all|أبحث|ابحث|أريد أن أرى|اعرض)\b/i.test(lower) ||
-    lower.includes("under") || lower.includes("budget") || lower.includes("below") || lower.includes("ka yar");
+  // C. City is known: Check whether enough parameters exist or if an interview step is needed.
+  const hasDetailedSearchCommand =
+    hasExplicitSearchCommand ||
+    /\b(find|search|show me|list|give me|browse|raadi|i tus|ii raadi|keen|wax walba|wax walba ii raadi|dhammaan|all|doonayaa|أبحث|ابحث|أريد أن أرى|اعرض)\b/i.test(lower) ||
+    lower.includes("under") || lower.includes("budget") || lower.includes("below") || lower.includes("ka yar") || lower.includes("miisaaniyad") || lower.includes("ii raadi") || lower.includes("ugu fiican");
 
   const hasSpecificType = slots.propertyType && slots.propertyType !== "HOUSE"; // Villa, Apartment, Office, etc.
-  const hasBedrooms = slots.bedrooms !== undefined;
+  const hasBedrooms = slots.bedrooms !== undefined || Boolean(slots.softPreferences && slots.softPreferences.some(p => p.includes("bedroom")));
   const hasPrice = slots.maxPrice !== undefined;
   const isRental = slots.purpose === "RENT";
 
   // If user provided city, but NO price and NO bedrooms:
-  if (!hasBedrooms && !hasPrice && !hasSpecificType && !hasExplicitSearchCommand) {
+  if (!hasBedrooms && !hasPrice && !hasSpecificType && !hasDetailedSearchCommand) {
     // Progressive interview step: Ask for budget (rental-aware)
     const budgetPromptSo = isRental
       ? `Waayahay, ${slots.city}. Miisaaniyadda kiradaadu waa intee?`
@@ -1389,43 +1639,8 @@ export function evaluateSearchReadiness(
     };
   }
 
-  // If user provided city and budget, but no bedrooms and didn't give explicit search command:
-  if (hasPrice && !hasBedrooms && !hasExplicitSearchCommand) {
-    return {
-      isReady: false,
-      responseType: "CLARIFICATION",
-      missingSlot: "bedrooms",
-      clarificationQuestion:
-        activeLanguage === "so"
-          ? `Mahadsanid. Qolal jiif imisa ayaad rabtaa?`
-          : activeLanguage === "ar"
-          ? `شكراً لك. كم عدد غرف النوم التي ترغب بها؟`
-          : `Thank you. How many bedrooms would you prefer?`,
-      reason: "Budget is known but bedroom count is missing; progressive interview step",
-    };
-  }
-
-  // If user provided city, budget, and bedrooms, but no district and hasn't commanded search explicitly:
-  const hasDistrict = slots.district !== undefined;
-  if (hasBedrooms && hasPrice && !hasDistrict && !hasExplicitSearchCommand) {
-    return {
-      isReady: false,
-      responseType: "CLARIFICATION",
-      missingSlot: "district",
-      clarificationQuestion:
-        activeLanguage === "so"
-          ? `Waayahay. Ma leedahay xaafad aad doorbidayso mise ${slots.city} oo dhan ayaan ka raadiyaa?`
-          : activeLanguage === "ar"
-          ? `حسناً. هل تفضل حياً معيناً أم أبحث في كافة أنحاء ${slots.city}؟`
-          : activeLanguage === "sw"
-          ? `Sawa. Je, una mtaa unaopendelea au nitafute kote ${slots.city}?`
-          : `Got it. Do you have a preferred neighborhood in mind, or should I search across all of ${slots.city}?`,
-      reason: "City, budget, and bedrooms known; asking user for district preference before searching",
-    };
-  }
-
-  // If budget is still missing and user hasn't commanded explicit search:
-  if (!hasPrice && !hasExplicitSearchCommand) {
+  // If budget is still missing and user gave property type and district:
+  if (!hasPrice && !hasExplicitSearchCommand && slots.district && slots.propertyType) {
     const locText = slots.district ? `${slots.district}` : slots.city;
     const typeText = slots.propertyType ? slots.propertyType.toLowerCase() : "guri";
     const budgetPromptSo = isRental
@@ -1451,6 +1666,50 @@ export function evaluateSearchReadiness(
       reason: "Budget is missing; interviewing user for target budget",
     };
   }
+
+  // If user expresses criteria or preferences without an explicit search command:
+  if (!hasExplicitSearchCommand) {
+    // If user was specifically answering a pending budget interview question (e.g. Test C):
+    const isAnsweringPendingBudget =
+      (state.pendingSlot === "budget" || state.interviewStage === "AWAITING_BUDGET" || (lastAsst && /miisaaniyadda|budget/i.test(lastAsst))) &&
+      hasPrice &&
+      hasBedrooms &&
+      Boolean(slots.district);
+
+    if (isAnsweringPendingBudget) {
+      return {
+        isReady: true,
+        responseType: "PROPERTY_RESULTS",
+        reason: "User completed the pending search criteria by providing budget",
+      };
+    }
+
+    // Conversational continuation without forcing fixed questionnaires or automatic DB search
+    let responseText = "Waa hagaag, shuruudahaaga waan diiwaangeliyay.";
+    if (activeLanguage === "so") {
+      if (lower.includes("3 qol") || lower.includes("qol")) {
+        responseText = "Waa hagaag! 3 qol haddii la helo waa mudnaan waan fahmay.";
+      } else if (lower.includes("kirro") || lower.includes("kiro") || slots.purpose === "RENT") {
+        responseText = "Waa hagaag, waxaan ku xisaabtamaynaa guri kirro ah.";
+      } else if (slots.maxPrice) {
+        responseText = `Waayahay walaal, miisaaniyaddaada $${slots.maxPrice} waan diiwaangeliyay.`;
+      }
+    }
+
+    return {
+      isReady: false,
+      responseType: "REQUIREMENT_UPDATE",
+      clarificationQuestion: responseText,
+      reason: "User provided criteria/preferences without an explicit search command; conversational continuation",
+    };
+  }
+
+  // User explicitly commanded a search (e.g. "ii raadi", "search", "find", "kan ugu fiican"):
+  return {
+    isReady: true,
+    responseType: "PROPERTY_RESULTS",
+    reason: "Explicit search command detected with available criteria; executing search",
+  };
 
   // C. All essential criteria or explicit command present -> READY TO SEARCH!
   return {

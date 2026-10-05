@@ -44,7 +44,7 @@ export interface ExtractedEntities {
 // 1. City Mappings (Standardized to actual database values)
 const CITY_DICTIONARY: Record<string, string[]> = {
   Mogadishu: [
-    "mogadishu", "muqdisho", "muqdisho ah", "muqdishu", "hamar", "xamar",
+    "mogadishu", "mogadisho", "muqdisho", "muqdisho ah", "muqdishu", "hamar", "xamar",
     "banaadir", "banadir", "magaalada muqdisho", "مقديشو", "بندر"
   ],
   Hargeisa: [
@@ -295,8 +295,8 @@ export function extractEntities(query: string): ExtractedEntities {
   // -------------------------------------------------------------
   // E. PRICE & FINANCIAL EXTRACTION
   // -------------------------------------------------------------
-  // 1. Between range
-  const betweenRangeRegex = /(?:between|ilaa|بين)\s*\$?(\d+(?:,\d+)?)\s*(k|kun|ألف|الف|m|million|malyan|مليون)?\s*(?:and|iyo|ilaa|و|-)\s*\$?(\d+(?:,\d+)?)\s*(k|kun|ألف|الف|m|million|malyan|مليون)?/iu;
+  // 1. Between range (e.g. "400 ilaa 500", "between 400 and 500", "400-500")
+  const betweenRangeRegex = /(?:between|ilaa|qiyaastii|بين)?\s*\$?(\d+(?:,\d+)?)\s*(k|kun|ألف|الف|m|million|malyan|مليون)?\s*(?:and|iyo|ilaa|to|و|-)\s*\$?(\d+(?:,\d+)?)\s*(k|kun|ألف|الف|m|million|malyan|مليون)?/iu;
   const betweenMatch = text.match(betweenRangeRegex);
 
   if (betweenMatch) {
@@ -335,7 +335,7 @@ export function extractEntities(query: string): ExtractedEntities {
   // 3. Less than / Under / Maximum
   if (!result.price) {
     const ltePrefixRegex = /(?:under|below|less than|max|up to|cheaper than|أقل من|دون|تحت|حتى)\s*\$?(\d+(?:,\d+)?)\s*(k|kun|ألف|الف|m|million|malyan|مليون)?/iu;
-    const lteSuffixRegex = /\$?(\d+(?:,\d+)?)\s*(k|kun|ألف|الف|m|million|malyan|مليون)?\s*(?:oo\s+(?:dollar|doolar)\s+)?(?:ka yar|aan ka badnayn|ugu badnaan)/iu;
+    const lteSuffixRegex = /\$?(\d+(?:,\d+)?)\s*(k|kun|ألف|الف|m|million|malyan|مليون)?\s*(?:oo\s+(?:dollar|doolar)\s+)?(?:ka yar|aan ka badnayn|ugu badnaan|ayaan awoodaa|ayaan awoodayaa|ayaan haystaa|ka badan ma awoodo|ka badan ma hayo|ka badan ma bixin karo)/iu;
 
     const prefixMatch = text.match(ltePrefixRegex);
     const suffixMatch = text.match(lteSuffixRegex);
@@ -394,7 +394,7 @@ export function extractEntities(query: string): ExtractedEntities {
     }
   }
 
-  // 5. Standalone price & conversational budget fallback (e.g. "budget is 80k", "500 dollar bishii", "80k", "$80,000")
+  // 5. Standalone price & conversational budget fallback (e.g. "budget is 80k", "500 dollar bishii", "80k", "$80,000", "500")
   if (!result.price) {
     // 5a. Rental period price pattern (e.g. "500 dollar bishii", "$500 bishii", "500/month", "600 sanadkii")
     const periodRentalPricePattern = /(?:\$|usd)?\s*(\d+(?:,\d+)?)\s*(?:dollar|doolar|\$|usd)?\s*(bishii|bishiiba|bille|per month|\/month|monthly|sanadkii|per year|\/year|yearly|todobaadkii|weekly|شهريا|شهري|سنويا|سنوي)\b/iu;
@@ -424,14 +424,16 @@ export function extractEntities(query: string): ExtractedEntities {
 
     if (!result.price) {
       const conversationalBudgetPattern = /(?:budget|miisaaniyad(?:eydu|adaadu)?|qiimaha|سعر|الميزانية|ميزانيتي)\s*(?:is|waa|=|:|around|ku dhowaad|حول)?\s*(?:\$|usd)?\s*(\d+(?:,\d+)?)\s*(k|kun|ألف|الف|m|million|malyan|مليون)?/iu;
+      const affirmativeBudgetPattern = /(?:^|\s)(?:\$|usd)?\s*(\d+(?:,\d+)?)\s*(k|kun|ألف|الف|m|million|malyan|مليون)?\s*(?:dollar|doolar|\$|usd)?\s*(?:ayaan\s+awoodaa|ayaan\s+awoodayaa|ayaan\s+haystaa|awoodi\s+karaa|awoodaa|awoodayaa|ka\s+badan\s+ma\s+awoodo|ka\s+badan\s+ma\s+hayo|ka\s+badan\s+ma\s+bixin\s+karo)/iu;
       const standaloneKPattern = /(?:^|\s)(?:\$|usd)?\s*(\d+(?:,\d+)?)\s*(k|kun|ألف|الف|m|million|malyan|مليون)\b/iu;
       const currencyNumberPattern = /(?:\$|usd)\s*(\d+(?:,\d+)?)\s*(k|kun|ألف|الف|m|million)?/iu;
 
       const convMatch = text.match(conversationalBudgetPattern);
+      const affMatch = text.match(affirmativeBudgetPattern);
       const kMatch = text.match(standaloneKPattern);
       const currMatch = text.match(currencyNumberPattern);
 
-      const matchToUse = convMatch || currMatch || kMatch;
+      const matchToUse = convMatch || affMatch || currMatch || kMatch;
       if (matchToUse) {
         const val = parsePriceValue(matchToUse[1], matchToUse[2]);
         if (val > 0) {
@@ -444,9 +446,9 @@ export function extractEntities(query: string): ExtractedEntities {
         }
       }
 
-      // Standalone numeric amount e.g. "80000", "100,000", "$80,000", "50000"
+      // Standalone numeric amount e.g. "500", "80000", "100,000", "$80,000", "50000"
       if (!result.price) {
-        const standaloneNumberPattern = /^\s*(?:\$|usd)?\s*(\d{1,3}(?:,\d{3})+|\d{4,9})\s*(?:\$|usd)?\s*$/i;
+        const standaloneNumberPattern = /^\s*(?:\$|usd)?\s*(\d{1,3}(?:,\d{3})+|\d{2,9})\s*(?:\$|usd)?\s*$/i;
         const numMatch = text.match(standaloneNumberPattern);
         if (numMatch) {
           const val = parsePriceValue(numMatch[1]);

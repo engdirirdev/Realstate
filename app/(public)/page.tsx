@@ -22,16 +22,21 @@ export const metadata: Metadata = {
 export const revalidate = 60; // ISR cache 60s
 
 async function getHomeData() {
-  const [featuredProperties, totalCount] = await Promise.all([
-    prisma.property.findMany({
-      where: { status: "APPROVED" },
-      include: { images: { orderBy: { order: "asc" }, take: 1 } },
-      take: 4,
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.property.count({ where: { status: "APPROVED" } }),
-  ]);
-  return { featuredProperties, totalCount };
+  try {
+    const [featuredProperties, totalCount] = await Promise.all([
+      prisma.property.findMany({
+        where: { status: "APPROVED" },
+        include: { images: { orderBy: { order: "asc" }, take: 1 } },
+        take: 4,
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.property.count({ where: { status: "APPROVED" } }),
+    ]);
+    return { featuredProperties, totalCount };
+  } catch (error) {
+    console.error("Database connection failed in getHomeData:", error);
+    return { featuredProperties: [], totalCount: 0 };
+  }
 }
 
 const popularLocations = [

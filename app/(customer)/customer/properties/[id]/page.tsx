@@ -195,6 +195,11 @@ export default async function CustomerPropertyDetailPage({ params }: Props) {
                 propertyId={property.id}
                 propertyTitle={property.title}
                 propertyPrice={Number(property.price)}
+                listingType={property.listingType}
+                status={property.status}
+                rentPeriod={property.rentPeriod}
+                securityDeposit={property.securityDeposit}
+                isNegotiable={property.isNegotiable}
                 managerId={property.managerId}
               />
             </div>
@@ -286,7 +291,7 @@ export default async function CustomerPropertyDetailPage({ params }: Props) {
           <div className="bg-[#FCFBF7] rounded-3xl border border-[#E8E1D4] p-6 shadow-xs">
             <PropertyReviews
               propertyId={property.id}
-              reviews={property.reviews as any}
+              initialReviews={property.reviews as any}
             />
           </div>
         </div>

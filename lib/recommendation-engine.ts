@@ -197,9 +197,9 @@ export async function generateRecommendations(
 
   const learnedProfile = await buildUserProfile(input.userId);
 
-  // 2. Fetch all approved properties with their embeddings and images
+  // 2. Fetch all approved/available properties with their embeddings and images
   const properties = await prisma.property.findMany({
-    where: { status: "APPROVED" },
+    where: { status: { in: ["APPROVED", "PUBLISHED"] } },
     include: {
       images: { orderBy: { order: "asc" }, take: 1 },
       embedding: true,
@@ -260,7 +260,10 @@ export async function generateRecommendations(
  */
 export async function getUserRecommendations(userId: string, limit = 6) {
   const recs = await prisma.recommendation.findMany({
-    where: { userId },
+    where: {
+      userId,
+      property: { status: { in: ["APPROVED", "PUBLISHED"] } },
+    },
     orderBy: { score: "desc" },
     take: limit,
     include: {
@@ -375,7 +378,7 @@ export async function getSimilarProperties(propertyId: string, limit = 3) {
   const similar = await prisma.property.findMany({
     where: {
       id: { not: propertyId },
-      status: "APPROVED",
+      status: { in: ["APPROVED", "PUBLISHED"] },
       city: current.city,
       type: current.type,
       price: { gte: minPrice, lte: maxPrice },
@@ -393,7 +396,7 @@ export async function getSimilarProperties(propertyId: string, limit = 3) {
     const fallback = await prisma.property.findMany({
       where: {
         id: { notIn: [propertyId, ...similar.map((s) => s.id)] },
-        status: "APPROVED",
+        status: { in: ["APPROVED", "PUBLISHED"] },
         city: current.city,
       },
       include: {

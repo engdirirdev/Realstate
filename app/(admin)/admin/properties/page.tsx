@@ -11,7 +11,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { Building2, CheckCircle2, XCircle, Clock, Eye, Filter, Sparkles } from "lucide-react";
+import { Building2, CheckCircle2, XCircle, Clock, Eye, Filter, Sparkles, Pencil } from "lucide-react";
 import { formatPrice, getPropertyTypeLabel } from "@/lib/utils";
 import AdminPropertyReviewModal from "@/components/AdminPropertyReviewModal";
 import AdminAddPropertyModal from "@/components/admin/AdminAddPropertyModal";
@@ -157,11 +157,21 @@ export default async function AdminPropertiesPage({
                         {new Date(p.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                       </td>
                       <td className="px-4 py-3.5">
-                        <AdminPropertyReviewModal
-                          propertyId={p.id}
-                          propertyTitle={p.title}
-                          currentStatus={p.status}
-                        />
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/admin/properties/${p.id}/edit`}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-[#07111F] bg-[#FCFBF7] border border-[#C89B3C]/40 hover:bg-[#F7F3EA] hover:border-[#C89B3C] transition-all shadow-2xs"
+                            title="Edit Property Listing"
+                          >
+                            <Pencil className="h-3.5 w-3.5 text-[#C89B3C]" />
+                            <span>Edit</span>
+                          </Link>
+                          <AdminPropertyReviewModal
+                            propertyId={p.id}
+                            propertyTitle={p.title}
+                            currentStatus={p.status}
+                          />
+                        </div>
                       </td>
                     </tr>
                   );

@@ -168,8 +168,8 @@ export default async function ManagerPropertiesPage({
                   </div>
                 </div>
 
-                {/* Status Badges */}
-                <div className="flex items-center gap-2">
+                {/* Status Badges & Actions */}
+                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                   <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                     prop.status === "APPROVED" || prop.status === "PUBLISHED"
                       ? "bg-[#07111F] text-[#D9B45B] border border-[#C89B3C]/40"
@@ -181,6 +181,21 @@ export default async function ManagerPropertiesPage({
                   }`}>
                     {prop.status}
                   </span>
+
+                  <Link
+                    href={`/dashboard/properties/${prop.id}/edit`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-[#07111F] bg-[#FCFBF7] border border-[#C89B3C]/40 hover:bg-[#F7F3EA] hover:border-[#C89B3C] transition-all shadow-2xs"
+                  >
+                    <Edit3 className="h-3.5 w-3.5 text-[#C89B3C]" /> Edit
+                  </Link>
+
+                  <Link
+                    href={`/properties/${prop.id}`}
+                    target="_blank"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-[#6B7280] hover:text-[#07111F] bg-[#FCFBF7] border border-[#E8E1D4] hover:bg-[#F7F3EA] transition-all shadow-2xs"
+                  >
+                    <Eye className="h-3.5 w-3.5 text-[#6B7280]" /> View
+                  </Link>
                 </div>
               </div>
 
@@ -195,7 +210,7 @@ export default async function ManagerPropertiesPage({
                   </p>
                   <div className="pt-1">
                     <Link
-                      href={`/dashboard/properties/add?editId=${prop.id}`}
+                      href={`/dashboard/properties/${prop.id}/edit`}
                       className="inline-flex items-center gap-1.5 bg-[#DC2626] hover:bg-[#B91C1C] text-white text-xs font-semibold px-3.5 py-1.5 rounded-xl shadow-xs transition-colors"
                     >
                       <Edit3 className="h-3.5 w-3.5" /> Edit &amp; Resubmit Listing

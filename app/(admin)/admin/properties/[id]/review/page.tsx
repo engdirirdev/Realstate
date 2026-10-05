@@ -26,6 +26,7 @@ import {
   User,
   Calendar,
   Sparkles,
+  Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -155,13 +156,21 @@ export default function PropertyReviewPage({ params }: ReviewPageProps) {
           <ArrowLeft className="h-4 w-4" /> Back to Properties
         </button>
 
-        <Link
-          href={`/properties/${property.id}`}
-          target="_blank"
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-[#07111F] hover:text-[#C89B3C] transition-colors bg-[#FCFBF7] border border-[#E8E1D4] px-3 py-1.5 rounded-xl shadow-2xs"
-        >
-          <ExternalLink className="h-3.5 w-3.5 text-[#C89B3C]" /> View Public Page
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/admin/properties/${property.id}/edit`}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#07111F] hover:text-[#C89B3C] transition-colors bg-[#FCFBF7] border border-[#C89B3C]/50 px-3 py-1.5 rounded-xl shadow-2xs"
+          >
+            <Pencil className="h-3.5 w-3.5 text-[#C89B3C]" /> Edit Listing
+          </Link>
+          <Link
+            href={`/properties/${property.id}`}
+            target="_blank"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#07111F] hover:text-[#C89B3C] transition-colors bg-[#FCFBF7] border border-[#E8E1D4] px-3 py-1.5 rounded-xl shadow-2xs"
+          >
+            <ExternalLink className="h-3.5 w-3.5 text-[#C89B3C]" /> View Public Page
+          </Link>
+        </div>
       </div>
 
       <div>

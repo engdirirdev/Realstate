@@ -18,6 +18,7 @@ import {
   Bookmark,
   Star,
   Headphones,
+  Receipt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -56,6 +57,13 @@ const customerNavGroups: NavGroup[] = [
     ],
   },
   {
+    title: "DEALS & TRANSACTIONS",
+    items: [
+      { href: "/customer/transactions", label: "My Transactions & Requests", icon: Receipt },
+      { href: "/customer/payments", label: "Payments", icon: CreditCard },
+    ],
+  },
+  {
     title: "AI & ANALYTICS",
     items: [
       { href: "/customer/predictions", label: "Price Prediction", icon: TrendingUp },
@@ -67,7 +75,6 @@ const customerNavGroups: NavGroup[] = [
     title: "ACCOUNT",
     items: [
       { href: "/customer/profile", label: "My Profile & Settings", icon: User },
-      { href: "/customer/payments", label: "Payments", icon: CreditCard },
     ],
   },
 ];

@@ -18,6 +18,10 @@ export interface PropertyCardData {
   bedrooms: number;
   bathrooms: number;
   area: number;
+  parking?: number;
+  listingType?: string | null;
+  status?: string | null;
+  rentPeriod?: string | null;
   images?: { url: string; altText?: string | null }[];
   isFeatured?: boolean;
   score?: number; // AI Match Score if provided
@@ -29,6 +33,7 @@ interface PropertyCardProps {
   className?: string;
   onFavoriteToggle?: (id: string, favorited: boolean) => void;
   href?: string;
+  isFavorited?: boolean;
 }
 
 export default function PropertyCard({
@@ -36,13 +41,17 @@ export default function PropertyCard({
   className,
   onFavoriteToggle,
   href,
+  isFavorited,
 }: PropertyCardProps) {
   const { data: session } = useSession();
   const { toast } = useToast();
-  const [isFav, setIsFav] = useState(property.isFavorited || false);
+  const [isFav, setIsFav] = useState(isFavorited ?? property.isFavorited ?? false);
   const [savingFav, setSavingFav] = useState(false);
 
-  const isRent = property.price < 5000;
+  const isRent = property.listingType ? property.listingType === "FOR_RENT" : property.price < 5000;
+  const isAvailable = !property.status || property.status === "APPROVED" || property.status === "PUBLISHED";
+  const isLand = String(property.type).toUpperCase() === "LAND";
+  const rentUnit = property.rentPeriod?.toLowerCase().replace("ly", "").replace("dai", "day") || "month";
   const imageUrl =
     property.images?.[0]?.url ||
     "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800";
@@ -104,7 +113,7 @@ export default function PropertyCard({
         />
 
         {/* Top Badges */}
-        <div className="absolute top-3 left-3 flex items-center gap-2">
+        <div className="absolute top-3 left-3 flex flex-wrap items-center gap-1.5 max-w-[80%]">
           <span
             className={cn(
               "px-2.5 py-1 rounded-full text-xs font-bold shadow-xs uppercase tracking-wider",
@@ -115,6 +124,21 @@ export default function PropertyCard({
           >
             {isRent ? "For Rent" : "For Sale"}
           </span>
+
+          {!isAvailable && property.status && (
+            <span
+              className={cn(
+                "px-2.5 py-1 rounded-full text-[10px] font-extrabold shadow-xs uppercase tracking-wider",
+                property.status === "SOLD"
+                  ? "bg-red-900/90 text-red-100 border border-red-500/50 backdrop-blur-xs"
+                  : property.status === "RENTED"
+                  ? "bg-blue-900/90 text-blue-100 border border-blue-500/50 backdrop-blur-xs"
+                  : "bg-amber-900/90 text-amber-100 border border-amber-500/50 backdrop-blur-xs"
+              )}
+            >
+              {property.status === "PAYMENT_PENDING" ? "Under Contract" : property.status}
+            </span>
+          )}
 
           {property.score !== undefined && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-[#07111F]/90 text-[#D9B45B] border border-[#C89B3C]/50 shadow-xs">
@@ -157,7 +181,7 @@ export default function PropertyCard({
           <div className="flex items-baseline justify-between mb-3">
             <div className="text-lg font-extrabold text-[#07111F]">
               <span className="text-[#C89B3C]">$</span>{property.price?.toLocaleString()}
-              {isRent && <span className="text-xs font-normal text-[#6B7280]"> /month</span>}
+              {isRent && <span className="text-xs font-normal text-[#6B7280]"> /{rentUnit}</span>}
             </div>
             <span className="text-[11px] font-bold text-[#A97918] uppercase tracking-wider bg-[#F7F3EA] px-2 py-0.5 rounded-md border border-[#E8E1D4]">
               {property.type}
@@ -165,20 +189,27 @@ export default function PropertyCard({
           </div>
 
           {/* Specs */}
-          <div className="grid grid-cols-3 gap-2 text-xs text-[#07111F] font-medium bg-[#F7F3EA]/70 py-2 px-2.5 rounded-xl border border-[#E8E1D4]">
-            <div className="flex items-center gap-1.5 justify-center">
-              <BedDouble className="w-3.5 h-3.5 text-[#6B7280]" />
-              <span>{property.bedrooms} Beds</span>
+          {isLand ? (
+            <div className="flex items-center justify-center gap-2 text-xs text-[#07111F] font-medium bg-[#F7F3EA]/70 py-2 px-2.5 rounded-xl border border-[#E8E1D4]">
+              <SquareStack className="w-3.5 h-3.5 text-[#C89B3C]" />
+              <span>Land Plot: <strong>{property.area} m²</strong></span>
             </div>
-            <div className="flex items-center gap-1.5 justify-center border-x border-[#E8E1D4]">
-              <Bath className="w-3.5 h-3.5 text-[#6B7280]" />
-              <span>{property.bathrooms} Baths</span>
+          ) : (
+            <div className="grid grid-cols-3 gap-2 text-xs text-[#07111F] font-medium bg-[#F7F3EA]/70 py-2 px-2.5 rounded-xl border border-[#E8E1D4]">
+              <div className="flex items-center gap-1.5 justify-center">
+                <BedDouble className="w-3.5 h-3.5 text-[#6B7280]" />
+                <span>{property.bedrooms} Beds</span>
+              </div>
+              <div className="flex items-center gap-1.5 justify-center border-x border-[#E8E1D4]">
+                <Bath className="w-3.5 h-3.5 text-[#6B7280]" />
+                <span>{property.bathrooms} Baths</span>
+              </div>
+              <div className="flex items-center gap-1.5 justify-center">
+                <SquareStack className="w-3.5 h-3.5 text-[#6B7280]" />
+                <span>{property.area} m²</span>
+              </div>
             </div>
-            <div className="flex items-center gap-1.5 justify-center">
-              <SquareStack className="w-3.5 h-3.5 text-[#6B7280]" />
-              <span>{property.area} m²</span>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

@@ -50,88 +50,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST: Process Demo/Sandbox Payment
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth();
-    if (!session || !session.user?.id) {
-      return NextResponse.json({ success: false, error: "Please log in to make a payment." }, { status: 401 });
-    }
-
-    const body = await request.json();
-    const { bookingId, propertyId, amount, paymentMethod } = body;
-
-    if (!amount || amount <= 0) {
-      return NextResponse.json({ success: false, error: "Invalid payment amount." }, { status: 400 });
-    }
-
-    let targetPropId = propertyId;
-    let managerId: string | null = null;
-
-    if (bookingId) {
-      const booking = await prisma.booking.findUnique({
-        where: { id: bookingId },
-        include: { property: true },
-      });
-      if (booking) {
-        targetPropId = booking.propertyId;
-        managerId = booking.managerId;
-
-        // Update booking status to CONFIRMED
-        await prisma.booking.update({
-          where: { id: bookingId },
-          data: { status: "CONFIRMED" },
-        });
-      }
-    } else if (propertyId) {
-      const prop = await prisma.property.findUnique({ where: { id: propertyId } });
-      if (prop) managerId = prop.managerId;
-    }
-
-    const txnRef = `TXN-DEMO-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
-
-    const payment = await prisma.payment.create({
-      data: {
-        bookingId: bookingId || null,
-        propertyId: targetPropId || null,
-        customerId: session.user.id,
-        managerId: managerId || null,
-        amount: Number(amount),
-        currency: "USD",
-        paymentMethod: paymentMethod || "DEMO / SANDBOX",
-        status: "PAID",
-        transactionRef: txnRef,
-        receiptUrl: `/customer/payments`,
-      },
-      include: { property: { select: { title: true } } },
-    });
-
-    // Send notifications
-    await prisma.notification.create({
-      data: {
-        userId: session.user.id,
-        type: "PAYMENT",
-        title: "Payment Successful 💳",
-        message: `Your payment of $${amount} for "${payment.property?.title || "Property"}" was processed successfully. Ref: ${txnRef}`,
-        linkUrl: `/customer/payments`,
-      },
-    }).catch(() => {});
-
-    if (managerId) {
-      await prisma.notification.create({
-        data: {
-          userId: managerId,
-          type: "PAYMENT",
-          title: "New Payment Received 💰",
-          message: `Received payment of $${amount} for "${payment.property?.title || "Property"}". Ref: ${txnRef}`,
-          linkUrl: `/dashboard/payments`,
-        },
-      }).catch(() => {});
-    }
-
-    return NextResponse.json({ success: true, payment });
-  } catch (error) {
-    console.error("[POST /api/payments]", error);
-    return NextResponse.json({ success: false, error: "Failed to process payment." }, { status: 500 });
-  }
+// POST: DISABLED. Payments are now created only through the approved
+// transaction flow: POST /api/transactions/[id]/pay (server-side amount).
+export async function POST(_request: NextRequest) {
+  return NextResponse.json(
+    {
+      success: false,
+      error: "Direct payments are no longer supported. Submit a purchase or rental request and pay once it is approved.",
+    },
+    { status: 410 }
+  );
 }

@@ -33,6 +33,35 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session || (session.user as any)?.role !== "ADMIN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id, name, description } = await request.json();
+    if (!id || !name) {
+      return NextResponse.json({ error: "Category ID and name are required" }, { status: 400 });
+    }
+
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "");
+
+    const category = await prisma.category.update({
+      where: { id },
+      data: {
+        name: String(name).trim(),
+        slug,
+        description: description ? String(description).trim() : null,
+      },
+    });
+
+    return NextResponse.json({ success: true, category });
+  } catch (error) {
+    return NextResponse.json({ error: "Failed to update category" }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: NextRequest) {
   try {
     const session = await auth();
@@ -50,3 +79,4 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "Failed to delete category" }, { status: 500 });
   }
 }
+

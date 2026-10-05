@@ -65,6 +65,10 @@ export async function POST(request: NextRequest) {
       lotSize,
       yearBuilt,
       listingType,
+      currency,
+      isNegotiable,
+      rentPeriod,
+      securityDeposit,
       typeDetails,
       amenities,
     } = body;
@@ -78,6 +82,20 @@ export async function POST(request: NextRequest) {
 
     const isAdmin = (session.user as any)?.role === "ADMIN";
     const status = submitForReview ? (isAdmin ? "APPROVED" : "PENDING") : "DRAFT";
+
+    const effectiveListingType = listingType === "FOR_RENT" ? "FOR_RENT" : "FOR_SALE";
+    const effectiveRentPeriod =
+      effectiveListingType === "FOR_RENT" && ["MONTHLY", "WEEKLY", "DAILY"].includes(String(rentPeriod).toUpperCase())
+        ? String(rentPeriod).toUpperCase()
+        : effectiveListingType === "FOR_RENT"
+        ? "MONTHLY"
+        : null;
+    if (Number(price) <= 0 || isNaN(Number(price))) {
+      return NextResponse.json({ success: false, error: "Price must be greater than zero." }, { status: 400 });
+    }
+    if (securityDeposit !== undefined && securityDeposit !== null && securityDeposit !== "" && Number(securityDeposit) < 0) {
+      return NextResponse.json({ success: false, error: "Security deposit cannot be negative." }, { status: 400 });
+    }
 
     // Handle parsed type-specific details
     let parsedTypeDetails: Record<string, any> | null = null;
@@ -143,7 +161,14 @@ export async function POST(request: NextRequest) {
         latitude: latitude !== undefined && latitude !== null && latitude !== "" ? Number(latitude) : null,
         longitude: longitude !== undefined && longitude !== null && longitude !== "" ? Number(longitude) : null,
         type,
-        listingType: listingType || "FOR_SALE",
+        listingType: effectiveListingType,
+        currency: typeof currency === "string" && currency.trim() ? currency.trim().toUpperCase().slice(0, 8) : "USD",
+        isNegotiable: effectiveListingType === "FOR_SALE" ? Boolean(isNegotiable) : false,
+        rentPeriod: effectiveRentPeriod,
+        securityDeposit:
+          effectiveListingType === "FOR_RENT" && securityDeposit !== undefined && securityDeposit !== null && securityDeposit !== ""
+            ? Number(securityDeposit)
+            : null,
         typeDetails: parsedTypeDetails ? JSON.stringify(parsedTypeDetails) : null,
         amenities: serializedAmenities,
         bedrooms: effectiveBedrooms,

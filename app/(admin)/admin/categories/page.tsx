@@ -8,7 +8,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FolderTree, Plus, Trash2, Tag, Loader2, Sparkles } from "lucide-react";
+import { FolderTree, Plus, Trash2, Tag, Loader2, Sparkles, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +29,12 @@ export default function AdminCategoriesPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ name: "", description: "" });
+
+  // Edit Modal State
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<CategoryItem | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", description: "" });
+  const [updating, setUpdating] = useState(false);
 
   const fetchCategories = async () => {
     try {
@@ -69,6 +75,42 @@ export default function AdminCategoriesPage() {
       toast({ title: "Error", description: "Failed to create category." });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const openEditModal = (cat: CategoryItem) => {
+    setEditingCategory(cat);
+    setEditForm({ name: cat.name, description: cat.description || "" });
+    setEditModalOpen(true);
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCategory || !editForm.name) return;
+    setUpdating(true);
+    try {
+      const res = await fetch("/api/admin/categories", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editingCategory.id,
+          name: editForm.name,
+          description: editForm.description,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast({ title: "Category Updated ✨", description: `Updated ${editForm.name}.` });
+        setEditModalOpen(false);
+        setEditingCategory(null);
+        fetchCategories();
+      } else {
+        toast({ title: "Error", description: data.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Failed to update category." });
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -130,14 +172,24 @@ export default function AdminCategoriesPage() {
                   <td className="px-4 py-4 text-[#A97918] font-mono text-xs">{cat.slug}</td>
                   <td className="px-4 py-4 text-[#6B7280] text-xs">{cat.description || "—"}</td>
                   <td className="px-5 py-4 text-right">
-                    <Button
-                      onClick={() => handleDelete(cat.id, cat.name)}
-                      variant="outline"
-                      size="sm"
-                      className="h-8 border-[#E8E1D4] text-[#DC2626] hover:bg-red-50 hover:border-red-200 rounded-xl"
-                    >
-                      <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
-                    </Button>
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        onClick={() => openEditModal(cat)}
+                        variant="outline"
+                        size="sm"
+                        className="h-8 border-[#C89B3C]/40 text-[#07111F] bg-[#FCFBF7] hover:bg-[#F7F3EA] hover:border-[#C89B3C] rounded-xl font-medium shadow-xs"
+                      >
+                        <Pencil className="h-3.5 w-3.5 mr-1 text-[#C89B3C]" /> Edit
+                      </Button>
+                      <Button
+                        onClick={() => handleDelete(cat.id, cat.name)}
+                        variant="outline"
+                        size="sm"
+                        className="h-8 border-[#E8E1D4] text-[#DC2626] hover:bg-red-50 hover:border-red-200 rounded-xl"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -146,6 +198,7 @@ export default function AdminCategoriesPage() {
         )}
       </div>
 
+      {/* Create Category Dialog */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-md bg-[#FCFBF7] rounded-2xl p-6 border border-[#E8E1D4] shadow-xl">
           <DialogHeader>
@@ -179,6 +232,58 @@ export default function AdminCategoriesPage() {
                 className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] font-bold hover:brightness-105 rounded-xl border-0 shadow-sm"
               >
                 {submitting ? "Saving..." : "Save Category"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Category Dialog */}
+      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+        <DialogContent className="max-w-md bg-[#FCFBF7] rounded-2xl p-6 border border-[#E8E1D4] shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-serif font-bold text-[#07111F] flex items-center gap-2">
+              <Pencil className="h-5 w-5 text-[#C89B3C]" /> Edit Property Category
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUpdate} className="space-y-4 mt-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">Category Name</Label>
+              <Input
+                value={editForm.name}
+                onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))}
+                placeholder="e.g. Luxury Villas"
+                required
+                className="rounded-xl border-[#E8E1D4] bg-white focus:border-[#C89B3C] focus:ring-1 focus:ring-[#C89B3C]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">Description (Optional)</Label>
+              <Input
+                value={editForm.description}
+                onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))}
+                placeholder="e.g. Exclusive residential standalone villas"
+                className="rounded-xl border-[#E8E1D4] bg-white focus:border-[#C89B3C] focus:ring-1 focus:ring-[#C89B3C]"
+              />
+            </div>
+            <DialogFooter className="pt-2 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setEditModalOpen(false);
+                  setEditingCategory(null);
+                }}
+                className="rounded-xl border-[#E8E1D4] text-[#07111F] hover:bg-[#F7F3EA]"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={updating}
+                className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] font-bold hover:brightness-105 rounded-xl border-0 shadow-sm"
+              >
+                {updating ? "Saving Changes..." : "Save Changes"}
               </Button>
             </DialogFooter>
           </form>

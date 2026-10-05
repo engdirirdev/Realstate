@@ -44,6 +44,40 @@ enum PropertyStatus {
   RENTED
   INACTIVE
   UNAVAILABLE
+  PAYMENT_PENDING
+  EXPIRED
+  CANCELLED
+  ARCHIVED
+}
+
+enum RequestStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  CANCELLED
+  PAYMENT_PENDING
+  ACTIVE
+  EXPIRED
+  COMPLETED
+}
+
+enum TransactionType {
+  SALE
+  RENTAL
+}
+
+enum TransactionStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  PAYMENT_PENDING
+  PAID
+  COMPLETED
+  ACTIVE
+  EXPIRED
+  REJECTED
+  CANCELLED
 }
 
 enum InquiryStatus {
@@ -62,6 +96,7 @@ enum BookingStatus {
 
 enum PaymentStatus {
   PENDING
+  PROCESSING
   PAID
   FAILED
   REFUNDED
@@ -77,6 +112,7 @@ enum NotificationType {
   INQUIRY
   BOOKING
   PAYMENT
+  TRANSACTION
 }
 
 enum InteractionType {
@@ -127,6 +163,12 @@ model User {
   listingReports    ListingReport[]
   interactions      UserInteraction[]
   preferenceProfile UserPreferenceProfile?
+  customerPurchaseRequests PurchaseRequest[] @relation("CustomerPurchaseRequests")
+  managerPurchaseRequests  PurchaseRequest[] @relation("ManagerPurchaseRequests")
+  customerRentalRequests   RentalRequest[]   @relation("CustomerRentalRequests")
+  managerRentalRequests    RentalRequest[]   @relation("ManagerRentalRequests")
+  customerTransactions     Transaction[]     @relation("CustomerTransactions")
+  managerTransactions      Transaction[]     @relation("ManagerTransactions")
 
   @@index([email])
   @@index([role])
@@ -189,6 +231,10 @@ model Property {
   isFurnished     Boolean        @default(false)
   lotSize         Float?
   listingType     String?        @default("FOR_SALE")
+  currency        String         @default("USD")
+  isNegotiable    Boolean        @default(false)
+  rentPeriod      String?        // MONTHLY | WEEKLY | DAILY (FOR_RENT only)
+  securityDeposit Float?         // FOR_RENT only
   typeDetails     String?        @db.Text // JSON object storing type-specific details
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
@@ -207,6 +253,9 @@ model Property {
   reports          ListingReport[]
   embedding        PropertyEmbedding?
   interactions     UserInteraction[]
+  purchaseRequests PurchaseRequest[]
+  rentalRequests   RentalRequest[]
+  transactions     Transaction[]
 
   @@index([location])
   @@index([city])
@@ -214,6 +263,7 @@ model Property {
   @@index([type])
   @@index([bedrooms])
   @@index([status])
+  @@index([listingType])
   @@index([isFeatured])
   @@index([managerId])
   @@map("properties")
@@ -333,19 +383,137 @@ model Payment {
   status         PaymentStatus @default(PAID)
   transactionRef String        @unique
   receiptUrl     String?
+  transactionId  String?
+  paidAt         DateTime?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  booking  Booking?  @relation(fields: [bookingId], references: [id], onDelete: SetNull)
-  property Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
-  customer User      @relation("CustomerPayments", fields: [customerId], references: [id], onDelete: Cascade)
-  manager  User?     @relation("ManagerPayments", fields: [managerId], references: [id], onDelete: SetNull)
+  booking     Booking?     @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  property    Property?    @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  customer    User         @relation("CustomerPayments", fields: [customerId], references: [id], onDelete: Cascade)
+  manager     User?        @relation("ManagerPayments", fields: [managerId], references: [id], onDelete: SetNull)
+  transaction Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  receipt     Receipt?
 
   @@index([customerId])
   @@index([managerId])
   @@index([status])
   @@index([transactionRef])
+  @@index([transactionId])
   @@map("payments")
+}
+
+// =============================================
+// PURCHASE / RENTAL REQUESTS, TRANSACTIONS, RECEIPTS
+// =============================================
+
+model PurchaseRequest {
+  id           String        @id @default(cuid())
+  requestNo    String        @unique
+  customerId   String
+  propertyId   String
+  managerId    String?
+  salePrice    Float
+  currency     String        @default("USD")
+  status       RequestStatus @default(PENDING)
+  notes        String?       @db.Text
+  reviewNotes  String?       @db.Text
+  reviewedById String?
+  reviewedAt   DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  customer    User         @relation("CustomerPurchaseRequests", fields: [customerId], references: [id], onDelete: Cascade)
+  manager     User?        @relation("ManagerPurchaseRequests", fields: [managerId], references: [id], onDelete: SetNull)
+  property    Property     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  transaction Transaction?
+
+  @@index([customerId])
+  @@index([propertyId])
+  @@index([managerId])
+  @@index([status])
+  @@map("purchase_requests")
+}
+
+model RentalRequest {
+  id              String        @id @default(cuid())
+  requestNo       String        @unique
+  customerId      String
+  propertyId      String
+  managerId       String?
+  startDate       DateTime
+  endDate         DateTime
+  rentalPeriod    String // MONTHLY | WEEKLY | DAILY
+  periods         Int
+  rentAmount      Float
+  securityDeposit Float         @default(0)
+  totalAmount     Float
+  currency        String        @default("USD")
+  status          RequestStatus @default(PENDING)
+  notes           String?       @db.Text
+  reviewNotes     String?       @db.Text
+  reviewedById    String?
+  reviewedAt      DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  customer    User         @relation("CustomerRentalRequests", fields: [customerId], references: [id], onDelete: Cascade)
+  manager     User?        @relation("ManagerRentalRequests", fields: [managerId], references: [id], onDelete: SetNull)
+  property    Property     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  transaction Transaction?
+
+  @@index([customerId])
+  @@index([propertyId, startDate, endDate])
+  @@index([managerId])
+  @@index([status])
+  @@map("rental_requests")
+}
+
+model Transaction {
+  id                String            @id @default(cuid())
+  txnNo             String            @unique
+  type              TransactionType
+  customerId        String
+  managerId         String?
+  propertyId        String
+  amount            Float
+  currency          String            @default("USD")
+  status            TransactionStatus @default(PENDING)
+  purchaseRequestId String?           @unique
+  rentalRequestId   String?           @unique
+  completedAt       DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  customer        User             @relation("CustomerTransactions", fields: [customerId], references: [id], onDelete: Cascade)
+  manager         User?            @relation("ManagerTransactions", fields: [managerId], references: [id], onDelete: SetNull)
+  property        Property         @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  purchaseRequest PurchaseRequest? @relation(fields: [purchaseRequestId], references: [id], onDelete: SetNull)
+  rentalRequest   RentalRequest?   @relation(fields: [rentalRequestId], references: [id], onDelete: SetNull)
+  payments        Payment[]
+  receipt         Receipt?
+
+  @@index([customerId])
+  @@index([managerId])
+  @@index([propertyId])
+  @@index([status])
+  @@index([type])
+  @@map("transactions")
+}
+
+model Receipt {
+  id            String   @id @default(cuid())
+  receiptNo     String   @unique
+  transactionId String   @unique
+  paymentId     String   @unique
+  details       String   @db.Text // JSON snapshot at time of payment
+  issuedAt      DateTime @default(now())
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  payment     Payment     @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@map("receipts")
 }
 
 // =============================================

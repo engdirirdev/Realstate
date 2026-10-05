@@ -17,6 +17,8 @@ import {
   BarChart3,
   ScrollText,
   Settings,
+  FileText,
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -58,8 +60,10 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    title: "TRANSACTIONS",
+    title: "TRANSACTIONS & SETTLEMENTS",
     items: [
+      { href: "/admin/requests", label: "Purchase & Rental Requests", icon: FileText },
+      { href: "/admin/transactions", label: "Transactions Ledger", icon: History },
       { href: "/admin/payments", label: "Payments", icon: CreditCard },
       { href: "/admin/messages", label: "Contact Requests", icon: MessageSquare },
     ],

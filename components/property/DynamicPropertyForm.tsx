@@ -35,6 +35,9 @@ import {
   Warehouse,
   Layers,
   HelpCircle,
+  Upload,
+  Camera,
+  Globe,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,6 +79,14 @@ export default function DynamicPropertyForm({
   const [dupWarning, setDupWarning] = useState<string | null>(null);
   const [anomalyWarning, setAnomalyWarning] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+  // Media Upload States
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const [uploadingGallery, setUploadingGallery] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [uploadingFloorPlan, setUploadingFloorPlan] = useState(false);
+  const [showCoverUrlInput, setShowCoverUrlInput] = useState(false);
+  const [showGalleryUrlInput, setShowGalleryUrlInput] = useState(false);
 
   // Cities from database
   const [cities, setCities] = useState<string[]>([
@@ -121,6 +132,9 @@ export default function DynamicPropertyForm({
     address: initialData?.address || "",
     latitude: initialData?.latitude ? String(initialData.latitude) : "",
     longitude: initialData?.longitude ? String(initialData.longitude) : "",
+    rentPeriod: initialData?.rentPeriod || "MONTHLY",
+    securityDeposit: initialData?.securityDeposit ? String(initialData.securityDeposit) : "",
+    isNegotiable: Boolean(initialData?.isNegotiable),
     area: initialData?.area ? String(initialData.area) : "",
     bedrooms: initialData?.bedrooms ? String(initialData.bedrooms) : "3",
     bathrooms: initialData?.bathrooms ? String(initialData.bathrooms) : "2",
@@ -173,6 +187,60 @@ export default function DynamicPropertyForm({
     }
     return {};
   });
+
+  // Sync state if initialData is passed or updated
+  useEffect(() => {
+    if (initialData) {
+      if (initialData.type) setSelectedType(initialData.type as PropertyTypeCode);
+      if (initialData.listingType) setListingType(initialData.listingType);
+      setCommon({
+        title: initialData.title || "",
+        description: initialData.description || "",
+        price: initialData.price !== undefined ? String(initialData.price) : "",
+        city: initialData.city || "Mogadishu",
+        location: initialData.location || "",
+        address: initialData.address || "",
+        latitude: initialData.latitude !== undefined && initialData.latitude !== null ? String(initialData.latitude) : "",
+        longitude: initialData.longitude !== undefined && initialData.longitude !== null ? String(initialData.longitude) : "",
+        rentPeriod: initialData.rentPeriod || "MONTHLY",
+        securityDeposit: initialData.securityDeposit !== undefined && initialData.securityDeposit !== null ? String(initialData.securityDeposit) : "",
+        isNegotiable: Boolean(initialData.isNegotiable),
+        area: initialData.area !== undefined ? String(initialData.area) : "",
+        bedrooms: initialData.bedrooms !== undefined ? String(initialData.bedrooms) : "3",
+        bathrooms: initialData.bathrooms !== undefined ? String(initialData.bathrooms) : "2",
+        parking: initialData.parking !== undefined ? String(initialData.parking) : "1",
+        lotSize: initialData.lotSize !== undefined && initialData.lotSize !== null ? String(initialData.lotSize) : "",
+        yearBuilt: initialData.yearBuilt !== undefined && initialData.yearBuilt !== null ? String(initialData.yearBuilt) : "",
+        isFurnished: Boolean(initialData.isFurnished),
+      });
+
+      if (initialData.images && initialData.images.length > 0) {
+        setMedia({
+          imageUrl: initialData.images[0]?.url || initialData.imageUrl || "",
+          videoUrl: initialData.videoUrl || "",
+          floorPlanUrl: initialData.floorPlanUrl || "",
+          virtualTourUrl: initialData.virtualTourUrl || "",
+        });
+        setGalleryImages(initialData.images.slice(1).map((img: any) => img.url));
+      } else if (initialData.imageUrl) {
+        setMedia((prev) => ({ ...prev, imageUrl: initialData.imageUrl }));
+      }
+
+      if (initialData.amenities) {
+        try {
+          const parsed = typeof initialData.amenities === "string" ? JSON.parse(initialData.amenities) : initialData.amenities;
+          if (Array.isArray(parsed)) setSelectedAmenities(parsed);
+        } catch {}
+      }
+
+      if (initialData.typeDetails) {
+        try {
+          const parsed = typeof initialData.typeDetails === "string" ? JSON.parse(initialData.typeDetails) : initialData.typeDetails;
+          if (parsed && typeof parsed === "object") setTypeDetails(parsed);
+        } catch {}
+      }
+    }
+  }, [initialData]);
 
   // Reset or initialize type-specific fields when Property Type changes
   const handleTypeChange = (newType: PropertyTypeCode) => {
@@ -278,6 +346,125 @@ export default function DynamicPropertyForm({
 
   const handleRemoveGalleryImage = (index: number) => {
     setGalleryImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Upload Cover Image from Device
+  const handleUploadCover = async (file: File) => {
+    if (!file) return;
+    setUploadingCover(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (data.success && data.url) {
+        setMedia((p) => ({ ...p, imageUrl: data.url }));
+        setValidationErrors((p) => {
+          const next = { ...p };
+          delete next.imageUrl;
+          return next;
+        });
+        toast({ title: "Cover Image Uploaded! 📸", description: "Primary photo set successfully." });
+      } else {
+        toast({ title: "Upload Failed", description: data.error || "Failed to upload cover image.", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Upload Error", description: "Network error during upload.", variant: "destructive" });
+    } finally {
+      setUploadingCover(false);
+    }
+  };
+
+  // Upload Multiple Gallery Photos from Device
+  const handleUploadGallery = async (files: FileList | File[]) => {
+    if (!files || files.length === 0) return;
+    setUploadingGallery(true);
+    try {
+      const formData = new FormData();
+      Array.from(files).forEach((f) => formData.append("files", f));
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (data.success && Array.isArray(data.urls) && data.urls.length > 0) {
+        setGalleryImages((prev) => [...prev, ...data.urls]);
+        toast({
+          title: "Photos Uploaded! 🖼️",
+          description: `Added ${data.urls.length} photo${data.urls.length > 1 ? "s" : ""} to property gallery.`,
+        });
+      } else if (data.success && data.url) {
+        setGalleryImages((prev) => [...prev, data.url]);
+        toast({ title: "Photo Uploaded! 🖼️", description: "Added 1 photo to property gallery." });
+      } else {
+        toast({ title: "Upload Failed", description: data.error || "Failed to upload gallery photos.", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Upload Error", description: "Network error during upload.", variant: "destructive" });
+    } finally {
+      setUploadingGallery(false);
+    }
+  };
+
+  // Upload Floor Plan
+  const handleUploadFloorPlan = async (file: File) => {
+    if (!file) return;
+    setUploadingFloorPlan(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (data.success && data.url) {
+        setMedia((p) => ({ ...p, floorPlanUrl: data.url }));
+        toast({ title: "Floor Plan Uploaded! 📐", description: "Floor plan attached successfully." });
+      } else {
+        toast({ title: "Upload Failed", description: data.error || "Failed to upload floor plan.", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Upload Error", description: "Network error during upload.", variant: "destructive" });
+    } finally {
+      setUploadingFloorPlan(false);
+    }
+  };
+
+  // Upload Video Tour from Device
+  const handleUploadVideo = async (file: File) => {
+    if (!file) return;
+    setUploadingVideo(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (data.success && data.url) {
+        setMedia((p) => ({ ...p, videoUrl: data.url }));
+        toast({ title: "Video Uploaded! 🎥", description: "Video tour attached successfully." });
+      } else {
+        toast({ title: "Upload Failed", description: data.error || "Failed to upload video.", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Upload Error", description: "Network error during video upload.", variant: "destructive" });
+    } finally {
+      setUploadingVideo(false);
+    }
   };
 
   // AI Description Generator
@@ -455,6 +642,9 @@ export default function DynamicPropertyForm({
         longitude: common.longitude ? Number(common.longitude) : null,
         type: selectedType,
         listingType,
+        isNegotiable: listingType === "FOR_SALE" ? common.isNegotiable : false,
+        rentPeriod: listingType === "FOR_RENT" ? common.rentPeriod : null,
+        securityDeposit: listingType === "FOR_RENT" && common.securityDeposit ? Number(common.securityDeposit) : null,
         bedrooms: ["LAND", "SHOP", "WAREHOUSE", "OFFICE", "COMMERCIAL"].includes(selectedType)
           ? 0
           : Number(common.bedrooms) || 0,
@@ -481,8 +671,12 @@ export default function DynamicPropertyForm({
         submitForReview,
       };
 
-      const res = await fetch("/api/properties", {
-        method: "POST",
+      const isEditing = Boolean(initialData?.id);
+      const url = isEditing ? `/api/properties/${initialData.id}` : "/api/properties";
+      const method = isEditing ? "PATCH" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
@@ -490,14 +684,20 @@ export default function DynamicPropertyForm({
       const data = await res.json();
       if (data.success) {
         toast({
-          title: submitForReview ? "Submitted for Admin Review! 🚀" : "Saved as Draft 📝",
-          description: submitForReview
+          title: isEditing
+            ? "Property Updated! ✨"
+            : submitForReview
+            ? "Submitted for Admin Review! 🚀"
+            : "Saved as Draft 📝",
+          description: isEditing
+            ? `Listing "${common.title}" details have been updated successfully.`
+            : submitForReview
             ? "Your listing has been submitted and queued for verification."
             : "Property successfully saved as a draft.",
         });
 
-        // In Admin Mode, if admin created it, auto-approve
-        if (isAdminMode && data.property?.id) {
+        // In Admin Mode, if admin created a new property, auto-approve
+        if (!isEditing && isAdminMode && data.property?.id) {
           await fetch(`/api/admin/properties/${data.property.id}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
@@ -739,12 +939,55 @@ export default function DynamicPropertyForm({
               />
             </div>
 
+            {/* Listing Terms: dynamic by listing type */}
+            {listingType === "FOR_RENT" ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl border border-[#E8E1D4] bg-[#F7F3EA]">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-[#07111F]">Rent Period (price below is per period)</Label>
+                  <Select
+                    value={common.rentPeriod}
+                    onValueChange={(val) => setCommon((p) => ({ ...p, rentPeriod: val }))}
+                  >
+                    <SelectTrigger className="h-11 border-[#E8E1D4] bg-[#FCFBF7] rounded-xl text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="MONTHLY">Monthly</SelectItem>
+                      <SelectItem value="WEEKLY">Weekly</SelectItem>
+                      <SelectItem value="DAILY">Daily</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-[#07111F]">Security Deposit (USD, optional)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={common.securityDeposit}
+                    onChange={(e) => setCommon((p) => ({ ...p, securityDeposit: e.target.value }))}
+                    placeholder="500"
+                    className="h-11 border-[#E8E1D4] bg-[#FCFBF7] rounded-xl text-sm"
+                  />
+                </div>
+              </div>
+            ) : (
+              <label className="flex items-center gap-2 text-xs font-semibold text-[#07111F] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={common.isNegotiable}
+                  onChange={(e) => setCommon((p) => ({ ...p, isNegotiable: e.target.checked }))}
+                  className="h-4 w-4 accent-[#C89B3C]"
+                />
+                Price is negotiable
+              </label>
+            )}
+
             {/* Price & Location */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <Label className="text-xs font-bold text-[#07111F]">
-                    Listing Price (USD) <span className="text-[#C89B3C]">*</span>
+                    {listingType === "FOR_RENT" ? `Rent per ${common.rentPeriod.toLowerCase().replace("ly", "").replace("dai", "day")} (USD)` : "Listing Price (USD)"} <span className="text-[#C89B3C]">*</span>
                   </Label>
                   {validationErrors.price && (
                     <span className="text-[11px] text-red-600 font-semibold">{validationErrors.price}</span>
@@ -1807,192 +2050,482 @@ export default function DynamicPropertyForm({
       )}
 
       {/* ════════════════════════════════════════════════════════
-          STEP 4: MEDIA, GALLERY, VIDEO, AND VIRTUAL TOURS
+          STEP 4: MEDIA, VIDEO TOUR & FLOOR PLANS
          ════════════════════════════════════════════════════════ */}
       {currentStep === 4 && (
-        <div className="bg-[#FCFBF7] rounded-3xl shadow-sm border border-[#E8E1D4] p-6 sm:p-8 space-y-6">
+        <div className="bg-[#FCFBF7] rounded-3xl shadow-sm border border-[#E8E1D4] p-6 sm:p-8 space-y-7">
           <div className="border-b border-[#E8E1D4] pb-4">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#07111F] text-[#D9B45B] text-[10px] font-bold uppercase tracking-wider mb-2">
-              Step 4 of 5 • Media &amp; Tours
+              Step 4 of 5
             </span>
             <h2 className="text-2xl font-serif font-black text-[#07111F]">
-              Property Media &amp; Visual Assets
+              Media, Video Tour &amp; Floor Plans
             </h2>
             <p className="text-xs text-[#6B7280] mt-1">
-              Add a required primary photo, additional gallery images, optional video tour, floor plans, and 360° virtual links.
+              Upload primary showcase photo, gallery images, video tours, floor plans, and link virtual tours.
             </p>
           </div>
 
-          <div className="space-y-5">
-            {/* Primary Image (Required) */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs font-bold text-[#07111F]">
-                  Primary Property Image URL <span className="text-[#C89B3C]">*</span>
-                </Label>
-                {validationErrors.imageUrl && (
-                  <span className="text-[11px] text-red-600 font-semibold">{validationErrors.imageUrl}</span>
-                )}
-              </div>
-              <Input
-                name="imageUrl"
-                value={media.imageUrl}
-                onChange={(e) => setMedia((p) => ({ ...p, imageUrl: e.target.value }))}
-                placeholder="https://images.unsplash.com/..."
-                className="h-11 border-[#E8E1D4] bg-[#FCFBF7] rounded-xl text-sm"
-                required
+          <div className="space-y-6">
+            {/* 1. Primary Property Image * */}
+            <div className="space-y-2.5">
+              <input
+                type="file"
+                id="primary-property-image-upload"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleUploadCover(file);
+                  e.target.value = "";
+                }}
               />
 
-              {/* Primary Image Preview */}
-              {media.imageUrl && (
-                <div className="aspect-16/9 max-w-sm rounded-2xl overflow-hidden border border-[#E8E1D4] bg-[#F7F3EA] relative">
-                  <img
-                    src={media.imageUrl}
-                    alt="Primary Preview"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as any).style.display = "none";
-                    }}
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-bold text-[#07111F] flex items-center gap-2">
+                  <Camera className="h-4 w-4 text-[#C89B3C]" />
+                  Primary Property Image <span className="text-[#C89B3C]">*</span>
+                </Label>
+                <button
+                  type="button"
+                  onClick={() => setShowCoverUrlInput(!showCoverUrlInput)}
+                  className="text-xs font-semibold text-[#A97918] hover:underline cursor-pointer"
+                >
+                  {showCoverUrlInput ? "Hide URL input" : "Or paste image URL"}
+                </button>
+              </div>
+
+              {validationErrors.imageUrl && (
+                <p className="text-xs text-red-600 font-semibold bg-red-50 p-2.5 rounded-xl border border-red-200">
+                  {validationErrors.imageUrl}
+                </p>
+              )}
+
+              {media.imageUrl ? (
+                <div className="space-y-3">
+                  <div className="aspect-16/9 max-w-md rounded-2xl overflow-hidden border-2 border-[#C89B3C]/50 bg-[#F7F3EA] relative shadow-sm group">
+                    <img
+                      src={media.imageUrl}
+                      alt="Primary Showcase"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as any).style.display = "none";
+                      }}
+                    />
+                    <span className="absolute top-2.5 left-2.5 bg-[#07111F]/85 backdrop-blur-xs text-[#D9B45B] text-[10px] font-bold px-2.5 py-1 rounded-md shadow-xs">
+                      Cover Image Active
+                    </span>
+
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <label
+                        htmlFor="primary-property-image-upload"
+                        className="inline-flex items-center gap-1.5 bg-[#07111F] text-[#FCFBF7] text-xs font-bold px-3.5 py-2 rounded-xl cursor-pointer hover:bg-black transition-colors shadow-md"
+                      >
+                        {uploadingCover ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5 text-[#D9B45B]" />}
+                        <span>Change Image</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setMedia((p) => ({ ...p, imageUrl: "" }))}
+                        className="inline-flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-3 py-2 rounded-xl transition-colors shadow-md cursor-pointer"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" /> Remove
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="primary-property-image-upload"
+                      className="inline-flex items-center gap-2 bg-[#FCFBF7] border border-[#C89B3C] text-[#07111F] hover:bg-[#F7F3EA] font-bold text-xs px-4 py-2 rounded-xl cursor-pointer transition-all shadow-2xs"
+                    >
+                      {uploadingCover ? <Loader2 className="h-3.5 w-3.5 animate-spin text-[#C89B3C]" /> : <Camera className="h-3.5 w-3.5 text-[#C89B3C]" />}
+                      <span>{uploadingCover ? "Uploading Image..." : "Upload New Cover Image"}</span>
+                    </label>
+                  </div>
+                </div>
+              ) : (
+                <label
+                  htmlFor="primary-property-image-upload"
+                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) handleUploadCover(file);
+                  }}
+                  className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-[#C89B3C]/50 hover:border-[#C89B3C] bg-[#F7F3EA]/60 hover:bg-[#F7F3EA] rounded-2xl cursor-pointer transition-all text-center group"
+                >
+                  {uploadingCover ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="h-9 w-9 animate-spin text-[#C89B3C]" />
+                      <p className="text-xs font-bold text-[#07111F]">Uploading image...</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-12 h-12 rounded-2xl bg-[#07111F] text-[#D9B45B] flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+                        <Camera className="h-6 w-6" />
+                      </div>
+                      <div className="mt-1">
+                        <span className="inline-flex items-center gap-2 bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs">
+                          <Camera className="h-4 w-4" /> Upload Image
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#6B7280] mt-1">High-resolution JPG, PNG, or WEBP up to 25MB</p>
+                    </div>
+                  )}
+                </label>
+              )}
+
+              {showCoverUrlInput && (
+                <div className="pt-2 space-y-1">
+                  <Label className="text-xs font-semibold text-[#6B7280]">Direct Image URL</Label>
+                  <Input
+                    name="imageUrl"
+                    value={media.imageUrl}
+                    onChange={(e) => setMedia((p) => ({ ...p, imageUrl: e.target.value }))}
+                    placeholder="https://images.unsplash.com/..."
+                    className="h-10 border-[#E8E1D4] bg-[#FCFBF7] rounded-xl text-xs"
                   />
-                  <span className="absolute top-2 left-2 bg-[#07111F]/80 backdrop-blur-xs text-[#D9B45B] text-[10px] font-bold px-2 py-0.5 rounded-md">
-                    Cover Image
+                </div>
+              )}
+            </div>
+
+            {/* 2. Property Gallery */}
+            <div className="space-y-3 pt-4 border-t border-[#E8E1D4]">
+              <input
+                type="file"
+                id="property-gallery-upload"
+                multiple
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files.length > 0) {
+                    handleUploadGallery(e.target.files);
+                    e.target.value = "";
+                  }
+                }}
+              />
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm font-bold text-[#07111F] flex items-center gap-2">
+                    <Camera className="h-4 w-4 text-[#C89B3C]" />
+                    Property Gallery
+                  </Label>
+                  <p className="text-xs text-[#6B7280] mt-0.5">
+                    Upload multiple images to showcase all rooms, exterior, and features in lightbox and carousel.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowGalleryUrlInput(!showGalleryUrlInput)}
+                  className="text-xs font-semibold text-[#A97918] hover:underline cursor-pointer"
+                >
+                  {showGalleryUrlInput ? "Hide URL input" : "Or add by URL"}
+                </button>
+              </div>
+
+              <label
+                htmlFor="property-gallery-upload"
+                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    handleUploadGallery(e.dataTransfer.files);
+                  }
+                }}
+                className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-[#C89B3C]/50 hover:border-[#C89B3C] bg-[#FCFBF7] hover:bg-[#F7F3EA] rounded-2xl cursor-pointer transition-all text-center group"
+              >
+                {uploadingGallery ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="h-8 w-8 animate-spin text-[#C89B3C]" />
+                    <p className="text-xs font-bold text-[#07111F]">Uploading gallery images...</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-12 h-12 rounded-2xl bg-[#07111F] text-[#D9B45B] flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+                      <Camera className="h-6 w-6" />
+                    </div>
+                    <div className="mt-1">
+                      <span className="inline-flex items-center gap-2 bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs">
+                        <Camera className="h-4 w-4" /> Upload Multiple Images
+                      </span>
+                    </div>
+                    <p className="text-xs text-[#6B7280] mt-1">Select multiple photos from your device at once</p>
+                  </div>
+                )}
+              </label>
+
+              {showGalleryUrlInput && (
+                <div className="flex gap-2 pt-1">
+                  <Input
+                    value={newGalleryUrl}
+                    onChange={(e) => setNewGalleryUrl(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddGalleryImage();
+                      }
+                    }}
+                    placeholder="Paste additional image URL (e.g. https://...)"
+                    className="h-10 flex-1 border-[#E8E1D4] bg-[#FCFBF7] rounded-xl text-xs"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleAddGalleryImage}
+                    className="gap-1.5 bg-[#07111F] text-[#FCFBF7] font-bold rounded-xl text-xs h-10 px-4 shrink-0 cursor-pointer"
+                  >
+                    <Plus className="h-4 w-4 text-[#D9B45B]" /> Add Image
+                  </Button>
+                </div>
+              )}
+
+              {galleryImages.length > 0 && (
+                <div className="pt-2">
+                  <p className="text-xs font-bold text-[#07111F] mb-2">
+                    Gallery Images ({galleryImages.length}):
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {galleryImages.map((img, idx) => (
+                      <div
+                        key={`${img}-${idx}`}
+                        className="aspect-4/3 rounded-xl overflow-hidden border border-[#E8E1D4] bg-[#F7F3EA] relative group shadow-2xs"
+                      >
+                        <img
+                          src={img}
+                          alt={`Gallery ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as any).style.display = "none";
+                          }}
+                        />
+                        <span className="absolute bottom-1.5 left-1.5 bg-[#07111F]/70 backdrop-blur-xs text-[#FCFBF7] text-[9px] font-bold px-1.5 py-0.5 rounded-md">
+                          #{idx + 1}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveGalleryImage(idx)}
+                          className="absolute top-1.5 right-1.5 w-7 h-7 rounded-lg bg-red-600 text-white flex items-center justify-center opacity-85 hover:opacity-100 hover:scale-105 transition-all cursor-pointer shadow-md"
+                          title="Remove Image"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 3. Video Tour: [ Upload Video ] OR [ YouTube/Vimeo URL ] */}
+            <div className="space-y-3 pt-4 border-t border-[#E8E1D4]">
+              <input
+                type="file"
+                id="video-tour-upload"
+                accept="video/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleUploadVideo(file);
+                  e.target.value = "";
+                }}
+              />
+
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-bold text-[#07111F] flex items-center gap-2">
+                  <Video className="h-4 w-4 text-[#C89B3C]" />
+                  Video Tour
+                </Label>
+                {media.videoUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setMedia((p) => ({ ...p, videoUrl: "" }))}
+                    className="text-xs text-red-600 hover:underline font-semibold cursor-pointer"
+                  >
+                    Remove Video
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Upload Video Button / Box */}
+                <label
+                  htmlFor="video-tour-upload"
+                  className="flex flex-col items-center justify-center p-5 border-2 border-dashed border-[#C89B3C]/50 hover:border-[#C89B3C] bg-[#FCFBF7] hover:bg-[#F7F3EA] rounded-2xl cursor-pointer transition-all text-center group"
+                >
+                  {uploadingVideo ? (
+                    <div className="flex flex-col items-center gap-1.5">
+                      <Loader2 className="h-7 w-7 animate-spin text-[#C89B3C]" />
+                      <p className="text-xs font-bold text-[#07111F]">Uploading video...</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <span className="inline-flex items-center gap-2 bg-[#07111F] text-[#FCFBF7] font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs group-hover:bg-[#07111F]/90 transition-all">
+                        <Video className="h-4 w-4 text-[#D9B45B]" /> Upload Video
+                      </span>
+                      <p className="text-[11px] text-[#6B7280]">MP4, WebM, MOV from device (up to 100MB)</p>
+                    </div>
+                  )}
+                </label>
+
+                {/* OR YouTube/Vimeo URL */}
+                <div className="flex flex-col justify-center p-5 border border-[#E8E1D4] bg-[#FCFBF7] rounded-2xl space-y-2">
+                  <Label className="text-xs font-bold text-[#07111F]">
+                    OR YouTube / Vimeo URL
+                  </Label>
+                  <Input
+                    name="videoUrl"
+                    value={media.videoUrl}
+                    onChange={(e) => setMedia((p) => ({ ...p, videoUrl: e.target.value }))}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    className="h-10 border-[#E8E1D4] bg-white rounded-xl text-xs"
+                  />
+                  <p className="text-[11px] text-[#6B7280]">Paste video link or embedded streaming URL</p>
+                </div>
+              </div>
+
+              {media.videoUrl && (
+                <div className="p-3 bg-[#F7F3EA] rounded-xl border border-[#E8E1D4] flex items-center justify-between text-xs">
+                  <span className="font-semibold text-[#07111F] truncate max-w-md">
+                    Attached Video: <span className="font-mono text-[#A97918]">{media.videoUrl}</span>
+                  </span>
+                  <span className="text-[10px] font-bold bg-[#07111F] text-[#D9B45B] px-2 py-0.5 rounded-md">
+                    Ready
                   </span>
                 </div>
               )}
             </div>
 
-            {/* Property Gallery (Multiple Images) */}
-            <div className="space-y-3 pt-2 border-t border-[#E8E1D4]">
-              <div>
-                <Label className="text-xs font-bold text-[#07111F]">
-                  Property Gallery (Multiple Images Optional)
-                </Label>
-                <p className="text-[11px] text-[#6B7280] mt-0.5">
-                  Add additional photos to display in the full-screen lightbox and carousel.
-                </p>
-              </div>
-
-              <div className="flex gap-2">
-                <Input
-                  value={newGalleryUrl}
-                  onChange={(e) => setNewGalleryUrl(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleAddGalleryImage();
-                    }
+            {/* 4. Floor Plan & 5. 360° Virtual Tour */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-4 border-t border-[#E8E1D4]">
+              {/* Floor Plan: [ 📐 Upload Image/PDF ] */}
+              <div className="space-y-2.5">
+                <input
+                  type="file"
+                  id="floorplan-file-upload"
+                  accept="image/*,application/pdf"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleUploadFloorPlan(f);
+                    e.target.value = "";
                   }}
-                  placeholder="Paste additional image URL (e.g. https://...)"
-                  className="h-10 flex-1 border-[#E8E1D4] bg-[#FCFBF7] rounded-xl text-xs"
                 />
-                <Button
-                  type="button"
-                  onClick={handleAddGalleryImage}
-                  className="gap-1.5 bg-[#07111F] text-[#FCFBF7] font-bold rounded-xl text-xs h-10 px-4 shrink-0 cursor-pointer"
-                >
-                  <Plus className="h-4 w-4 text-[#D9B45B]" /> Add Image
-                </Button>
-              </div>
 
-              {galleryImages.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-                  {galleryImages.map((img, idx) => (
-                    <div
-                      key={`${img}-${idx}`}
-                      className="aspect-4/3 rounded-xl overflow-hidden border border-[#E8E1D4] bg-[#F7F3EA] relative group"
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-bold text-[#07111F] flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-[#C89B3C]" />
+                    Floor Plan
+                  </Label>
+                  {media.floorPlanUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setMedia((p) => ({ ...p, floorPlanUrl: "" }))}
+                      className="text-xs text-red-600 hover:underline font-semibold cursor-pointer"
                     >
-                      <img
-                        src={img}
-                        alt={`Gallery ${idx + 1}`}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = "none";
-                          const parent = target.parentElement;
-                          if (parent && !parent.querySelector('.img-error-fallback')) {
-                            const fallback = document.createElement('div');
-                            fallback.className = 'img-error-fallback w-full h-full flex flex-col items-center justify-center text-[#6B7280]';
-                            fallback.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg><span style="font-size:10px;margin-top:4px">Failed to load</span>';
-                            parent.insertBefore(fallback, parent.firstChild);
-                          }
-                        }}
-                      />
-                      <span className="absolute bottom-1.5 left-1.5 bg-[#07111F]/70 backdrop-blur-xs text-[#FCFBF7] text-[9px] font-bold px-1.5 py-0.5 rounded-md">
-                        #{idx + 1}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveGalleryImage(idx)}
-                        className="absolute top-1.5 right-1.5 w-6 h-6 rounded-lg bg-red-600/90 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                        title="Remove Image"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ))}
+                      Remove
+                    </button>
+                  )}
                 </div>
-              )}
-            </div>
 
-            {/* Optional Video Tour & 360 Walkthrough */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-[#E8E1D4]">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-[#07111F]">
-                  Video Tour (YouTube / Vimeo / MP4 URL)
-                </Label>
-                <Input
-                  name="videoUrl"
-                  value={media.videoUrl}
-                  onChange={(e) => setMedia((p) => ({ ...p, videoUrl: e.target.value }))}
-                  placeholder="https://www.youtube.com/watch?v=..."
-                  className="h-10 border-[#E8E1D4] bg-[#FCFBF7] rounded-xl text-xs"
-                />
+                <label
+                  htmlFor="floorplan-file-upload"
+                  className="flex flex-col items-center justify-center p-5 border-2 border-dashed border-[#C89B3C]/50 hover:border-[#C89B3C] bg-[#FCFBF7] hover:bg-[#F7F3EA] rounded-2xl cursor-pointer transition-all text-center group"
+                >
+                  {uploadingFloorPlan ? (
+                    <div className="flex flex-col items-center gap-1.5">
+                      <Loader2 className="h-7 w-7 animate-spin text-[#C89B3C]" />
+                      <p className="text-xs font-bold text-[#07111F]">Uploading floor plan...</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <span className="inline-flex items-center gap-2 bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs">
+                        <FileText className="h-4 w-4" /> Upload Image/PDF
+                      </span>
+                      <p className="text-[11px] text-[#6B7280]">Architectural layout (JPG, PNG, or PDF)</p>
+                    </div>
+                  )}
+                </label>
+
+                {media.floorPlanUrl && (
+                  <p className="text-xs text-[#07111F] bg-[#F7F3EA] p-2.5 rounded-xl border border-[#E8E1D4] truncate font-mono">
+                    Attached: {media.floorPlanUrl}
+                  </p>
+                )}
               </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-[#07111F]">
-                  Floor Plan (JPG, PNG, or PDF URL)
+              {/* 360° Virtual Tour: [ 🌐 Paste Virtual Tour URL ] */}
+              <div className="space-y-2.5">
+                <Label className="text-sm font-bold text-[#07111F] flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-[#C89B3C]" />
+                  360° Virtual Tour
                 </Label>
-                <Input
-                  name="floorPlanUrl"
-                  value={media.floorPlanUrl}
-                  onChange={(e) => setMedia((p) => ({ ...p, floorPlanUrl: e.target.value }))}
-                  placeholder="https://.../floorplan.pdf"
-                  className="h-10 border-[#E8E1D4] bg-[#FCFBF7] rounded-xl text-xs"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-[#07111F]">
-                  360° Virtual Tour (Matterport URL)
-                </Label>
-                <Input
-                  name="virtualTourUrl"
-                  value={media.virtualTourUrl}
-                  onChange={(e) => setMedia((p) => ({ ...p, virtualTourUrl: e.target.value }))}
-                  placeholder="https://my.matterport.com/show/..."
-                  className="h-10 border-[#E8E1D4] bg-[#FCFBF7] rounded-xl text-xs"
-                />
+                <div className="p-5 border border-[#E8E1D4] bg-[#FCFBF7] rounded-2xl space-y-2">
+                  <Label className="text-xs font-bold text-[#07111F]">
+                    Paste Virtual Tour URL
+                  </Label>
+                  <Input
+                    name="virtualTourUrl"
+                    value={media.virtualTourUrl}
+                    onChange={(e) => setMedia((p) => ({ ...p, virtualTourUrl: e.target.value }))}
+                    placeholder="https://my.matterport.com/show/?m=..."
+                    className="h-10 border-[#E8E1D4] bg-white rounded-xl text-xs"
+                  />
+                  <p className="text-[11px] text-[#6B7280]">Supports Matterport, Kuula, and 360 viewer links</p>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="pt-4 border-t border-[#E8E1D4] flex items-center justify-between">
+          {/* Action Buttons: [ Save as Draft ] [ Submit for Admin Review ] */}
+          <div className="pt-5 border-t border-[#E8E1D4] flex flex-col sm:flex-row items-center justify-between gap-3">
             <Button
               type="button"
               variant="outline"
               onClick={handlePrevStep}
-              className="gap-2 border-[#E8E1D4] rounded-xl text-xs font-bold"
+              className="w-full sm:w-auto gap-2 border-[#E8E1D4] rounded-xl text-xs font-bold"
             >
               <ArrowLeft className="h-4 w-4" /> Back to Specs
             </Button>
-            <Button
-              type="button"
-              onClick={handleNextStep}
-              className="gap-2 bg-[#07111F] hover:bg-[#07111F]/90 text-[#FCFBF7] font-bold rounded-xl px-6 h-11 cursor-pointer"
-            >
-              Review Listing Summary <ArrowRight className="h-4 w-4 text-[#D9B45B]" />
-            </Button>
+
+            <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap sm:flex-nowrap">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!!submitting}
+                onClick={() => handleSubmit(false)}
+                className="flex-1 sm:flex-none rounded-xl border-[#E8E1D4] text-[#07111F] hover:bg-[#F7F3EA] gap-2 bg-[#FCFBF7] h-11 px-5 font-bold"
+              >
+                {submitting === "DRAFT" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 text-[#6B7280]" />
+                )}
+                Save as Draft
+              </Button>
+
+              <Button
+                type="button"
+                disabled={!!submitting}
+                onClick={() => handleSubmit(true)}
+                className="flex-1 sm:flex-none rounded-xl bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] hover:opacity-95 text-[#07111F] font-bold gap-2 shadow-md shadow-[#C89B3C]/20 border-0 h-11 px-6 cursor-pointer"
+              >
+                {submitting === "PENDING" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+                {initialData?.id
+                  ? isAdminMode
+                    ? "Save & Publish Listing"
+                    : "Save & Resubmit Listing"
+                  : isAdminMode
+                  ? "Publish Listing"
+                  : "Submit for Admin Review"}
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -2156,7 +2689,13 @@ export default function DynamicPropertyForm({
                 ) : (
                   <Send className="h-4 w-4" />
                 )}
-                Submit for Admin Review
+                {initialData?.id
+                  ? isAdminMode
+                    ? "Save & Publish Listing"
+                    : "Save & Resubmit Listing"
+                  : isAdminMode
+                  ? "Publish Listing"
+                  : "Submit for Admin Review"}
               </Button>
             </div>
           </div>

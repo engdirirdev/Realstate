@@ -521,6 +521,12 @@ export default async function PropertyDetailPage({ params }: Props) {
                 propertyId={property.id}
                 propertyTitle={property.title}
                 propertyPrice={property.price}
+                listingType={property.listingType}
+                status={property.status}
+                rentPeriod={property.rentPeriod}
+                securityDeposit={property.securityDeposit}
+                isNegotiable={property.isNegotiable}
+                managerId={property.managerId}
               />
             </div>
           </div>

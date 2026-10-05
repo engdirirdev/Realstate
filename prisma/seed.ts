@@ -71,6 +71,18 @@ function generatePropertyData(index: number) {
       `Cozy Studio Apartment in ${city}`,
       `Modern Compact Studio, ${city}`,
     ],
+    SHOP: [
+      `Prime Retail Storefront in ${city}`,
+      `Commercial Retail Unit in ${city}`,
+    ],
+    WAREHOUSE: [
+      `High-Ceiling Logistics Warehouse in ${city}`,
+      `Industrial Storage Depot in ${city}`,
+    ],
+    OTHER: [
+      `Multipurpose Real Estate Asset in ${city}`,
+      `Commercial Property in ${city}`,
+    ],
   };
 
   const titleList = titles[type] || [`Property in ${city}`];

@@ -102,9 +102,37 @@ function scoreProperty(
     totalScore += PRICE_WEIGHT * priceScore;
   }
 
-  // ─── BEDROOMS (20%) ───────────────────────────────
+  // ─── BEDROOMS / TYPE-SPECIFIC UTILITY (20%) ─────────
   const BEDROOM_WEIGHT = 20;
-  if (prefs.preferredBedrooms) {
+  const isLand = property.type === "LAND";
+  const isCommercial = ["SHOP", "WAREHOUSE", "OFFICE", "COMMERCIAL"].includes(property.type);
+
+  let parsedDetails: any = null;
+  if (property.typeDetails) {
+    try {
+      parsedDetails = typeof property.typeDetails === "string" ? JSON.parse(property.typeDetails) : property.typeDetails;
+    } catch {}
+  }
+
+  if (isLand) {
+    // For land, re-attribute bedroom score to land utility, road access, and legal deed
+    let landScore = 14;
+    if (parsedDetails?.roadAccess) {
+      landScore += 3;
+      reasons.push("Direct road access included");
+    }
+    if (parsedDetails?.titleDeedStatus?.includes("Title Deed")) {
+      landScore += 3;
+      reasons.push("Verified registered title deed");
+    }
+    totalScore += Math.min(BEDROOM_WEIGHT, landScore);
+  } else if (isCommercial) {
+    // For commercial / shop / warehouse, re-attribute to access and commercial readiness
+    totalScore += BEDROOM_WEIGHT;
+    if (parsedDetails?.frontageWidth || parsedDetails?.loadingBays || parsedDetails?.meetingRooms) {
+      reasons.push(`Tailored commercial infrastructure for ${property.type.toLowerCase()}`);
+    }
+  } else if (prefs.preferredBedrooms) {
     const diff = Math.abs(property.bedrooms - prefs.preferredBedrooms);
     if (diff === 0) {
       totalScore += BEDROOM_WEIGHT;
@@ -132,14 +160,15 @@ function scoreProperty(
 
   // ─── AREA (10%) ───────────────────────────────────
   const AREA_WEIGHT = 10;
+  const effectiveArea = property.area || parsedDetails?.landArea || parsedDetails?.shopArea || parsedDetails?.warehouseArea || 0;
   if (prefs.preferredMinArea || prefs.preferredMaxArea) {
     const minA = prefs.preferredMinArea || 0;
     const maxA = prefs.preferredMaxArea || Infinity;
-    if (property.area >= minA && property.area <= maxA) {
+    if (effectiveArea >= minA && effectiveArea <= maxA) {
       totalScore += AREA_WEIGHT;
       reasons.push("Area matches your preference");
     } else {
-      const areaScore = 1 - normalize(Math.abs(property.area - (minA + maxA) / 2), 0, maxA - minA);
+      const areaScore = 1 - normalize(Math.abs(effectiveArea - (minA + maxA) / 2), 0, maxA - minA);
       totalScore += AREA_WEIGHT * Math.max(0, areaScore);
     }
   } else {
@@ -257,6 +286,8 @@ export function calculatePropertyScore(property: {
   area: number;
   bedrooms: number;
   bathrooms: number;
+  type?: string;
+  typeDetails?: string | null;
   description?: string | null;
   amenities?: string | null;
   images?: any[];
@@ -269,13 +300,20 @@ export function calculatePropertyScore(property: {
 
   // 1. Space & Layout Proportion (Max 25 pts)
   let spaceScore = 15;
-  if (property.area > 0 && property.bedrooms > 0) {
+  if (property.type === "LAND") {
+    const area = property.area || 0;
+    if (area >= 400) spaceScore = 25;
+    else if (area >= 200) spaceScore = 21;
+    else spaceScore = 18;
+  } else if (property.area > 0 && property.bedrooms > 0) {
     const areaPerBed = property.area / property.bedrooms;
     if (areaPerBed >= 25 && areaPerBed <= 75) spaceScore = 25;
     else if (areaPerBed >= 18) spaceScore = 20;
     else spaceScore = 12;
+  } else if (property.area > 0) {
+    spaceScore = 22;
   }
-  breakdown.push({ factor: "Space & Room Proportion", points: spaceScore, max: 25 });
+  breakdown.push({ factor: "Space & Proportion", points: spaceScore, max: 25 });
   total += spaceScore;
 
   // 2. Listing Quality & Media (Max 25 pts)

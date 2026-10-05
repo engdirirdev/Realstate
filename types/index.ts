@@ -17,10 +17,10 @@ export type {
 } from "@prisma/client";
 
 // Enums
-export type PropertyType = "HOUSE" | "APARTMENT" | "VILLA" | "OFFICE" | "LAND" | "COMMERCIAL" | "TOWNHOUSE" | "STUDIO";
+export type PropertyType = "HOUSE" | "APARTMENT" | "VILLA" | "OFFICE" | "LAND" | "COMMERCIAL" | "TOWNHOUSE" | "STUDIO" | "SHOP" | "WAREHOUSE" | "OTHER";
 export type PropertyStatus = "DRAFT" | "PENDING" | "APPROVED" | "REJECTED" | "PUBLISHED" | "SOLD" | "RENTED" | "INACTIVE" | "UNAVAILABLE";
 export type Role = "USER" | "ADMIN" | "CUSTOMER";
-export type ListingType = "SALE" | "RENT";
+export type ListingType = "FOR_SALE" | "FOR_RENT" | "SALE" | "RENT";
 
 // Property with joined images
 export interface PropertyWithImages {

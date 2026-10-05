@@ -58,7 +58,12 @@ export default async function AdminPropertiesPage({
           <p className="text-[#6B7280] text-sm mt-1">Review, approve, and oversee all real estate listings across Somalia</p>
         </div>
 
-        <AdminAddPropertyModal />
+        <Link
+          href="/admin/properties/add"
+          className="inline-flex items-center gap-2 bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm hover:brightness-105 self-start sm:self-auto cursor-pointer"
+        >
+          <Building2 className="h-4 w-4" /> Add New Property
+        </Link>
       </div>
 
       {/* Status tabs */}

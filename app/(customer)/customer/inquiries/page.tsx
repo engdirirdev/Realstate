@@ -51,7 +51,7 @@ export default async function CustomerInquiriesPage() {
             When you view any verified listing, select &ldquo;Send Property Enquiry&rdquo; to connect directly with the assigned property advisor.
           </p>
           <Link
-            href="/properties"
+            href="/customer/properties"
             className="inline-flex items-center gap-2 bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] px-6 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm hover:brightness-105"
           >
             <Building2 className="h-4 w-4" /> Browse Properties
@@ -73,7 +73,7 @@ export default async function CustomerInquiriesPage() {
                     )}
                   </div>
                   <div>
-                    <Link href={`/properties/${inq.property.id}`} className="font-serif font-bold text-[#07111F] text-base hover:text-[#A97918] transition-colors">
+                    <Link href={`/customer/properties/${inq.property.id}`} className="font-serif font-bold text-[#07111F] text-base hover:text-[#A97918] transition-colors">
                       {inq.property.title}
                     </Link>
                     <p className="text-xs text-[#6B7280] flex items-center gap-1.5 mt-0.5">

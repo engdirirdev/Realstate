@@ -35,6 +35,33 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export async function PATCH(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session || (session.user as any)?.role !== "ADMIN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id, city, region, country } = await request.json();
+    if (!id || !city || !region) {
+      return NextResponse.json({ error: "Location ID, City, and Region are required" }, { status: 400 });
+    }
+
+    const location = await prisma.location.update({
+      where: { id },
+      data: {
+        city: String(city).trim(),
+        region: String(region).trim(),
+        country: country ? String(country).trim() : "Somalia",
+      },
+    });
+
+    return NextResponse.json({ success: true, location });
+  } catch (error) {
+    return NextResponse.json({ error: "Failed to update location" }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: NextRequest) {
   try {
     const session = await auth();
@@ -52,3 +79,4 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "Failed to delete location" }, { status: 500 });
   }
 }
+

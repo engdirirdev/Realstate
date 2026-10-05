@@ -17,6 +17,8 @@ import {
   CreditCard,
   Bookmark,
   Star,
+  Headphones,
+  Receipt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -38,10 +40,10 @@ const customerNavGroups: NavGroup[] = [
   {
     title: "PROPERTIES",
     items: [
-      { href: "/properties", label: "Browse Properties", icon: Building2 },
+      { href: "/customer/properties", label: "Browse Properties", icon: Building2 },
       { href: "/customer/favorites", label: "Saved Favorites", icon: Heart },
       { href: "/customer/saved-searches", label: "Saved Searches", icon: Bookmark },
-      { href: "/properties/compare", label: "Compare Properties", icon: Sliders },
+      { href: "/customer/compare", label: "Compare Properties", icon: Sliders },
     ],
   },
   {
@@ -49,14 +51,22 @@ const customerNavGroups: NavGroup[] = [
     items: [
       { href: "/customer/bookings", label: "My Appointments", icon: Calendar },
       { href: "/customer/inquiries", label: "My Inquiries", icon: MessageSquare },
+      { href: "/customer/contact", label: "VIP Concierge", icon: Headphones },
       { href: "/customer/notifications", label: "Messages & Alerts", icon: Mail },
       { href: "/customer/reviews", label: "My Reviews", icon: Star },
     ],
   },
   {
+    title: "DEALS & TRANSACTIONS",
+    items: [
+      { href: "/customer/transactions", label: "My Transactions & Requests", icon: Receipt },
+      { href: "/customer/payments", label: "Payments", icon: CreditCard },
+    ],
+  },
+  {
     title: "AI & ANALYTICS",
     items: [
-      { href: "/price-prediction", label: "Price Prediction", icon: TrendingUp },
+      { href: "/customer/predictions", label: "Price Prediction", icon: TrendingUp },
       { href: "/customer/recommendations", label: "Recommendations", icon: Sparkles },
       { href: "/ai-assistant", label: "AI Assistant", icon: Bot },
     ],
@@ -65,7 +75,6 @@ const customerNavGroups: NavGroup[] = [
     title: "ACCOUNT",
     items: [
       { href: "/customer/profile", label: "My Profile & Settings", icon: User },
-      { href: "/customer/payments", label: "Payments", icon: CreditCard },
     ],
   },
 ];

@@ -15,6 +15,8 @@ import {
   Settings,
   Bell,
   CreditCard,
+  FileText,
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,8 +38,7 @@ const managerNavGroups: NavGroup[] = [
   {
     title: "PROPERTIES",
     items: [
-      { href: "/properties", label: "All Properties", icon: Building2 },
-      { href: "/dashboard/properties", label: "My Listings", icon: ListFilter },
+      { href: "/dashboard/properties", label: "All Properties", icon: Building2 },
       { href: "/dashboard/properties/add", label: "Add Property", icon: PlusCircle },
     ],
   },
@@ -55,15 +56,17 @@ const managerNavGroups: NavGroup[] = [
     ],
   },
   {
-    title: "FINANCES",
+    title: "DEALS & TRANSACTIONS",
     items: [
+      { href: "/dashboard/requests", label: "Purchase & Rental Requests", icon: FileText },
+      { href: "/dashboard/transactions", label: "Transactions Ledger", icon: History },
       { href: "/dashboard/payments", label: "Payments & Revenue", icon: CreditCard },
     ],
   },
   {
     title: "AI & ANALYTICS",
     items: [
-      { href: "/price-prediction", label: "Price Prediction", icon: TrendingUp },
+      { href: "/dashboard/predictions", label: "Price Prediction", icon: TrendingUp },
       { href: "/dashboard/recommendations", label: "Recommendations", icon: Sparkles },
       { href: "/dashboard/analytics", label: "Sales & Reports", icon: BarChart3 },
     ],

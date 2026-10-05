@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Search, MapPin, Building2, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,24 @@ export default function HeroSearchBar({ className }: HeroSearchBarProps) {
   const [location, setLocation] = useState("");
   const [propertyType, setPropertyType] = useState("");
   const [priceRange, setPriceRange] = useState("");
+  const [cities, setCities] = useState<string[]>([
+    "Mogadishu", "Hargeisa", "Bosaso", "Garowe", "Kismayo", "Berbera", "Baydhabo"
+  ]);
+
+  useEffect(() => {
+    async function loadCities() {
+      try {
+        const res = await fetch("/api/locations");
+        const data = await res.json();
+        if (data.success && Array.isArray(data.cities) && data.cities.length > 0) {
+          setCities(data.cities);
+        }
+      } catch (err) {
+        console.error("Failed to load cities", err);
+      }
+    }
+    loadCities();
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,13 +101,11 @@ export default function HeroSearchBar({ className }: HeroSearchBarProps) {
             className="w-full h-11 px-3 rounded-xl border border-[#E8E1D4] bg-[#FCFBF7] text-xs sm:text-sm text-[#07111F] focus:outline-none focus:border-[#C89B3C] focus:ring-1 focus:ring-[#C89B3C] transition-colors"
           >
             <option value="">Select location</option>
-            <option value="Mogadishu">Mogadishu, Somalia</option>
-            <option value="Hargeisa">Hargeisa, Somaliland</option>
-            <option value="Bosaso">Bosaso, Puntland</option>
-            <option value="Garowe">Garowe, Puntland</option>
-            <option value="Kismayo">Kismayo, Jubaland</option>
-            <option value="Berbera">Berbera, Somaliland</option>
-            <option value="Baydhabo">Baydhabo, Southwest</option>
+            {cities.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
           </select>
         </div>
 

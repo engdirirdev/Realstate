@@ -30,6 +30,7 @@ export interface ParsedChatIntent {
   luxury?: boolean;
   cheap?: boolean;
   status?: string;
+  listingType?: "FOR_SALE" | "FOR_RENT";
   sortBy?: "best_match" | "price_asc" | "price_desc" | "newest";
   rawMessage?: string;
 }
@@ -289,21 +290,58 @@ export function classifyUserIntent(
   const bathMatch = (isFollowUpPhrase ? contextForSearch : text).match(/(\d+)\s*(?:bath|bathroom)/);
   if (bathMatch) bathrooms = parseInt(bathMatch[1], 10);
 
+  const targetPriceContext = isFollowUpPhrase ? contextForSearch : text;
+
+  // Extract Listing Type (Rent vs Sale)
+  let listingType: "FOR_SALE" | "FOR_RENT" | undefined;
+  if (
+    targetPriceContext.includes("rent") ||
+    targetPriceContext.includes("rental") ||
+    targetPriceContext.includes("lease") ||
+    targetPriceContext.includes("kiro") ||
+    targetPriceContext.includes("kirada") ||
+    targetPriceContext.includes("kirayn") ||
+    targetPriceContext.includes("للايجار") ||
+    targetPriceContext.includes("إيجار")
+  ) {
+    listingType = "FOR_RENT";
+  } else if (
+    targetPriceContext.includes("buy") ||
+    targetPriceContext.includes("purchase") ||
+    targetPriceContext.includes("for sale") ||
+    targetPriceContext.includes("sale") ||
+    targetPriceContext.includes("iib") ||
+    targetPriceContext.includes("iibso") ||
+    targetPriceContext.includes("gadasho") ||
+    targetPriceContext.includes("للبيع") ||
+    targetPriceContext.includes("شراء")
+  ) {
+    listingType = "FOR_SALE";
+  }
+
   // Extract Price Constraints
   let maxPrice: number | undefined;
   let minPrice: number | undefined;
-  const targetPriceContext = isFollowUpPhrase ? contextForSearch : text;
 
   const underMatch = targetPriceContext.match(/(?:under|below|less than|max|up to|\$)\s*(\d+)(?:\s*(k|thousand))?/);
   if (underMatch) {
     let val = parseInt(underMatch[1], 10);
-    if (underMatch[2] === "k" || underMatch[2] === "thousand" || val < 1000) val *= 1000;
+    if (underMatch[2] === "k" || underMatch[2] === "thousand") {
+      val *= 1000;
+    } else if (val < 1000 && listingType !== "FOR_RENT" && !targetPriceContext.includes("month")) {
+      // In sale context, e.g. "under 50" means 50k
+      val *= 1000;
+    }
     maxPrice = val;
   }
   const aboveMatch = targetPriceContext.match(/(?:above|more than|min|at least)\s*(\d+)(?:\s*(k|thousand))?/);
   if (aboveMatch) {
     let val = parseInt(aboveMatch[1], 10);
-    if (aboveMatch[2] === "k" || aboveMatch[2] === "thousand" || val < 1000) val *= 1000;
+    if (aboveMatch[2] === "k" || aboveMatch[2] === "thousand") {
+      val *= 1000;
+    } else if (val < 1000 && listingType !== "FOR_RENT" && !targetPriceContext.includes("month")) {
+      val *= 1000;
+    }
     minPrice = val;
   }
 
@@ -330,23 +368,24 @@ export function classifyUserIntent(
 
   return {
     intent: resolvedIntent,
-    confidence: 0.95,
+    confidence: isFollowUpPhrase ? 0.94 : 0.91,
     explanation: isFollowUpPhrase
-      ? "User refined previous search parameters (continuing filter session)."
-      : "User requested property records from the database.",
+      ? "User refined previous search criteria."
+      : "User searched for properties with custom attributes.",
     city,
     propertyType,
     bedrooms,
     bathrooms,
     minPrice,
     maxPrice,
-    furnished,
-    parking,
-    pool,
-    garden,
-    security,
-    luxury,
-    cheap,
+    listingType,
+    furnished: furnished ? true : undefined,
+    parking: parking ? true : undefined,
+    pool: pool ? true : undefined,
+    garden: garden ? true : undefined,
+    security: security ? true : undefined,
+    luxury: luxury ? true : undefined,
+    cheap: cheap ? true : undefined,
     status,
     sortBy,
     rawMessage: currentMessage,
@@ -396,23 +435,28 @@ export async function searchDatabaseProperties(
 
   // STRICT AUTHORIZATION & PROPERTY VISIBILITY
   if (role === "ADMIN") {
-    // Admin can view specific status if explicitly requested, otherwise default to APPROVED
+    // Admin can view specific status if explicitly requested, otherwise default to APPROVED / PUBLISHED
     if (intent.status) {
       where.status = intent.status;
     } else {
-      where.status = "APPROVED";
+      where.status = { in: ["APPROVED", "PUBLISHED"] };
     }
   } else if (role === "USER" && userId) {
-    // Managers can view APPROVED, or their own managed listings if explicitly asking about pending/draft
+    // Managers can view APPROVED/PUBLISHED, or their own managed listings if explicitly asking about pending/draft
     if (intent.status && ["PENDING", "DRAFT", "REJECTED"].includes(intent.status)) {
       where.status = intent.status;
       where.managerId = userId;
     } else {
-      where.status = "APPROVED";
+      where.status = { in: ["APPROVED", "PUBLISHED"] };
     }
   } else {
-    // PUBLIC and CUSTOMER users can ONLY EVER view APPROVED properties
-    where.status = "APPROVED";
+    // PUBLIC and CUSTOMER users can ONLY EVER view APPROVED or PUBLISHED available properties
+    where.status = { in: ["APPROVED", "PUBLISHED"] };
+  }
+
+  // STRICT LISTING TYPE FILTERING (FOR_SALE vs FOR_RENT)
+  if (intent.listingType) {
+    where.listingType = intent.listingType;
   }
 
   // STRICT CITY MATCHING — Never guess or mix cities

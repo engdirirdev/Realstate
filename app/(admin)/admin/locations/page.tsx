@@ -8,7 +8,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MapPin, Plus, Trash2, Globe, Loader2, Sparkles } from "lucide-react";
+import { MapPin, Plus, Trash2, Globe, Loader2, Sparkles, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +29,12 @@ export default function AdminLocationsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ city: "", region: "", country: "Somalia" });
+
+  // Edit Modal State
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingLocation, setEditingLocation] = useState<LocationItem | null>(null);
+  const [editForm, setEditForm] = useState({ city: "", region: "", country: "Somalia" });
+  const [updating, setUpdating] = useState(false);
 
   const fetchLocations = async () => {
     try {
@@ -69,6 +75,43 @@ export default function AdminLocationsPage() {
       toast({ title: "Error", description: "Failed to add location." });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const openEditModal = (loc: LocationItem) => {
+    setEditingLocation(loc);
+    setEditForm({ city: loc.city, region: loc.region, country: loc.country });
+    setEditModalOpen(true);
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingLocation || !editForm.city || !editForm.region) return;
+    setUpdating(true);
+    try {
+      const res = await fetch("/api/admin/locations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editingLocation.id,
+          city: editForm.city,
+          region: editForm.region,
+          country: editForm.country,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast({ title: "Location Updated ✨", description: `Updated ${editForm.city}, ${editForm.region}.` });
+        setEditModalOpen(false);
+        setEditingLocation(null);
+        fetchLocations();
+      } else {
+        toast({ title: "Error", description: data.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Failed to update location." });
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -130,14 +173,24 @@ export default function AdminLocationsPage() {
                   <td className="px-4 py-4 text-[#6B7280] text-xs font-semibold">{loc.region}</td>
                   <td className="px-4 py-4 text-[#6B7280] text-xs">{loc.country}</td>
                   <td className="px-5 py-4 text-right">
-                    <Button
-                      onClick={() => handleDelete(loc.id, loc.city)}
-                      variant="outline"
-                      size="sm"
-                      className="h-8 border-[#E8E1D4] text-[#DC2626] hover:bg-red-50 hover:border-red-200 rounded-xl"
-                    >
-                      <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
-                    </Button>
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        onClick={() => openEditModal(loc)}
+                        variant="outline"
+                        size="sm"
+                        className="h-8 border-[#C89B3C]/40 text-[#07111F] bg-[#FCFBF7] hover:bg-[#F7F3EA] hover:border-[#C89B3C] rounded-xl font-medium shadow-xs"
+                      >
+                        <Pencil className="h-3.5 w-3.5 mr-1 text-[#C89B3C]" /> Edit
+                      </Button>
+                      <Button
+                        onClick={() => handleDelete(loc.id, loc.city)}
+                        variant="outline"
+                        size="sm"
+                        className="h-8 border-[#E8E1D4] text-[#DC2626] hover:bg-red-50 hover:border-red-200 rounded-xl"
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -146,6 +199,7 @@ export default function AdminLocationsPage() {
         )}
       </div>
 
+      {/* Create Location Dialog */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-md bg-[#FCFBF7] rounded-2xl p-6 border border-[#E8E1D4] shadow-xl">
           <DialogHeader>
@@ -189,6 +243,68 @@ export default function AdminLocationsPage() {
                 className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] font-bold hover:brightness-105 rounded-xl border-0 shadow-sm"
               >
                 {submitting ? "Saving..." : "Save Location"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Location Dialog */}
+      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+        <DialogContent className="max-w-md bg-[#FCFBF7] rounded-2xl p-6 border border-[#E8E1D4] shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-serif font-bold text-[#07111F] flex items-center gap-2">
+              <Pencil className="h-5 w-5 text-[#C89B3C]" /> Edit Geographic Location
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUpdate} className="space-y-4 mt-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">City Name</Label>
+              <Input
+                value={editForm.city}
+                onChange={(e) => setEditForm((p) => ({ ...p, city: e.target.value }))}
+                placeholder="e.g. Mogadishu"
+                required
+                className="rounded-xl border-[#E8E1D4] bg-white focus:border-[#C89B3C] focus:ring-1 focus:ring-[#C89B3C]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">Region / State</Label>
+              <Input
+                value={editForm.region}
+                onChange={(e) => setEditForm((p) => ({ ...p, region: e.target.value }))}
+                placeholder="e.g. Banaadir"
+                required
+                className="rounded-xl border-[#E8E1D4] bg-white focus:border-[#C89B3C] focus:ring-1 focus:ring-[#C89B3C]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">Country</Label>
+              <Input
+                value={editForm.country}
+                onChange={(e) => setEditForm((p) => ({ ...p, country: e.target.value }))}
+                placeholder="Somalia"
+                className="rounded-xl border-[#E8E1D4] bg-white focus:border-[#C89B3C] focus:ring-1 focus:ring-[#C89B3C]"
+              />
+            </div>
+            <DialogFooter className="pt-2 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setEditModalOpen(false);
+                  setEditingLocation(null);
+                }}
+                className="rounded-xl border-[#E8E1D4] text-[#07111F] hover:bg-[#F7F3EA]"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={updating}
+                className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] font-bold hover:brightness-105 rounded-xl border-0 shadow-sm"
+              >
+                {updating ? "Saving Changes..." : "Save Changes"}
               </Button>
             </DialogFooter>
           </form>

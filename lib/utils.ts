@@ -37,9 +37,12 @@ export function getPropertyTypeLabel(type: string): string {
     VILLA: "Villa",
     OFFICE: "Office",
     LAND: "Land",
-    COMMERCIAL: "Commercial",
+    COMMERCIAL: "Commercial Property",
     TOWNHOUSE: "Townhouse",
     STUDIO: "Studio",
+    SHOP: "Shop",
+    WAREHOUSE: "Warehouse",
+    OTHER: "Other",
   };
   return labels[type] || type;
 }

@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import PropertyCard from "@/components/PropertyCard";
 import CustomerHeroSearch from "@/components/customer/CustomerHeroSearch";
+import CustomerAiChatButton from "@/components/customer/CustomerAiChatButton";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Customer Dashboard – Kiro-Maal Real Estate" };
@@ -263,13 +264,7 @@ export default async function CustomerDashboardPage() {
           </div>
 
           <div className="flex items-end justify-between mt-4">
-            <Link
-              href="/ai-assistant"
-              className="bg-gradient-to-r from-[#C89B3C] to-[#D9B45B] hover:brightness-105 text-[#07111F] font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md shadow-[#C89B3C]/20 flex items-center gap-1.5 cursor-pointer"
-            >
-              <span>Chat Now</span>
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+            <CustomerAiChatButton />
 
             {/* Cute AI Bot Graphic / Icon */}
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#C89B3C] to-[#A97918] flex items-center justify-center flex-shrink-0 text-[#07111F] shadow-sm">
@@ -326,7 +321,7 @@ export default async function CustomerDashboardPage() {
               <p className="text-xs text-[#6B7280]">AI personalized matches based on your preferences</p>
             </div>
             <Link
-              href="/properties"
+              href="/customer/properties"
               className="text-xs font-bold text-[#C89B3C] hover:text-[#A97918] transition-colors"
             >
               View All →
@@ -335,7 +330,7 @@ export default async function CustomerDashboardPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {recommendedProps.map((p) => (
-              <PropertyCard key={p.id} property={p as any} />
+              <PropertyCard key={p.id} property={p as any} href={`/customer/properties/${p.id}`} />
             ))}
           </div>
         </div>
@@ -390,7 +385,7 @@ export default async function CustomerDashboardPage() {
             </div>
           </div>
           <Link
-            href="/price-prediction"
+            href="/customer/predictions"
             className="bg-gradient-to-r from-[#C89B3C] to-[#D9B45B] hover:brightness-105 text-[#07111F] text-xs font-bold px-5 py-2.5 rounded-xl transition-all shadow-md shadow-[#C89B3C]/20 border border-[#A97918]/30 whitespace-nowrap cursor-pointer"
           >
             Try Now →
@@ -411,7 +406,7 @@ export default async function CustomerDashboardPage() {
             </div>
           </div>
           <Link
-            href="/contact"
+            href="/customer/contact"
             className="bg-[#07111F] hover:bg-[#0B1728] text-[#D9B45B] border border-[#C89B3C]/30 text-xs font-bold px-5 py-2.5 rounded-xl transition-all shadow-sm whitespace-nowrap cursor-pointer"
           >
             Contact Us →

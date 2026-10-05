@@ -141,27 +141,27 @@ export default function AdminCharts({
       </div>
 
       {/* ─── Property Types Donut Chart (1 col) ─── */}
-      <div className="bg-white rounded-2xl border border-[#E6DED4] p-5 sm:p-6 shadow-xs flex flex-col justify-between">
+      <div className="bg-white rounded-2xl border border-[#E8E1D4] p-5 sm:p-6 shadow-xs flex flex-col justify-between">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#C99126] text-white flex items-center justify-center shrink-0 shadow-xs">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#C99126] to-[#E8B849] text-white flex items-center justify-center shrink-0 shadow-xs">
               <Building2 className="w-5 h-5" />
             </div>
             <div>
               <h3 className="text-base sm:text-lg font-bold text-[#0B1523] tracking-tight">
                 Property Types
               </h3>
-              <p className="text-xs text-slate-500">Distribution of active assets</p>
+              <p className="text-xs text-slate-500 font-medium">Distribution of active assets</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D9CEBF] rounded-xl text-xs font-semibold text-slate-700 shadow-2xs cursor-pointer hover:bg-slate-50">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#FAF7F2] border border-[#E8E1D4] rounded-xl text-xs font-semibold text-slate-700 shadow-2xs">
             <span>{new Date().getFullYear()}</span>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 my-auto pt-3">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-5 my-auto pt-3">
           {/* Donut Chart with Centered Number */}
           <div className="relative w-44 h-44 shrink-0 flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
@@ -170,31 +170,39 @@ export default function AdminCharts({
                   data={propertyTypes}
                   cx="50%"
                   cy="50%"
-                  innerRadius={52}
-                  outerRadius={75}
-                  paddingAngle={2}
+                  innerRadius={50}
+                  outerRadius={72}
+                  paddingAngle={3}
                   dataKey="value"
                 >
-                  {propertyTypes.map((entry, index) => {
-                    const typeKey = entry.name.toUpperCase().replace(/S$/, "");
-                    const sliceColor =
-                      DONUT_COLORS[typeKey] || entry.color || "#1E60D5";
-                    return <Cell key={`cell-${index}`} fill={sliceColor} />;
-                  })}
+                  {propertyTypes.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={entry.color || "#C89B3C"}
+                      stroke="#ffffff"
+                      strokeWidth={2}
+                    />
+                  ))}
                 </Pie>
                 <Tooltip
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       const data = payload[0].payload as PropertyTypeData;
                       return (
-                        <div className="bg-[#0B1523] text-white px-3 py-1.5 rounded-xl text-xs shadow-xl border border-[#C99126]">
-                          <span className="font-semibold">{data.name}: </span>
-                          <span className="font-bold text-[#D9A336]">
-                            {data.value} listings
-                          </span>
-                          <span className="text-[11px] text-slate-300 ml-1">
-                            ({data.percentage}%)
-                          </span>
+                        <div className="bg-[#0B1523] text-white px-3.5 py-2 rounded-xl text-xs shadow-xl border border-[#C89B3C]/50 backdrop-blur-md">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span
+                              className="w-2.5 h-2.5 rounded-full"
+                              style={{ backgroundColor: data.color }}
+                            />
+                            <span className="font-bold text-white">{data.name}</span>
+                          </div>
+                          <div className="text-slate-300">
+                            <span className="font-extrabold text-[#D9B45B] text-sm">
+                              {data.value}
+                            </span>{" "}
+                            listings ({data.percentage}%)
+                          </div>
                         </div>
                       );
                     }
@@ -206,40 +214,41 @@ export default function AdminCharts({
 
             {/* Donut Center */}
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-2xl font-black text-[#0B1523] leading-none">
+              <span className="text-3xl font-black text-[#0B1523] tracking-tight leading-none">
                 {totalProperties}
               </span>
-              <span className="text-[10px] font-semibold text-slate-500 mt-0.5">
-                Total Properties
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">
+                Total Assets
               </span>
             </div>
           </div>
 
-          {/* Legend on Right (Matching Screenshot) */}
-          <div className="space-y-2.5 w-full sm:w-auto text-xs min-w-[130px]">
-            {propertyTypes.slice(0, 5).map((type, idx) => {
-              const typeKey = type.name.toUpperCase().replace(/S$/, "");
-              const dotColor = DONUT_COLORS[typeKey] || type.color || "#1E60D5";
-              return (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between gap-3 text-xs"
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="w-2.5 h-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: dotColor }}
-                    />
-                    <span className="text-slate-700 font-medium truncate max-w-[85px]">
-                      {type.name}
-                    </span>
-                  </div>
-                  <span className="font-bold text-[#0B1523]">
+          {/* Legend on Right - Complete breakdown with count & percentage */}
+          <div className="w-full sm:w-auto flex-1 max-h-[190px] overflow-y-auto pr-1 space-y-1.5 scrollbar-thin">
+            {propertyTypes.map((type, idx) => (
+              <div
+                key={idx}
+                className="flex items-center justify-between gap-2.5 py-1 px-2 rounded-lg hover:bg-[#FAF7F2] transition-colors text-xs"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs"
+                    style={{ backgroundColor: type.color }}
+                  />
+                  <span className="text-slate-700 font-semibold truncate text-xs">
+                    {type.name}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-md">
+                    {type.value}
+                  </span>
+                  <span className="font-bold text-[#0B1523] text-xs min-w-[42px] text-right">
                     {type.percentage}%
                   </span>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         </div>
       </div>

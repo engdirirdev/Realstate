@@ -101,15 +101,6 @@ export default function Navbar() {
               <div className="h-9 w-24 rounded-xl bg-[#F7F3EA] animate-pulse" />
             ) : session ? (
               <div className="flex items-center gap-2">
-                {/* Direct Dashboard Link */}
-                <Link
-                  href={isAdmin ? "/admin" : isCustomer ? "/customer" : "/dashboard"}
-                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs bg-[#FCFBF7] text-[#07111F] hover:bg-gradient-to-r hover:from-[#C89B3C] hover:to-[#D9B45B] hover:text-[#07111F] border border-[#E8E1D4]"
-                >
-                  <LayoutDashboard className="w-3.5 h-3.5 text-[#C89B3C]" />
-                  <span>{isAdmin ? "Admin Dashboard" : isCustomer ? "Customer Portal" : "Manager Dashboard"}</span>
-                </Link>
-
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-[#F7F3EA] border border-transparent hover:border-[#E8E1D4] transition-all group cursor-pointer">

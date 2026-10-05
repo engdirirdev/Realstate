@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import Link from "next/link";
-import Image from "next/image";
 import { Settings } from "lucide-react";
 import AdminSidebarNav from "./AdminSidebarNav";
 import AdminHeader from "@/components/admin/AdminHeader";
 import SidebarSignOutButton from "@/components/layout/SidebarSignOutButton";
+import BrandLogo from "@/components/layout/BrandLogo";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminLayout({
@@ -28,19 +28,9 @@ export default async function AdminLayout({
     <div className="min-h-screen bg-[#F5EFEB] flex font-sans">
       {/* ─── Sidebar (Dark Navy #0B1523 Matching Reference) ─── */}
       <aside className="hidden lg:flex w-64 flex-col bg-[#0B1523] border-r border-[#1B2738] fixed inset-y-0 left-0 z-30 shadow-2xl">
-        {/* Top Kiro-Maal Logo Brand Header (Seamless Deep Navy with Gold Emblem) */}
-        <div className="pt-5 pb-3 px-4 flex flex-col items-center justify-center text-center border-b border-[#1B2738]/80 bg-[#0B1523]">
-          <Link href="/admin" className="flex flex-col items-center group w-full">
-            <div className="w-full h-32 relative transition-transform duration-200 group-hover:scale-[1.02]">
-              <Image
-                src="/images/kiro_maal_logo_dark.png"
-                alt="Kiro-Maal Real Estate"
-                fill
-                className="object-contain"
-                priority
-              />
-            </div>
-          </Link>
+        {/* Top Kiro-Maal Logo Brand Header */}
+        <div className="h-[72px] min-h-[72px] px-5 border-b border-[#1B2738] flex items-center bg-[#0B1523]">
+          <BrandLogo variant="dark" href="/admin" size="md" />
         </div>
 
         {/* Navigation Items */}

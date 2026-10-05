@@ -49,7 +49,7 @@ export default async function CustomerPaymentsPage() {
             When you complete a luxury property reservation settlement, your official certified receipt will appear here.
           </p>
           <Link
-            href="/properties"
+            href="/customer/properties"
             className="inline-flex items-center gap-2 bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] px-6 py-2.5 rounded-xl text-xs font-bold transition-all shadow-sm hover:brightness-105"
           >
             <Building2 className="h-4 w-4" /> Browse Properties

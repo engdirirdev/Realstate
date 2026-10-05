@@ -6,12 +6,14 @@ interface BrandLogoProps {
   variant?: "dark" | "light"; // dark = for dark sidebar/footer, light = for white header
   className?: string;
   size?: "sm" | "md" | "lg";
+  href?: string;
 }
 
 export default function BrandLogo({
   variant = "light",
   className,
   size = "md",
+  href = "/",
 }: BrandLogoProps) {
   const isDark = variant === "dark";
 
@@ -19,29 +21,26 @@ export default function BrandLogo({
 
   return (
     <Link
-      href="/"
+      href={href}
       className={cn("inline-flex items-center gap-3 group", className)}
     >
       {/* Kiro-Maal Shield Logo Image */}
       <div
         className={cn(
-          "relative rounded-xl overflow-hidden flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105",
+          "relative flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105",
           size === "sm"
             ? "w-9 h-9"
             : size === "lg"
             ? "w-12 h-12"
-            : "w-10 h-10",
-          isDark
-            ? "bg-[#07111F] border border-[#C89B3C]/30 shadow-md shadow-black/40"
-            : "bg-[#FCFBF7] border border-[#E8E1D4] shadow-xs"
+            : "w-10 h-10"
         )}
       >
         <Image
-          src="/images/kiro_maal_logo.png"
+          src="/images/kiro_maal_logo_trans.png"
           alt="Kiro-Maal Real Estate"
           width={imgDimension}
           height={imgDimension}
-          className="object-contain p-0.5"
+          className="object-contain"
           priority
         />
       </div>

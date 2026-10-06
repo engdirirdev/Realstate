@@ -5,8 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
-  Menu, X, Search, ChevronDown, User, LogOut, Heart,
-  LayoutDashboard, Bell,
+  Menu, X, ChevronDown, User, LogOut, Heart,
+  LayoutDashboard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -17,14 +17,11 @@ import {
 import BrandLogo from "@/components/layout/BrandLogo";
 import { cn } from "@/lib/utils";
 
-const referenceNavLinks = [
+// 5 Main Tabs for Public Site
+const publicNavLinks = [
   { href: "/", label: "Home" },
   { href: "/properties", label: "Properties" },
-  { href: "/properties?status=APPROVED", label: "Buy" },
-  { href: "/properties?priceMax=5000", label: "Rent" },
-  { href: "/dashboard/properties/add", label: "Sell" },
-  { href: "/about#team", label: "Agents" },
-  { href: "/ai-assistant", label: "AI Features" },
+  { href: "/services", label: "Services" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
 ];
@@ -66,19 +63,19 @@ export default function Navbar() {
           {/* ── Logo ── */}
           <BrandLogo variant="light" size="md" />
 
-          {/* ── Desktop Nav ── */}
-          <div className="hidden xl:flex items-center gap-1">
-            {referenceNavLinks.map(({ href, label }) => {
+          {/* ── Desktop Nav: 5 Main Tabs ── */}
+          <div className="hidden md:flex items-center gap-1.5 lg:gap-2">
+            {publicNavLinks.map(({ href, label }) => {
               const isActive = pathname === href || (href !== "/" && pathname.startsWith(href));
               return (
                 <Link
                   key={href}
                   href={href}
                   className={cn(
-                    "px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150",
+                    "px-3.5 py-1.5 rounded-xl text-sm font-semibold transition-all duration-150",
                     isActive
-                      ? "text-[#C89B3C] font-semibold bg-[#F7F3EA]/70"
-                      : "text-[#475569] hover:text-[#07111F] hover:bg-[#F7F3EA]"
+                      ? "text-[#C89B3C] font-bold bg-[#F7F3EA] shadow-2xs"
+                      : "text-[#475569] hover:text-[#07111F] hover:bg-[#F7F3EA]/70"
                   )}
                 >
                   {label}
@@ -87,16 +84,8 @@ export default function Navbar() {
             })}
           </div>
 
-          {/* ── Desktop Right Auth & Search ── */}
+          {/* ── Desktop Right: Login Button Tab / Account Dropdown ── */}
           <div className="hidden md:flex items-center gap-3">
-            <Link
-              href="/properties"
-              aria-label="Search properties"
-              className="w-9 h-9 rounded-full bg-[#FCFBF7] hover:bg-[#F7F3EA] border border-[#E8E1D4] flex items-center justify-center text-[#6B7280] hover:text-[#C89B3C] transition-colors"
-            >
-              <Search className="w-4 h-4" />
-            </Link>
-
             {status === "loading" ? (
               <div className="h-9 w-24 rounded-xl bg-[#F7F3EA] animate-pulse" />
             ) : session ? (
@@ -121,71 +110,71 @@ export default function Navbar() {
                       <ChevronDown className="h-3.5 w-3.5 text-[#6B7280]" />
                     </button>
                   </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 border-[#E8E1D4] bg-[#FCFBF7] shadow-xl p-1.5 rounded-2xl">
-                  <DropdownMenuLabel className="font-normal px-2 py-1.5">
-                    <div className="flex flex-col space-y-0.5">
-                      <p className="text-sm font-bold text-[#07111F]">{session.user?.name}</p>
-                      <p className="text-xs text-[#6B7280] truncate">{session.user?.email}</p>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator className="bg-[#E8E1D4]" />
-                  {isAdmin ? (
+                  <DropdownMenuContent align="end" className="w-56 border-[#E8E1D4] bg-[#FCFBF7] shadow-xl p-1.5 rounded-2xl">
+                    <DropdownMenuLabel className="font-normal px-2 py-1.5">
+                      <div className="flex flex-col space-y-0.5">
+                        <p className="text-sm font-bold text-[#07111F]">{session.user?.name}</p>
+                        <p className="text-xs text-[#6B7280] truncate">{session.user?.email}</p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator className="bg-[#E8E1D4]" />
+                    {isAdmin ? (
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin" className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
+                          <LayoutDashboard className="h-4 w-4 text-[#C89B3C]" /> Admin Dashboard
+                        </Link>
+                      </DropdownMenuItem>
+                    ) : isCustomer ? (
+                      <>
+                        <DropdownMenuItem asChild>
+                          <Link href="/customer" className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
+                            <LayoutDashboard className="h-4 w-4 text-[#C89B3C]" /> Customer Portal
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href="/customer/favorites" className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
+                            <Heart className="h-4 w-4 text-[#C89B3C]" /> Saved Favorites
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href="/customer/profile" className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
+                            <User className="h-4 w-4 text-[#6B7280]" /> Profile Settings
+                          </Link>
+                        </DropdownMenuItem>
+                      </>
+                    ) : (
+                      <>
+                        <DropdownMenuItem asChild>
+                          <Link href="/dashboard" className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
+                            <LayoutDashboard className="h-4 w-4 text-[#C89B3C]" /> Manager Dashboard
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href="/dashboard/profile" className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
+                            <User className="h-4 w-4 text-[#6B7280]" /> Profile Settings
+                          </Link>
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    <DropdownMenuSeparator className="bg-[#E8E1D4]" />
                     <DropdownMenuItem asChild>
-                      <Link href="/admin" className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
-                        <LayoutDashboard className="h-4 w-4 text-[#C89B3C]" /> Admin Dashboard
+                      <Link href="/login?switch=true" className="flex items-center gap-2 text-[#6B7280] hover:text-[#C89B3C] hover:bg-[#F7F3EA] rounded-xl cursor-pointer">
+                        <User className="h-4 w-4 text-[#C89B3C]" /> Switch Account
                       </Link>
                     </DropdownMenuItem>
-                  ) : isCustomer ? (
-                    <>
-                      <DropdownMenuItem asChild>
-                        <Link href="/customer" className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
-                          <LayoutDashboard className="h-4 w-4 text-[#C89B3C]" /> Customer Portal
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/customer/favorites" className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
-                          <Heart className="h-4 w-4 text-[#C89B3C]" /> Saved Favorites
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/customer/profile" className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
-                          <User className="h-4 w-4 text-[#6B7280]" /> Profile Settings
-                        </Link>
-                      </DropdownMenuItem>
-                    </>
-                  ) : (
-                    <>
-                      <DropdownMenuItem asChild>
-                        <Link href="/dashboard" className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
-                          <LayoutDashboard className="h-4 w-4 text-[#C89B3C]" /> Manager Dashboard
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href="/dashboard/profile" className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
-                          <User className="h-4 w-4 text-[#6B7280]" /> Profile Settings
-                        </Link>
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                  <DropdownMenuSeparator className="bg-[#E8E1D4]" />
-                  <DropdownMenuItem asChild>
-                    <Link href="/login?switch=true" className="flex items-center gap-2 text-[#6B7280] hover:text-[#C89B3C] hover:bg-[#F7F3EA] rounded-xl cursor-pointer">
-                      <User className="h-4 w-4 text-[#C89B3C]" /> Switch Account
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="text-[#DC2626] focus:text-[#B91C1C] focus:bg-[#FEF2F2] rounded-xl cursor-pointer"
-                    onClick={() => signOut({ callbackUrl: "/" })}
-                  >
-                    <LogOut className="h-4 w-4 mr-2" /> Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          ) : (
+                    <DropdownMenuItem
+                      className="text-[#DC2626] focus:text-[#B91C1C] focus:bg-[#FEF2F2] rounded-xl cursor-pointer"
+                      onClick={() => signOut({ callbackUrl: "/" })}
+                    >
+                      <LogOut className="h-4 w-4 mr-2" /> Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ) : (
               <Link href="/login">
                 <Button size="sm" className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] hover:brightness-105 text-[#07111F] font-bold rounded-xl text-sm px-6 py-2 shadow-md shadow-[#C89B3C]/20 border border-[#A97918]/30 transition-all cursor-pointer">
-                  Sign In
+                  Login
                 </Button>
               </Link>
             )}
@@ -193,7 +182,7 @@ export default function Navbar() {
 
           {/* ── Mobile toggle ── */}
           <button
-            className="xl:hidden p-2 rounded-lg text-[#6B7280] hover:bg-[#F7F3EA] transition-colors"
+            className="md:hidden p-2 rounded-lg text-[#6B7280] hover:bg-[#F7F3EA] transition-colors cursor-pointer"
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label="Toggle menu"
           >
@@ -201,20 +190,28 @@ export default function Navbar() {
           </button>
         </div>
 
-        {/* ── Mobile Menu ── */}
+        {/* ── Mobile Menu: 5 Main Tabs + Login ── */}
         {mobileOpen && (
-          <div className="xl:hidden py-4 border-t border-[#E8E1D4] animate-fade-in bg-[#FCFBF7]">
+          <div className="md:hidden py-4 border-t border-[#E8E1D4] animate-fade-in bg-[#FCFBF7]">
             <div className="flex flex-col gap-1">
-              {referenceNavLinks.map(({ href, label }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  onClick={() => setMobileOpen(false)}
-                  className="px-4 py-2 rounded-xl text-sm font-medium text-[#475569] hover:text-[#C89B3C] hover:bg-[#F7F3EA]"
-                >
-                  {label}
-                </Link>
-              ))}
+              {publicNavLinks.map(({ href, label }) => {
+                const isActive = pathname === href || (href !== "/" && pathname.startsWith(href));
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={() => setMobileOpen(false)}
+                    className={cn(
+                      "px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors",
+                      isActive
+                        ? "text-[#C89B3C] font-bold bg-[#F7F3EA]"
+                        : "text-[#475569] hover:text-[#C89B3C] hover:bg-[#F7F3EA]"
+                    )}
+                  >
+                    {label}
+                  </Link>
+                );
+              })}
               <div className="border-t border-[#E8E1D4] pt-3 mt-2 flex flex-col gap-2 px-3">
                 {session ? (
                   <Link
@@ -222,7 +219,7 @@ export default function Navbar() {
                     className="bg-gradient-to-r from-[#C89B3C] to-[#D9B45B] text-[#07111F] text-center text-sm py-2 rounded-xl font-bold shadow-sm"
                     onClick={() => setMobileOpen(false)}
                   >
-                    Go to Portal
+                    Go to Portal ({roleLabel})
                   </Link>
                 ) : (
                   <Link
@@ -230,7 +227,7 @@ export default function Navbar() {
                     onClick={() => setMobileOpen(false)}
                     className="bg-gradient-to-r from-[#C89B3C] to-[#D9B45B] text-[#07111F] text-center text-sm py-2.5 rounded-xl font-bold shadow-sm"
                   >
-                    Sign In
+                    Login
                   </Link>
                 )}
               </div>

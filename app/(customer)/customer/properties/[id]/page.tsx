@@ -197,6 +197,7 @@ export default async function CustomerPropertyDetailPage({ params }: Props) {
                 propertyPrice={Number(property.price)}
                 listingType={property.listingType}
                 status={property.status}
+                availabilityStatus={property.availabilityStatus}
                 rentPeriod={property.rentPeriod}
                 securityDeposit={property.securityDeposit}
                 isNegotiable={property.isNegotiable}
@@ -260,7 +261,9 @@ export default async function CustomerPropertyDetailPage({ params }: Props) {
             </div>
             <div>
               <span className="text-[#8C7A6B] block">Status</span>
-              <span className="font-bold text-emerald-600">Available</span>
+              <span className={`font-bold ${property.availabilityStatus === "AVAILABLE" ? "text-emerald-600" : "text-amber-600"}`}>
+                {property.availabilityStatus?.replace(/_/g, " ") || "Available"}
+              </span>
             </div>
           </div>
         </div>

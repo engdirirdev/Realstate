@@ -34,7 +34,10 @@ export default async function AdminPropertiesPage({
 
   const properties = await prisma.property.findMany({
     where: statusFilter ? { status: statusFilter } : {},
-    include: { images: { take: 1, orderBy: { order: "asc" } } },
+    include: {
+      images: { take: 1, orderBy: { order: "asc" } },
+      manager: { select: { id: true, name: true, email: true } },
+    },
     orderBy: { createdAt: "desc" },
   });
 
@@ -42,6 +45,8 @@ export default async function AdminPropertiesPage({
     { label: "All Listings", value: "", count: await prisma.property.count() },
     { label: "Pending Review", value: "PENDING", count: await prisma.property.count({ where: { status: "PENDING" } }) },
     { label: "Approved Live", value: "APPROVED", count: await prisma.property.count({ where: { status: "APPROVED" } }) },
+    { label: "Rented", value: "RENTED", count: await prisma.property.count({ where: { OR: [{ status: "RENTED" }, { availabilityStatus: "RENTED" }] } }) },
+    { label: "Sold", value: "SOLD", count: await prisma.property.count({ where: { OR: [{ status: "SOLD" }, { availabilityStatus: "SOLD" }] } }) },
     { label: "Rejected", value: "REJECTED", count: await prisma.property.count({ where: { status: "REJECTED" } }) },
   ];
 
@@ -72,7 +77,7 @@ export default async function AdminPropertiesPage({
           const isActive = (statusFilter ?? "") === tab.value;
           return (
             <Link
-              key={tab.value}
+              key={tab.label}
               href={tab.value ? `/admin/properties?status=${tab.value}` : "/admin/properties"}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all shadow-xs ${
                 isActive
@@ -98,17 +103,19 @@ export default async function AdminPropertiesPage({
             <thead className="bg-[#F7F3EA] border-b border-[#E8E1D4]">
               <tr>
                 <th className="text-left px-5 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">Property</th>
-                <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">City / Type</th>
+                <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">Type &amp; Listing</th>
+                <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">Manager</th>
                 <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">Price</th>
-                <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">Status</th>
+                <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">Approval</th>
+                <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">Availability</th>
                 <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">Listed Date</th>
-                <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">Review Actions</th>
+                <th className="text-right px-5 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E8E1D4]">
               {properties.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-12 text-[#9CA3AF]">
+                  <td colSpan={8} className="text-center py-12 text-[#9CA3AF]">
                     <Building2 className="h-10 w-10 mx-auto mb-2 text-[#C89B3C]/40" />
                     No property records match the selected filter.
                   </td>
@@ -116,6 +123,8 @@ export default async function AdminPropertiesPage({
               ) : (
                 properties.map((p) => {
                   const img = p.images[0]?.url;
+                  const isSold = p.status === "SOLD" || p.availabilityStatus === "SOLD";
+                  const isRented = p.status === "RENTED" || p.availabilityStatus === "RENTED";
                   return (
                     <tr key={p.id} className="hover:bg-[#F7F3EA]/50 transition-colors">
                       <td className="px-5 py-3.5">
@@ -130,41 +139,72 @@ export default async function AdminPropertiesPage({
                             )}
                           </div>
                           <div>
-                            <p className="font-semibold text-[#07111F] text-sm max-w-[220px] truncate">{p.title}</p>
-                            <p className="text-xs text-[#6B7280]">{p.bedrooms} bed · {p.area} m²</p>
+                            <Link href={`/properties/${p.id}`} target="_blank" className="font-semibold text-[#07111F] text-sm hover:text-[#C89B3C] max-w-[200px] truncate block">
+                              {p.title}
+                            </Link>
+                            <p className="text-xs text-[#6B7280]">{p.city} · {p.bedrooms} bed</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-3.5">
-                        <p className="font-medium text-[#07111F] text-xs">{p.city}</p>
                         <p className="text-[11px] text-[#A97918] uppercase tracking-wide font-bold">{getPropertyTypeLabel(p.type)}</p>
-                      </td>
-                      <td className="px-4 py-3.5 font-bold text-[#07111F] text-sm">{formatPrice(p.price)}</td>
-                      <td className="px-4 py-3.5">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                          p.status === "APPROVED" ? "bg-[#07111F] text-[#D9B45B] border border-[#C89B3C]/30" :
-                          p.status === "PENDING" ? "bg-amber-50 text-amber-700 border border-amber-200" :
-                          p.status === "SOLD" ? "bg-stone-100 text-stone-700 border border-stone-300" :
-                          "bg-red-50 text-red-700 border border-red-200"
+                        <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                          p.listingType === "FOR_RENT" ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-800"
                         }`}>
-                          {p.status === "APPROVED" && <CheckCircle2 className="h-3 w-3 text-[#D9B45B]" />}
-                          {p.status === "PENDING" && <Clock className="h-3 w-3" />}
-                          {p.status === "REJECTED" && <XCircle className="h-3 w-3" />}
-                          {p.status}
+                          {p.listingType === "FOR_RENT" ? "FOR RENT" : "FOR SALE"}
                         </span>
                       </td>
-                      <td className="px-4 py-3.5 text-[#6B7280] text-xs">
-                        {new Date(p.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      <td className="px-4 py-3.5 text-xs">
+                        <p className="font-medium text-[#07111F]">{p.manager?.name || "System"}</p>
+                        <p className="text-[10px] text-[#6B7280]">{p.manager?.email || ""}</p>
+                      </td>
+                      <td className="px-4 py-3.5 font-bold text-[#07111F] text-sm whitespace-nowrap">
+                        {formatPrice(p.price)}
+                        {p.listingType === "FOR_RENT" && <span className="text-[10px] font-normal text-[#6B7280]">/{p.rentPeriod?.toLowerCase() || "mo"}</span>}
                       </td>
                       <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                          p.status === "APPROVED" || p.status === "PUBLISHED" ? "bg-[#07111F] text-[#D9B45B] border border-[#C89B3C]/30" :
+                          p.status === "PENDING" ? "bg-amber-50 text-amber-700 border border-amber-200" :
+                          p.status === "REJECTED" ? "bg-red-50 text-red-700 border border-red-200" :
+                          "bg-stone-100 text-stone-700 border border-stone-300"
+                        }`}>
+                          {(p.status === "APPROVED" || p.status === "PUBLISHED") && <CheckCircle2 className="h-3 w-3 text-[#D9B45B]" />}
+                          {p.status === "PENDING" && <Clock className="h-3 w-3" />}
+                          {p.status === "REJECTED" && <XCircle className="h-3 w-3" />}
+                          {p.status === "PENDING" ? "PENDING REVIEW" : p.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
+                          isSold ? "bg-slate-900 text-slate-100 border border-slate-700" :
+                          isRented ? "bg-indigo-900 text-indigo-100 border border-indigo-700" :
+                          p.availabilityStatus === "BOOKING_PENDING" ? "bg-amber-100 text-amber-800 border border-amber-300" :
+                          p.status === "APPROVED" ? "bg-emerald-100 text-emerald-800 border border-emerald-300" :
+                          "bg-stone-100 text-stone-700 border border-stone-300"
+                        }`}>
+                          {isSold ? "SOLD" : isRented ? "RENTED" : p.availabilityStatus || "AVAILABLE"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-[#6B7280] text-xs whitespace-nowrap">
+                        {new Date(p.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      </td>
+                      <td className="px-5 py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Link
+                            href={`/properties/${p.id}`}
+                            target="_blank"
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-[#6B7280] hover:text-[#07111F] bg-[#FCFBF7] border border-[#E8E1D4] hover:bg-[#F7F3EA]"
+                            title="View Public Listing"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </Link>
                           <Link
                             href={`/admin/properties/${p.id}/edit`}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-[#07111F] bg-[#FCFBF7] border border-[#C89B3C]/40 hover:bg-[#F7F3EA] hover:border-[#C89B3C] transition-all shadow-2xs"
-                            title="Edit Property Listing"
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold text-[#07111F] bg-[#FCFBF7] border border-[#C89B3C]/40 hover:bg-[#F7F3EA] hover:border-[#C89B3C] shadow-2xs"
+                            title="Edit Property"
                           >
-                            <Pencil className="h-3.5 w-3.5 text-[#C89B3C]" />
-                            <span>Edit</span>
+                            <Pencil className="h-3.5 w-3.5 text-[#C89B3C]" /> Edit
                           </Link>
                           <AdminPropertyReviewModal
                             propertyId={p.id}

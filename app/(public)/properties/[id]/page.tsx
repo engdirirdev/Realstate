@@ -114,7 +114,9 @@ export default async function PropertyDetailPage({ params }: Props) {
     prisma.property.findMany({
       where: {
         id: { not: property.id },
-        status: "APPROVED",
+        status: { in: ["APPROVED", "PUBLISHED"] },
+        availabilityStatus: "AVAILABLE",
+        isActive: true,
         type: property.type,
       },
       include: {
@@ -127,7 +129,9 @@ export default async function PropertyDetailPage({ params }: Props) {
     prisma.property.findMany({
       where: {
         id: { not: property.id },
-        status: "APPROVED",
+        status: { in: ["APPROVED", "PUBLISHED"] },
+        availabilityStatus: "AVAILABLE",
+        isActive: true,
         city: property.city,
       },
       include: {
@@ -140,7 +144,9 @@ export default async function PropertyDetailPage({ params }: Props) {
     prisma.property.findMany({
       where: {
         id: { not: property.id },
-        status: "APPROVED",
+        status: { in: ["APPROVED", "PUBLISHED"] },
+        availabilityStatus: "AVAILABLE",
+        isActive: true,
       },
       select: {
         id: true,
@@ -285,6 +291,7 @@ export default async function PropertyDetailPage({ params }: Props) {
                   {/* Requirement 9: Live Property Availability Badge */}
                   <PropertyAvailabilityBadge
                     status={property.status}
+                    availabilityStatus={property.availabilityStatus}
                     hasActiveBooking={property._count.bookings > 0}
                   />
                 </div>
@@ -523,6 +530,7 @@ export default async function PropertyDetailPage({ params }: Props) {
                 propertyPrice={property.price}
                 listingType={property.listingType}
                 status={property.status}
+                availabilityStatus={property.availabilityStatus}
                 rentPeriod={property.rentPeriod}
                 securityDeposit={property.securityDeposit}
                 isNegotiable={property.isNegotiable}

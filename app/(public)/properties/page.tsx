@@ -26,11 +26,18 @@ export default async function PropertiesPage({
   searchParams: Promise<Record<string, string | string[]>>;
 }) {
   const params = await searchParams;
-  const { location, city, type, minPrice, maxPrice, bedrooms, bathrooms, furnished, parking, sort } = params;
+  const { location, city, type, listingType, minPrice, maxPrice, bedrooms, bathrooms, furnished, parking, sort } = params;
 
   const searchLocation = location || city;
 
-  const where: any = { status: "APPROVED" };
+  const where: any = {
+    status: { in: ["APPROVED", "PUBLISHED"] },
+    availabilityStatus: "AVAILABLE",
+    isActive: true,
+  };
+  if (listingType && ["FOR_RENT", "FOR_SALE"].includes(String(listingType))) {
+    where.listingType = String(listingType);
+  }
   if (searchLocation) where.city = { contains: String(searchLocation) };
   if (type) where.type = String(type);
   if (bedrooms) where.bedrooms = { gte: Number(bedrooms) };
@@ -92,6 +99,16 @@ export default async function PropertiesPage({
                 className="w-full pl-9.5 pr-3 py-2 rounded-xl border border-[#E8E1D4] bg-[#FCFBF7] focus:bg-white focus:border-[#C89B3C] focus:ring-2 focus:ring-[#C89B3C]/20 text-[#07111F] text-xs h-10 outline-hidden transition-all"
               />
             </div>
+
+            <select
+              name="listingType"
+              defaultValue={listingType ?? ""}
+              className="w-full px-3 py-2 rounded-xl border border-[#E8E1D4] bg-[#FCFBF7] focus:bg-white focus:border-[#C89B3C] focus:ring-2 focus:ring-[#C89B3C]/20 text-[#07111F] text-xs h-10 outline-hidden transition-all cursor-pointer font-semibold"
+            >
+              <option value="">All Listings (Rent &amp; Sale)</option>
+              <option value="FOR_RENT">For Rent</option>
+              <option value="FOR_SALE">For Sale</option>
+            </select>
 
             <select
               name="type"

@@ -189,7 +189,7 @@ export default function PropertyCard({
           </div>
 
           {/* Specs */}
-          {isLand ? (
+              {isLand ? (
             <div className="flex items-center justify-center gap-2 text-xs text-[#07111F] font-medium bg-[#F7F3EA]/70 py-2 px-2.5 rounded-xl border border-[#E8E1D4]">
               <SquareStack className="w-3.5 h-3.5 text-[#C89B3C]" />
               <span>Land Plot: <strong>{property.area} m²</strong></span>
@@ -210,6 +210,38 @@ export default function PropertyCard({
               </div>
             </div>
           )}
+
+          {/* Action Buttons: State Aware */}
+          <div className="mt-3.5 flex items-center gap-2">
+            <Link
+              href={href || `/properties/${property.id}`}
+              className="flex-1 py-2 px-3 text-center rounded-xl text-xs font-semibold bg-[#FCFBF7] text-[#07111F] hover:bg-[#F7F3EA] border border-[#E8E1D4] hover:border-[#C89B3C] transition-all shadow-2xs"
+            >
+              View Details
+            </Link>
+
+            {isAvailable ? (
+              isRent ? (
+                <Link
+                  href={href || `/properties/${property.id}`}
+                  className="flex-1 py-2 px-3 text-center rounded-xl text-xs font-bold bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] hover:opacity-95 text-[#07111F] transition-all shadow-xs"
+                >
+                  Book Now
+                </Link>
+              ) : (
+                <Link
+                  href={href || `/properties/${property.id}`}
+                  className="flex-1 py-2 px-3 text-center rounded-xl text-xs font-bold bg-[#07111F] hover:bg-[#112238] text-[#D9B45B] border border-[#C89B3C]/50 transition-all shadow-xs"
+                >
+                  Buy Property
+                </Link>
+              )
+            ) : (
+              <span className="flex-1 py-2 px-3 text-center rounded-xl text-xs font-medium bg-[#E8E1D4]/60 text-[#6B7280] cursor-not-allowed">
+                {property.status === "SOLD" ? "Sold" : property.status === "RENTED" ? "Rented" : "Unavailable"}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -968,8 +968,8 @@ export async function processConversationalTurn(
 
     // Bedroom filter: only enforce if bedrooms is a hard constraint, NOT a soft preference
     const hasSoftBedroomPref =
-      state.softPreferences?.some((p) => p.includes("bedroom") || p.includes("qol")) ||
-      state.slots.softPreferences?.some((p) => p.includes("bedroom") || p.includes("qol"));
+      state.softPreferences?.some((p: string) => p.includes("bedroom") || p.includes("qol")) ||
+      state.slots.softPreferences?.some((p: string) => p.includes("bedroom") || p.includes("qol"));
     if (state.slots.bedrooms !== undefined && !hasSoftBedroomPref) {
       searchFilter.bedrooms = { gte: state.slots.bedrooms };
     }

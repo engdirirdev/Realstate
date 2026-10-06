@@ -20,10 +20,17 @@ import {
   CheckCircle2,
   Sparkles,
   ArrowRight,
+  Key,
+  Building2,
+  ExternalLink,
+  Receipt,
+  FileText,
 } from "lucide-react";
 import PropertyCard from "@/components/PropertyCard";
 import CustomerHeroSearch from "@/components/customer/CustomerHeroSearch";
 import CustomerAiChatButton from "@/components/customer/CustomerAiChatButton";
+import StatusBadge from "@/components/transactions/StatusBadge";
+import { formatPrice } from "@/lib/utils";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Customer Dashboard – Kiro-Maal Real Estate" };
@@ -46,6 +53,8 @@ export default async function CustomerDashboardPage() {
     fallbackProperties,
     recentUserInquiries,
     recentUserBookings,
+    customerRentals,
+    customerPurchases,
   ] = await Promise.all([
     // 1. My Favorites
     prisma.favorite.count({ where: { userId } }),
@@ -65,9 +74,16 @@ export default async function CustomerDashboardPage() {
       },
       take: 3,
     }),
-    // AI Recommendations
+    // AI Recommendations - strictly Available + Approved
     prisma.recommendation.findMany({
-      where: { userId },
+      where: {
+        userId,
+        property: {
+          status: { in: ["APPROVED", "PUBLISHED"] },
+          availabilityStatus: "AVAILABLE",
+          isActive: true,
+        },
+      },
       include: {
         property: {
           include: { images: { take: 1, orderBy: { order: "asc" } } },
@@ -76,9 +92,13 @@ export default async function CustomerDashboardPage() {
       orderBy: { score: "desc" },
       take: 3,
     }),
-    // Fallback featured / approved properties for recommended strip
+    // Fallback featured / approved properties - strictly Available + Approved
     prisma.property.findMany({
-      where: { status: "APPROVED" },
+      where: {
+        status: { in: ["APPROVED", "PUBLISHED"] },
+        availabilityStatus: "AVAILABLE",
+        isActive: true,
+      },
       include: { images: { take: 1, orderBy: { order: "asc" } } },
       orderBy: { viewCount: "desc" },
       take: 3,
@@ -96,6 +116,70 @@ export default async function CustomerDashboardPage() {
       include: { property: { select: { title: true } } },
       orderBy: { createdAt: "desc" },
       take: 2,
+    }),
+    // 10. Customer Rentals
+    prisma.rentalRequest.findMany({
+      where: { customerId: userId },
+      include: {
+        property: {
+          select: {
+            id: true,
+            title: true,
+            city: true,
+            listingType: true,
+            availabilityStatus: true,
+            images: { take: 1, orderBy: { order: "asc" } },
+          },
+        },
+        manager: { select: { id: true, name: true, email: true } },
+        transaction: {
+          select: {
+            id: true,
+            txnNo: true,
+            status: true,
+            receipt: { select: { id: true } },
+            payments: {
+              select: { status: true, paidAt: true },
+              take: 1,
+              orderBy: { createdAt: "desc" },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 4,
+    }),
+    // 11. Customer Purchases
+    prisma.purchaseRequest.findMany({
+      where: { customerId: userId },
+      include: {
+        property: {
+          select: {
+            id: true,
+            title: true,
+            city: true,
+            listingType: true,
+            availabilityStatus: true,
+            images: { take: 1, orderBy: { order: "asc" } },
+          },
+        },
+        manager: { select: { id: true, name: true, email: true } },
+        transaction: {
+          select: {
+            id: true,
+            txnNo: true,
+            status: true,
+            receipt: { select: { id: true } },
+            payments: {
+              select: { status: true, paidAt: true },
+              take: 1,
+              orderBy: { createdAt: "desc" },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 4,
     }),
   ]);
 
@@ -366,6 +450,238 @@ export default async function CustomerDashboardPage() {
               );
             })}
           </div>
+        </div>
+      </div>
+
+      {/* ─── Portfolio Section: My Rentals & My Purchases ─── */}
+      <div className="space-y-6">
+        {/* MY RENTALS */}
+        <div className="bg-[#FCFBF7] rounded-3xl border border-[#E8E1D4] p-5 sm:p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-[#07111F] text-[#D9B45B] flex items-center justify-center">
+                <Key className="w-4 h-4 text-[#C89B3C]" />
+              </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-bold font-serif text-[#07111F]">
+                  My Rentals &amp; Leases
+                </h3>
+                <p className="text-xs text-[#6B7280]">
+                  Active leases, pending bookings, and rental payment status
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/customer/transactions"
+              className="text-xs font-bold text-[#C89B3C] hover:text-[#A97918] transition-colors flex items-center gap-1"
+            >
+              All Transactions →
+            </Link>
+          </div>
+
+          {customerRentals.length === 0 ? (
+            <div className="text-center py-8 px-4 border border-dashed border-[#E8E1D4] rounded-2xl bg-white/50">
+              <Key className="w-8 h-8 text-[#C89B3C]/40 mx-auto mb-2" />
+              <p className="text-xs font-bold text-[#07111F]">No active rental bookings</p>
+              <p className="text-[11px] text-[#6B7280] mt-0.5">
+                Explore luxury properties available for rent across Somalia.
+              </p>
+              <Link
+                href="/customer/properties?listingType=FOR_RENT"
+                className="inline-block mt-3 px-3.5 py-1.5 rounded-xl bg-[#07111F] text-[#D9B45B] text-xs font-bold"
+              >
+                Browse Rentals
+              </Link>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left">
+                <thead>
+                  <tr className="bg-[#F7F3EA] text-[#6B7280] font-mono text-[10px] uppercase tracking-wider border-b border-[#E8E1D4]">
+                    <th className="p-3">Property</th>
+                    <th className="p-3">Check-in</th>
+                    <th className="p-3">Check-out</th>
+                    <th className="p-3">Rent</th>
+                    <th className="p-3">Status</th>
+                    <th className="p-3">Payment</th>
+                    <th className="p-3">Manager</th>
+                    <th className="p-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E8E1D4]">
+                  {customerRentals.map((r) => {
+                    const paymentStatus =
+                      r.transaction?.payments?.[0]?.status ||
+                      (r.status === "ACTIVE"
+                        ? "PAID"
+                        : r.transaction?.status === "PAYMENT_PENDING"
+                        ? "PENDING"
+                        : null);
+
+                    return (
+                      <tr key={r.id} className="hover:bg-[#F2ECE1]/30 transition-colors">
+                        <td className="p-3">
+                          <Link
+                            href={`/properties/${r.property?.id}`}
+                            className="font-bold text-[#07111F] hover:text-[#C89B3C] block truncate max-w-[180px]"
+                          >
+                            {r.property?.title}
+                          </Link>
+                          <span className="text-[11px] text-[#6B7280]">{r.property?.city}</span>
+                        </td>
+                        <td className="p-3 text-[#07111F]">
+                          {r.startDate ? new Date(r.startDate).toLocaleDateString() : "—"}
+                        </td>
+                        <td className="p-3 text-[#07111F]">
+                          {r.endDate ? new Date(r.endDate).toLocaleDateString() : "—"}
+                        </td>
+                        <td className="p-3 font-semibold text-[#07111F] whitespace-nowrap">
+                          {formatPrice(r.rentAmount)}
+                          <span className="text-[10px] text-[#6B7280] block font-normal">
+                            {r.periods} × {r.rentalPeriod?.toLowerCase()}
+                          </span>
+                        </td>
+                        <td className="p-3">
+                          <StatusBadge status={r.status} />
+                        </td>
+                        <td className="p-3">
+                          <StatusBadge status={paymentStatus} />
+                        </td>
+                        <td className="p-3 text-[#07111F]">
+                          {r.manager?.name || "Kiro-Maal"}
+                        </td>
+                        <td className="p-3 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {r.transaction?.receipt && (
+                              <Link href={`/receipt/${r.transaction.receipt.id}`} target="_blank">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-[#E8E1D4] text-[#C89B3C] hover:bg-white text-[11px] font-semibold">
+                                  <Receipt className="w-3 h-3" /> Receipt
+                                </span>
+                              </Link>
+                            )}
+                            <Link href="/customer/transactions">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#07111F] text-[#D9B45B] text-[11px] font-semibold">
+                                Details
+                              </span>
+                            </Link>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* MY PURCHASES */}
+        <div className="bg-[#FCFBF7] rounded-3xl border border-[#E8E1D4] p-5 sm:p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-[#07111F] text-[#D9B45B] flex items-center justify-center">
+                <Building2 className="w-4 h-4 text-[#C89B3C]" />
+              </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-bold font-serif text-[#07111F]">
+                  My Property Purchases
+                </h3>
+                <p className="text-xs text-[#6B7280]">
+                  Acquisition proposals, admin approvals, settlements, and deeds
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/customer/transactions"
+              className="text-xs font-bold text-[#C89B3C] hover:text-[#A97918] transition-colors flex items-center gap-1"
+            >
+              All Transactions →
+            </Link>
+          </div>
+
+          {customerPurchases.length === 0 ? (
+            <div className="text-center py-8 px-4 border border-dashed border-[#E8E1D4] rounded-2xl bg-white/50">
+              <Building2 className="w-8 h-8 text-[#C89B3C]/40 mx-auto mb-2" />
+              <p className="text-xs font-bold text-[#07111F]">No property purchase requests</p>
+              <p className="text-[11px] text-[#6B7280] mt-0.5">
+                Browse exclusive properties available for acquisition.
+              </p>
+              <Link
+                href="/customer/properties?listingType=FOR_SALE"
+                className="inline-block mt-3 px-3.5 py-1.5 rounded-xl bg-[#07111F] text-[#D9B45B] text-xs font-bold"
+              >
+                Browse Properties For Sale
+              </Link>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left">
+                <thead>
+                  <tr className="bg-[#F7F3EA] text-[#6B7280] font-mono text-[10px] uppercase tracking-wider border-b border-[#E8E1D4]">
+                    <th className="p-3">Property</th>
+                    <th className="p-3">Purchase Date</th>
+                    <th className="p-3">Sale Price</th>
+                    <th className="p-3">Status</th>
+                    <th className="p-3">Payment Status</th>
+                    <th className="p-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E8E1D4]">
+                  {customerPurchases.map((p) => {
+                    const paymentStatus =
+                      p.transaction?.payments?.[0]?.status ||
+                      (p.status === "COMPLETED"
+                        ? "PAID"
+                        : p.status === "PAYMENT_PENDING"
+                        ? "PENDING"
+                        : null);
+
+                    return (
+                      <tr key={p.id} className="hover:bg-[#F2ECE1]/30 transition-colors">
+                        <td className="p-3">
+                          <Link
+                            href={`/properties/${p.property?.id}`}
+                            className="font-bold text-[#07111F] hover:text-[#C89B3C] block truncate max-w-[200px]"
+                          >
+                            {p.property?.title}
+                          </Link>
+                          <span className="text-[11px] text-[#6B7280]">{p.property?.city}</span>
+                        </td>
+                        <td className="p-3 text-[#07111F]">
+                          {new Date(p.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="p-3 font-serif font-bold text-sm text-[#07111F] whitespace-nowrap">
+                          {formatPrice(p.salePrice)}
+                        </td>
+                        <td className="p-3">
+                          <StatusBadge status={p.status} />
+                        </td>
+                        <td className="p-3">
+                          <StatusBadge status={paymentStatus} />
+                        </td>
+                        <td className="p-3 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {p.transaction?.receipt && (
+                              <Link href={`/receipt/${p.transaction.receipt.id}`} target="_blank">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-[#E8E1D4] text-[#C89B3C] hover:bg-white text-[11px] font-semibold">
+                                  <Receipt className="w-3 h-3" /> Receipt
+                                </span>
+                              </Link>
+                            )}
+                            <Link href="/customer/transactions">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#07111F] text-[#D9B45B] text-[11px] font-semibold">
+                                Details
+                              </span>
+                            </Link>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 

@@ -19,6 +19,7 @@ interface PropertyActionsProps {
   propertyPrice: number;
   listingType?: string | null;
   status?: string;
+  availabilityStatus?: string | null;
   rentPeriod?: string | null;
   securityDeposit?: number | null;
   isNegotiable?: boolean;
@@ -34,6 +35,7 @@ export default function PropertyActions({
   propertyPrice,
   listingType,
   status = "APPROVED",
+  availabilityStatus,
   rentPeriod,
   securityDeposit,
   isNegotiable,
@@ -43,7 +45,10 @@ export default function PropertyActions({
   const router = useRouter();
   const role = (session?.user as any)?.role as string | undefined;
   const isRent = listingType === "FOR_RENT";
-  const available = status === "APPROVED" || status === "PUBLISHED";
+  const effectiveAvailability = availabilityStatus || "AVAILABLE";
+  const available =
+    (status === "APPROVED" || status === "PUBLISHED") &&
+    effectiveAvailability === "AVAILABLE";
 
   const [inquiryModalOpen, setInquiryModalOpen] = useState(false);
   const [buyOpen, setBuyOpen] = useState(false);
@@ -176,16 +181,24 @@ export default function PropertyActions({
   } else if (available && isRent) {
     primary = (
       <Button onClick={openRent} className={GOLD_BTN} size="lg" id="btn-rent-property">
-        <KeyRound className="h-4 w-4" /> Rent Property
+        <KeyRound className="h-4 w-4" /> Book Now
       </Button>
     );
   } else {
     const map: Record<string, { label: string; icon: any }> = {
       SOLD: { label: "Sold", icon: Lock },
       RENTED: { label: "Currently Rented", icon: Lock },
+      BOOKING_PENDING: { label: "Booking Pending", icon: Hourglass },
       PAYMENT_PENDING: { label: "Payment Pending", icon: Hourglass },
+      RENT_EXPIRED: { label: "Lease Expired", icon: Hourglass },
+      INACTIVE: { label: "Inactive Listing", icon: Ban },
+      REJECTED: { label: "Not Approved", icon: Ban },
     };
-    const m = map[status] || { label: "Not Available", icon: Ban };
+    const activeKey =
+      effectiveAvailability !== "AVAILABLE"
+        ? effectiveAvailability
+        : status;
+    const m = map[activeKey] || { label: "Not Available", icon: Ban };
     const Icon = m.icon;
     primary = (
       <Button disabled size="lg" className="w-full rounded-xl font-bold gap-2 bg-[#E8E1D4] text-[#6B7280]">

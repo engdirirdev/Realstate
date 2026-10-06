@@ -52,11 +52,19 @@ export default async function CustomerPropertiesPage({
   const params = await searchParams;
   const city = typeof params.city === "string" ? params.city : "";
   const type = typeof params.type === "string" ? params.type : "";
+  const listingType = typeof params.listingType === "string" ? params.listingType : "";
   const sort = typeof params.sort === "string" ? params.sort : "latest";
 
-  const where: any = { status: "APPROVED" };
+  const where: any = {
+    status: { in: ["APPROVED", "PUBLISHED"] },
+    availabilityStatus: "AVAILABLE",
+    isActive: true,
+  };
   if (city && city !== "All Cities") where.city = city;
   if (type) where.type = type;
+  if (listingType && ["FOR_RENT", "FOR_SALE"].includes(listingType)) {
+    where.listingType = listingType;
+  }
 
   let orderBy: any = { createdAt: "desc" };
   if (sort === "price_asc") orderBy = { price: "asc" };
@@ -109,7 +117,23 @@ export default async function CustomerPropertiesPage({
         </div>
 
         {/* Filter Toolbar */}
-        <form method="GET" className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-4 border-t border-[#E8E1D4]">
+        <form method="GET" className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 pt-4 border-t border-[#E8E1D4]">
+          {/* Listing Type Filter */}
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-[#6B7280] mb-1">
+              Listing Type
+            </label>
+            <select
+              name="listingType"
+              defaultValue={listingType}
+              className="w-full px-3 py-2 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs font-semibold focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] outline-hidden transition-all"
+            >
+              <option value="">All (Rent &amp; Sale)</option>
+              <option value="FOR_RENT">For Rent</option>
+              <option value="FOR_SALE">For Sale</option>
+            </select>
+          </div>
+
           {/* City Filter */}
           <div>
             <label className="block text-[10px] font-bold uppercase tracking-wider text-[#6B7280] mb-1">

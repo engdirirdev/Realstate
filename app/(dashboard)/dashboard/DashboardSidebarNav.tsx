@@ -17,6 +17,7 @@ import {
   CreditCard,
   FileText,
   History,
+  KeyRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -58,6 +59,7 @@ const managerNavGroups: NavGroup[] = [
   {
     title: "DEALS & TRANSACTIONS",
     items: [
+      { href: "/dashboard/rentals", label: "Rentals & Leases", icon: KeyRound },
       { href: "/dashboard/requests", label: "Purchase & Rental Requests", icon: FileText },
       { href: "/dashboard/transactions", label: "Transactions Ledger", icon: History },
       { href: "/dashboard/payments", label: "Payments & Revenue", icon: CreditCard },

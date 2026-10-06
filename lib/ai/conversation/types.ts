@@ -55,6 +55,9 @@ export interface ResultItem {
   price: number;
   formattedPrice: string;
   city: string;
+  location?: string | null;
+  district?: string | null;
+  address?: string | null;
   type: string;
   typeLabel?: string;
   bedrooms: number;
@@ -123,6 +126,7 @@ export type ResponseType =
   | "USER_UNCERTAIN"
   | "CONFIRMATION"
   | "CORRECTION"
+  | "REQUIREMENT_UPDATE"
   | "AMBIGUOUS"
   | "RESET"
   | "OUT_OF_SCOPE"
@@ -155,6 +159,7 @@ export interface ConversationState {
   previousTopic?: ConversationTopic;
   topicConfidence: number;
   slots: ConversationSlotState;
+  softPreferences?: string[];
   activeResultSet: ResultItem[];
   referencedPropertyId?: string;
   unresolvedSlots: string[];

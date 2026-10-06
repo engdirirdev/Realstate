@@ -7,7 +7,12 @@
  * All API keys remain server-side and are never logged or exposed.
  */
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import {
+  GoogleGenerativeAI,
+  FunctionDeclaration,
+  SchemaType,
+  Tool,
+} from "@google/generative-ai";
 import {
   GEMINI_CONFIG,
   getGeminiApiKey,
@@ -21,6 +26,126 @@ import {
   AIGenerationResult,
   AIStructuredUnderstanding,
 } from "./ai-provider";
+import { ConversationSlotState, ExtendedLanguage, ResponseType } from "../conversation/types";
+
+/**
+ * Native Gemini Function / Tool Declaration for Verified Property Search
+ * Section 3 & 4 Architectural Directive: Real Gemini structured tool call
+ */
+export const PROPERTY_SEARCH_FUNCTION_DECLARATION: FunctionDeclaration = {
+  name: "search_properties",
+  description:
+    "Search verified Kiro-Maal property listings in the database. Use this tool when verified property inventory is needed to answer the user's request. Do not invent property information.",
+  parameters: {
+    type: SchemaType.OBJECT,
+    properties: {
+      city: {
+        type: SchemaType.STRING,
+        description: "City to search in, e.g. Mogadishu, Hargeisa, Kismayo.",
+      },
+      district: {
+        type: SchemaType.STRING,
+        description: "Specific neighborhood or district, e.g. Wadajir, Hodan, Waberi.",
+      },
+      purpose: {
+        type: SchemaType.STRING,
+        description: "Listing purpose: 'RENT' or 'SALE'.",
+      },
+      propertyType: {
+        type: SchemaType.STRING,
+        description: "Property type: APARTMENT, HOUSE, VILLA, COMMERCIAL, or LAND.",
+      },
+      minPrice: {
+        type: SchemaType.NUMBER,
+        description: "Minimum price or budget in USD.",
+      },
+      maxPrice: {
+        type: SchemaType.NUMBER,
+        description: "Maximum budget or price in USD.",
+      },
+      preferredBedrooms: {
+        type: SchemaType.ARRAY,
+        items: {
+          type: SchemaType.NUMBER,
+        },
+        description: "Preferred or acceptable bedroom counts, e.g. [3, 2].",
+      },
+      excludedLocations: {
+        type: SchemaType.ARRAY,
+        items: {
+          type: SchemaType.STRING,
+        },
+        description: "Districts or areas explicitly rejected or excluded by the user (e.g. ['Hodan']).",
+      },
+      proximity: {
+        type: SchemaType.STRING,
+        description: "Workplace or landmark proximity preference (e.g. KM4).",
+      },
+      prioritizeBest: {
+        type: SchemaType.BOOLEAN,
+        description: "True if user asked for the best matching property for their budget and preferences.",
+      },
+    },
+  },
+};
+
+export const GEMINI_PROPERTY_SEARCH_TOOL: Tool = {
+  functionDeclarations: [PROPERTY_SEARCH_FUNCTION_DECLARATION],
+};
+
+export interface GeminiPropertySearchArgs {
+  city?: string;
+  district?: string;
+  purpose?: "RENT" | "SALE";
+  propertyType?: "APARTMENT" | "HOUSE" | "VILLA" | "COMMERCIAL" | "LAND";
+  minPrice?: number;
+  maxPrice?: number;
+  preferredBedrooms?: number[];
+  excludedLocations?: string[];
+  proximity?: string;
+  prioritizeBest?: boolean;
+}
+
+export interface GeminiConversationalTurnInput {
+  userMessage: string;
+  conversationHistory?: { role: string; content: string }[];
+  contextSlots?: Partial<ConversationSlotState>;
+  activeResultSet?: any[];
+  referencedProperty?: any;
+  preferredLanguage?: ExtendedLanguage;
+}
+
+export interface GeminiContextUpdates {
+  city?: string;
+  district?: string;
+  maxPrice?: number;
+  minPrice?: number;
+  purpose?: "RENT" | "SALE";
+  propertyType?: "APARTMENT" | "HOUSE" | "VILLA" | "COMMERCIAL" | "LAND";
+  bedrooms?: number;
+  excludedLocations?: string[];
+  softPreferences?: string[];
+  userReasoning?: string[];
+  furnished?: boolean;
+  parking?: boolean;
+  responseType?: ResponseType;
+  referencedPropertyId?: string;
+  proximity?: string;
+}
+
+export interface GeminiConversationalDecision {
+  type: "TOOL_CALL" | "TEXT_RESPONSE";
+  toolCall?: {
+    name: "search_properties";
+    args: GeminiPropertySearchArgs;
+  };
+  replyText?: string;
+  contextUpdates?: GeminiContextUpdates;
+  latencyMs: number;
+  model: string;
+  success: boolean;
+  error?: string;
+}
 
 export class GeminiProvider implements AIProvider {
   public readonly id = "gemini" as const;
@@ -260,7 +385,7 @@ DOMAIN & DATA GROUNDING (CRITICAL):
       if (input.verifiedProperties && input.verifiedProperties.length > 0) {
         groundedContext += `[VERIFIED KIRO-MAAL PROPERTIES IN DATABASE]:\n` +
           input.verifiedProperties.map((p) =>
-            `#${p.rank || 1} "${p.title}": Price $${p.price} (${p.city}${p.location ? ', ' + p.location : ''}), ` +
+            `#${p.rank || 1} "${p.title}": Price $${p.price} (${p.city}${(p as any).location ? ', ' + (p as any).location : ''}), ` +
             `${p.bedrooms || 0} bedrooms, ${p.bathrooms || 0} baths, ` +
             `Type: ${p.type}, Furnished: ${p.furnished ? 'Yes' : 'No'}, Parking: ${p.parking ? 'Yes' : 'No'}.`
           ).join("\n") + "\n";
@@ -331,6 +456,194 @@ DOMAIN & DATA GROUNDING (CRITICAL):
         error: err?.message || "Unknown Gemini error",
       };
     }
+  }
+
+  /**
+   * Gemini Conversational Action & Tool-Decision Authority
+   *
+   * Gemini 3.8 Flash decides whether to call `search_properties` tool
+   * or answer conversationally with text (NO tool call, NO MySQL execution).
+   */
+  public async decideConversationalAction(
+    input: GeminiConversationalTurnInput
+  ): Promise<GeminiConversationalDecision> {
+    const startTime = Date.now();
+    const client = this.getClient();
+
+    if (!client) {
+      return this.safeGenericTechnicalFallback(input, startTime, "API_KEY_NOT_CONFIGURED");
+    }
+
+    let timer: NodeJS.Timeout | null = null;
+
+    try {
+      const systemInstruction = `You are Gemini 3.8 Flash, serving as AIDA — the conversational AI Real Estate Assistant for Kiro-Maal in Somalia.
+
+CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
+1. You are the SOLE conversational and natural language understanding authority.
+2. Converse warmly, professionally, and politely in Somali, English, or Arabic.
+3. You natively understand:
+   - Natural, colloquial, and imperfect Somali (e.g. "kirro", "dabaq", "qolal jiif", "reer").
+   - Code-switching and mixed languages (e.g. "3 bedroom apartment oo furnished ah").
+   - Negations: "Hodan ma rabo" means Hodan is EXCLUDED/REJECTED.
+   - Corrections: "Maya, Wadajir ayaan rabaa" updates the preferred location to Wadajir.
+   - Soft preferences: "3 qol haddii la helo waa fiican tahay laakiin khasab ma aha" means 3 bedrooms is preferred, but 2 is acceptable.
+   - Workplace proximity: "KM4 ayaan ka shaqeeyaa" is proximity context.
+   - Short answers: "$400", "3 qol", "Hodan".
+   - Questions about previously returned properties (e.g. "Kan labaad ma furnished baa?", "Parking ma leeyahay?").
+4. TOOLS:
+   - You have the tool: 'search_properties'.
+   - CALL 'search_properties' ONLY when the user explicitly requests to search, find, or view properties (e.g. "ii raadi kan ugu fiican", "find properties", "keen guryo").
+   - DO NOT call any tool for greetings, general conversation, advice questions, expressing preferences, budget statements, or inquiries about already displayed properties. Answer those with natural conversational text!
+5. When responding with text, if the user mentioned new criteria, preferences, or constraints during this turn, or if answering an inquiry about a property, append a JSON block at the very end:
+\`\`\`context
+{"city":"...","district":"...","maxPrice":...,"minPrice":...,"bedrooms":...,"propertyType":"...","purpose":"...","excludedLocations":[...],"softPreferences":[...],"responseType":"GREETING|ADVICE|REQUIREMENT_UPDATE|PROPERTY_DETAIL|GENERAL_CONVERSATION"}
+\`\`\`
+6. STRICT TRUTH: Never invent properties, prices, or listings.`;
+
+      const genModel = client.getGenerativeModel({
+        model: this.model,
+        generationConfig: {
+          temperature: 0.2,
+        },
+        systemInstruction,
+        tools: [GEMINI_PROPERTY_SEARCH_TOOL],
+      });
+
+      const historyContents = (input.conversationHistory || []).slice(-16).map((h) => ({
+        role: h.role === "assistant" ? "model" : "user",
+        parts: [{ text: h.content }],
+      }));
+
+      let promptText = input.userMessage;
+      const ctx: string[] = [];
+      if (input.contextSlots && Object.keys(input.contextSlots).length > 0) {
+        if (input.contextSlots.city) ctx.push(`City: ${input.contextSlots.city}`);
+        if (input.contextSlots.district) ctx.push(`District: ${input.contextSlots.district}`);
+        if (input.contextSlots.maxPrice) ctx.push(`Budget: $${input.contextSlots.maxPrice}`);
+        if (input.contextSlots.purpose) ctx.push(`Purpose: ${input.contextSlots.purpose}`);
+        if (input.contextSlots.propertyType) ctx.push(`Type: ${input.contextSlots.propertyType}`);
+        if (input.contextSlots.bedrooms) ctx.push(`Bedrooms: ${input.contextSlots.bedrooms}`);
+        if (input.contextSlots.excludedLocations && input.contextSlots.excludedLocations.length > 0) {
+          ctx.push(`Excluded: ${input.contextSlots.excludedLocations.join(", ")}`);
+        }
+        if (input.contextSlots.softPreferences && input.contextSlots.softPreferences.length > 0) {
+          ctx.push(`Soft Preferences: ${input.contextSlots.softPreferences.join(", ")}`);
+        }
+        if (input.contextSlots.userReasoning && input.contextSlots.userReasoning.length > 0) {
+          ctx.push(`Reasoning/Workplace: ${input.contextSlots.userReasoning.join(", ")}`);
+        }
+      }
+      if (input.activeResultSet && input.activeResultSet.length > 0) {
+        const propSummaries = input.activeResultSet.slice(0, 5).map((p, idx) =>
+          `#${p.rank || idx + 1} ID:${p.id} ${p.title} (${p.city || ''}${p.location ? ', ' + p.location : ''}) $${p.price} | Beds:${p.bedrooms ?? 'N/A'} | Furnished:${p.furnished === true ? 'Yes' : p.furnished === false ? 'No' : 'Unknown'} | Parking:${p.parking === true ? 'Yes' : p.parking === false ? 'No' : 'Unknown'}`
+        ).join("; ");
+        ctx.push(`Active Properties: [${propSummaries}]`);
+      }
+
+      if (ctx.length > 0) {
+        promptText = `[KNOWN CONVERSATION CONTEXT: ${ctx.join(" | ")}]\nUser Message: ${input.userMessage}`;
+      }
+
+      const contents = [
+        ...historyContents,
+        {
+          role: "user",
+          parts: [{ text: promptText }],
+        },
+      ];
+
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          reject(new Error(`Gemini tool decision timed out after ${GEMINI_CONFIG.CHAT_TIMEOUT_MS}ms`));
+        }, GEMINI_CONFIG.CHAT_TIMEOUT_MS);
+      });
+
+      const apiPromise = genModel.generateContent({ contents });
+      const result = await Promise.race([apiPromise, timeoutPromise]);
+      if (timer) clearTimeout(timer);
+
+      const latencyMs = Date.now() - startTime;
+      const calls = result.response.functionCalls();
+
+      if (calls && calls.length > 0 && calls[0].name === "search_properties") {
+        return {
+          type: "TOOL_CALL",
+          toolCall: {
+            name: "search_properties",
+            args: (calls[0].args as any) || {},
+          },
+          latencyMs,
+          model: this.model,
+          success: true,
+        };
+      }
+
+      let rawReply = result.response.text().trim();
+      let contextUpdates: GeminiContextUpdates | undefined = undefined;
+
+      const contextMatch = rawReply.match(/```context\s*([\s\S]*?)\s*```/i) || rawReply.match(/\[CONTEXT_UPDATE:\s*([\s\S]*?)\]/i);
+      if (contextMatch) {
+        try {
+          contextUpdates = JSON.parse(contextMatch[1]);
+          rawReply = rawReply.replace(contextMatch[0], "").trim();
+        } catch {
+          // ignore parsing error
+        }
+      }
+
+      return {
+        type: "TEXT_RESPONSE",
+        replyText: rawReply,
+        contextUpdates,
+        latencyMs,
+        model: this.model,
+        success: rawReply.length > 0,
+      };
+    } catch (err: any) {
+      if (timer) clearTimeout(timer);
+      return this.safeGenericTechnicalFallback(input, startTime, err?.message);
+    }
+  }
+
+  /**
+   * Mock client hook for unit testing Gemini native behavior without network calls
+   */
+  public setMockClient(mockClient: any): void {
+    this.client = mockClient;
+  }
+
+  /**
+   * Safe Generic Technical Fallback
+   *
+   * Strictly adheres to the architectural directive:
+   * When Gemini 3.8 Flash is unavailable (network error, timeout, or 429 quota exhaustion),
+   * the application MUST NOT independently interpret, classify, extract entities, or decide
+   * what property search the user intended using JavaScript/regex.
+   *
+   * Returns a polite technical service notice with 0 database queries and 0 tool calls.
+   */
+  public safeGenericTechnicalFallback(
+    input: GeminiConversationalTurnInput,
+    startTime: number,
+    errorReason?: string
+  ): GeminiConversationalDecision {
+    const latencyMs = Date.now() - startTime;
+    const lang = input.preferredLanguage || "so";
+    const replyText =
+      lang === "en"
+        ? "I apologize, our AI assistant is currently experiencing high demand or network interruption. Please try again in a moment."
+        : "Raalli ahow, adeegga AI-ga ee Kiro-Maal ayaa hadda mashquul ah ama xiriirka ayaa go'an. Fadlan wax yar ka dib isku day mar kale.";
+
+    return {
+      type: "TEXT_RESPONSE",
+      replyText,
+      contextUpdates: undefined,
+      latencyMs,
+      model: this.model,
+      success: false,
+      error: errorReason || "GEMINI_UNAVAILABLE",
+    };
   }
 
   private buildFallbackUnderstanding(

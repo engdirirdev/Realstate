@@ -97,8 +97,10 @@ export async function executeSemanticSearch(
     // Managers only see APPROVED or their own properties
     where.status = "APPROVED";
   } else {
-    // PUBLIC & CUSTOMER roles strictly only see APPROVED properties
-    where.status = "APPROVED";
+    // PUBLIC & CUSTOMER roles strictly only see APPROVED & AVAILABLE properties
+    where.status = { in: ["APPROVED", "PUBLISHED"] };
+    where.availabilityStatus = "AVAILABLE";
+    where.isActive = true;
   }
 
   // 4. Apply Optional Structured Hard Constraints

@@ -41,10 +41,13 @@ export default async function CustomerPropertiesPage({
   if (!session?.user?.id) redirect("/login");
 
   const params = await searchParams;
+  const q = typeof params.q === "string" ? params.q.trim() : "";
   const city = typeof params.city === "string" ? params.city : "";
   const type = typeof params.type === "string" ? params.type : "";
   const listingType = typeof params.listingType === "string" ? params.listingType : "";
   const sort = typeof params.sort === "string" ? params.sort : "latest";
+  const maxPrice = typeof params.maxPrice === "string" && !isNaN(Number(params.maxPrice)) ? Number(params.maxPrice) : null;
+  const minPrice = typeof params.minPrice === "string" && !isNaN(Number(params.minPrice)) ? Number(params.minPrice) : null;
 
   const where: any = {
     status: { in: ["APPROVED", "PUBLISHED"] },
@@ -55,6 +58,20 @@ export default async function CustomerPropertiesPage({
   if (type) where.type = type;
   if (listingType && ["FOR_RENT", "FOR_SALE"].includes(listingType)) {
     where.listingType = listingType;
+  }
+  if (q) {
+    where.OR = [
+      { title: { contains: q } },
+      { description: { contains: q } },
+      { location: { contains: q } },
+      { city: { contains: q } },
+    ];
+  }
+  if (maxPrice !== null) {
+    where.price = { ...(where.price || {}), lte: maxPrice };
+  }
+  if (minPrice !== null) {
+    where.price = { ...(where.price || {}), gte: minPrice };
   }
 
   let orderBy: any = { createdAt: "desc" };
@@ -122,19 +139,25 @@ export default async function CustomerPropertiesPage({
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Link
-              href="/customer/compare"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-[#FAF7F2] text-[#07111F] hover:bg-white border border-[#E8E1D4] hover:border-[#C89B3C] transition-all shadow-xs"
-            >
-              <SlidersHorizontal className="w-4 h-4 text-[#C89B3C]" />
-              <span>Compare Properties</span>
-            </Link>
-          </div>
         </div>
 
         {/* Filter Toolbar */}
-        <form method="GET" className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 pt-4 border-t border-[#E8E1D4]">
+        <form method="GET" className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-3 pt-4 border-t border-[#E8E1D4]">
+          {/* Keyword Search */}
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-[#6B7280] mb-1">
+              Search Keywords
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                name="q"
+                defaultValue={q}
+                placeholder="Title, area, street..."
+                className="w-full px-3 py-2 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs font-semibold focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] outline-hidden transition-all"
+              />
+            </div>
+          </div>
           {/* Listing Type Filter */}
           <div>
             <label className="block text-[10px] font-bold uppercase tracking-wider text-[#6B7280] mb-1">
@@ -213,7 +236,7 @@ export default async function CustomerPropertiesPage({
             >
               <Filter className="w-3.5 h-3.5" /> Filter Listings
             </button>
-            {(city || type || sort !== "latest") && (
+            {(city || type || sort !== "latest" || q || listingType || maxPrice !== null) && (
               <Link
                 href="/customer/properties"
                 className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"

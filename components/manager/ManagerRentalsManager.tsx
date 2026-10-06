@@ -17,11 +17,22 @@ import {
   Building2,
   Receipt,
   Eye,
+  MapPin,
+  Phone,
+  FileText,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+
+function getInitials(name?: string | null): string {
+  if (!name) return "CL";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 import {
   Dialog,
   DialogContent,
@@ -51,6 +62,7 @@ export default function ManagerRentalsManager() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [rejectingReq, setRejectingReq] = useState<any | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [viewModalTarget, setViewModalTarget] = useState<any | null>(null);
 
   // Create Rental Modal state
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -267,74 +279,167 @@ export default function ManagerRentalsManager() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
-              <thead className="bg-[#F7F3EA] text-[#6B7280] uppercase text-[10px] tracking-wider border-b border-[#E8E1D4]">
+              <thead className="bg-[#FAF6EC] text-[#475569] uppercase text-[10px] font-bold tracking-wider border-b border-[#E8E1D4]">
                 <tr>
-                  <th className="text-left p-3.5">Agreement #</th>
-                  <th className="text-left p-3.5">Property</th>
-                  <th className="text-left p-3.5">Customer</th>
-                  <th className="text-left p-3.5">Rental Period</th>
-                  <th className="text-left p-3.5">Total Rent</th>
-                  <th className="text-left p-3.5">Status</th>
-                  <th className="text-left p-3.5">Payment</th>
-                  <th className="text-right p-3.5">Actions</th>
+                  <th className="text-left py-3.5 pl-4 pr-3">Agreement #</th>
+                  <th className="text-left py-3.5 px-3">Property</th>
+                  <th className="text-left py-3.5 px-3">Customer</th>
+                  <th className="text-left py-3.5 px-3">Rental Period</th>
+                  <th className="text-left py-3.5 px-3">Total Rent</th>
+                  <th className="text-left py-3.5 px-3">Status</th>
+                  <th className="text-left py-3.5 px-3">Payment</th>
+                  <th className="text-right py-3.5 pl-3 pr-4">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#E8E1D4]">
+              <tbody className="divide-y divide-[#E8E1D4]/80">
                 {data.items.map((r) => {
                   const paid = r.transaction?.payments?.[0]?.status === "PAID";
                   const canReview = r.status === "PENDING" || r.status === "UNDER_REVIEW";
                   return (
-                    <tr key={r.id} className="hover:bg-[#F7F3EA]/40 transition-colors">
-                      <td className="p-3.5 font-mono font-bold text-[#07111F]">
-                        {r.requestNo}
-                        <p className="text-[10px] text-[#6B7280] font-sans font-normal">{fmt(r.createdAt)}</p>
+                    <tr key={r.id} className="hover:bg-[#FAF6EC]/70 transition-colors align-middle">
+                      {/* Agreement # */}
+                      <td className="py-3.5 pl-4 pr-3 align-middle">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#07111F]/5 border border-[#E8E1D4] text-[#07111F] font-mono font-bold text-xs tracking-tight shadow-2xs">
+                          <FileText className="h-3 w-3 text-[#C89B3C] shrink-0" />
+                          <span>{r.requestNo}</span>
+                        </div>
+                        <div className="text-[10px] text-[#64748B] mt-1 flex items-center gap-1 pl-0.5">
+                          <Clock className="h-2.5 w-2.5 text-[#C89B3C]" />
+                          <span>{fmt(r.createdAt)}</span>
+                        </div>
                       </td>
-                      <td className="p-3.5">
-                        <Link href={`/properties/${r.property?.id}`} className="font-semibold text-[#07111F] hover:text-[#C89B3C]" target="_blank">
-                          {r.property?.title}
-                        </Link>
-                        <p className="text-[10px] text-[#6B7280]">{r.property?.city}</p>
+
+                      {/* Property */}
+                      <td className="py-3.5 px-3 align-middle">
+                        <div className="flex items-center gap-3">
+                          <div className="relative h-11 w-11 rounded-xl overflow-hidden bg-gradient-to-br from-[#07111F] to-[#1E293B] border border-[#E8E1D4] shrink-0 flex items-center justify-center shadow-2xs">
+                            {r.property?.images?.[0]?.url ? (
+                              <img
+                                src={r.property.images[0].url}
+                                alt={r.property?.title || "Property"}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <Building2 className="h-5 w-5 text-[#C89B3C]" />
+                            )}
+                          </div>
+                          <div className="min-w-0 max-w-[220px] space-y-0.5">
+                            <Link
+                              href={`/properties/${r.property?.id || ""}`}
+                              className="font-bold text-xs text-[#07111F] hover:text-[#C89B3C] transition-colors truncate block"
+                              target="_blank"
+                              title={r.property?.title}
+                            >
+                              {r.property?.title || "Untitled Property"}
+                            </Link>
+                            <div className="flex items-center gap-1 text-[11px] text-[#64748B]">
+                              <MapPin className="h-3 w-3 text-[#C89B3C] shrink-0" />
+                              <span className="truncate">{r.property?.city || "Location on file"}</span>
+                            </div>
+                          </div>
+                        </div>
                       </td>
-                      <td className="p-3.5">
-                        <p className="font-semibold text-[#07111F]">{r.customer?.name}</p>
-                        <p className="text-[10px] text-[#6B7280]">{r.customer?.email}</p>
+
+                      {/* Customer */}
+                      <td className="py-3.5 px-3 align-middle">
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-[#07111F] to-[#1E293B] text-[#D9B45B] border border-[#C89B3C]/30 flex items-center justify-center font-bold text-[11px] shrink-0 shadow-2xs">
+                            {getInitials(r.customer?.name)}
+                          </div>
+                          <div className="min-w-0 space-y-0.5">
+                            <p className="font-semibold text-xs text-[#07111F] truncate">{r.customer?.name || "Anonymous Client"}</p>
+                            <p className="text-[11px] text-[#64748B] truncate">{r.customer?.email || "No email"}</p>
+                            {r.customer?.phone && (
+                              <p className="text-[10px] font-mono font-medium text-[#8C6D23] flex items-center gap-1">
+                                <Phone className="h-2.5 w-2.5 text-[#C89B3C]" />
+                                <span>{r.customer.phone}</span>
+                              </p>
+                            )}
+                          </div>
+                        </div>
                       </td>
-                      <td className="p-3.5 whitespace-nowrap">
-                        <p className="font-medium text-[#07111F]">{fmt(r.startDate)} → {fmt(r.endDate)}</p>
-                        <p className="text-[10px] text-[#6B7280]">{r.periods} × {r.rentalPeriod?.toLowerCase()}</p>
+
+                      {/* Rental Period */}
+                      <td className="py-3.5 px-3 whitespace-nowrap align-middle">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-[#07111F]">
+                          <Calendar className="h-3.5 w-3.5 text-[#C89B3C] shrink-0" />
+                          <span>{fmt(r.startDate)} → {fmt(r.endDate)}</span>
+                        </div>
+                        <div className="text-[10px] text-[#64748B] mt-0.5 flex items-center gap-1.5 pl-5">
+                          <span className="px-1.5 py-0.5 rounded bg-[#FAF6EC] border border-[#E8DEC8] text-[#8C6D23] font-bold">
+                            {r.periods}× {r.rentalPeriod?.toLowerCase()}
+                          </span>
+                          <span>tenancy</span>
+                        </div>
                       </td>
-                      <td className="p-3.5 whitespace-nowrap font-bold text-[#07111F]">
-                        {formatPrice(r.totalAmount)}
-                        {r.securityDeposit > 0 && (
-                          <p className="text-[10px] font-normal text-[#6B7280]">incl. {formatPrice(r.securityDeposit)} dep.</p>
+
+                      {/* Total Rent */}
+                      <td className="py-3.5 px-3 whitespace-nowrap align-middle">
+                        <p className="font-serif font-black text-sm text-[#07111F] tracking-tight">
+                          {formatPrice(r.totalAmount)}
+                        </p>
+                        {r.securityDeposit > 0 ? (
+                          <p className="text-[10px] font-medium text-[#64748B]">incl. {formatPrice(r.securityDeposit)} dep.</p>
+                        ) : (
+                          <p className="text-[10px] font-medium text-[#64748B]">Total Contract</p>
                         )}
                       </td>
-                      <td className="p-3.5">
+
+                      {/* Status */}
+                      <td className="py-3.5 px-3 whitespace-nowrap align-middle">
                         <StatusBadge status={r.status} />
                       </td>
-                      <td className="p-3.5">
-                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                          paid ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
-                        }`}>
-                          {paid ? "PAID" : "PENDING"}
-                        </span>
+
+                      {/* Payment */}
+                      <td className="py-3.5 px-3 whitespace-nowrap align-middle">
+                        {paid ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-950 border border-emerald-500/40 shadow-2xs">
+                            <CheckCircle2 className="h-3 w-3 text-emerald-700" />
+                            PAID / VERIFIED
+                          </span>
+                        ) : (
+                          <div className="space-y-0.5">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-950 border border-amber-500/40 shadow-2xs">
+                              <Clock className="h-3 w-3 text-amber-700" />
+                              PENDING VERIFICATION
+                            </span>
+                            {r.transaction?.payments?.[0]?.transactionRef && (
+                              <p className="text-[9px] font-mono text-[#8C6D23] truncate max-w-[130px]">
+                                Ref: {r.transaction.payments[0].transactionRef}
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </td>
-                      <td className="p-3.5 text-right">
+
+                      {/* Actions */}
+                      <td className="py-3.5 pl-3 pr-4 text-right whitespace-nowrap align-middle">
                         <div className="flex items-center justify-end gap-1.5">
+                          {/* View is ALWAYS available for Manager */}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setViewModalTarget(r)}
+                            className="h-7 text-xs rounded-lg border-[#E8E1D4] hover:border-[#C89B3C] text-[#07111F] bg-[#FCFBF7] gap-1 cursor-pointer font-medium"
+                          >
+                            <Eye className="h-3 w-3 text-[#C89B3C]" /> View
+                          </Button>
+
                           {r.transaction?.receipt && (
                             <Link href={`/receipt/${r.transaction.receipt.id}`} target="_blank">
-                              <Button size="sm" variant="outline" className="h-7 text-[10px] rounded-lg border-[#E8E1D4]">
-                                Receipt
+                              <Button size="sm" variant="outline" className="h-7 text-xs rounded-lg border-[#E8E1D4] hover:border-[#C89B3C] text-[#07111F] bg-[#FCFBF7] gap-1 cursor-pointer font-medium">
+                                <Receipt className="h-3 w-3 text-[#C89B3C]" /> Receipt
                               </Button>
                             </Link>
                           )}
+
                           {canReview && (
                             <>
                               <Button
                                 size="sm"
                                 disabled={busyId === r.id}
                                 onClick={() => handleReviewAction(r, "approve")}
-                                className="h-7 text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg gap-1"
+                                className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg gap-1 cursor-pointer shadow-2xs"
                               >
                                 {busyId === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
                                 Approve
@@ -344,18 +449,11 @@ export default function ManagerRentalsManager() {
                                 variant="outline"
                                 disabled={busyId === r.id}
                                 onClick={() => setRejectingReq(r)}
-                                className="h-7 text-[10px] border-red-200 text-red-600 hover:bg-red-50 rounded-lg gap-1"
+                                className="h-7 text-xs border-red-200 text-red-600 hover:bg-red-50 bg-red-50/40 rounded-lg gap-1 cursor-pointer"
                               >
                                 <XCircle className="h-3 w-3" /> Reject
                               </Button>
                             </>
-                          )}
-                          {!canReview && (
-                            <Link href={`/properties/${r.property?.id}`} target="_blank">
-                              <Button size="sm" variant="outline" className="h-7 text-[10px] rounded-lg border-[#E8E1D4] text-[#6B7280]">
-                                <Eye className="h-3 w-3" /> View
-                              </Button>
-                            </Link>
                           )}
                         </div>
                       </td>
@@ -536,6 +634,171 @@ export default function ManagerRentalsManager() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Booking Details Modal */}
+      <Dialog open={!!viewModalTarget} onOpenChange={(o) => !o && setViewModalTarget(null)}>
+        <DialogContent className="max-w-lg bg-[#FCFBF7] rounded-2xl border border-[#E8E1D4] p-6 shadow-xl">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-xs font-bold text-[#A97918]">#{viewModalTarget?.requestNo}</span>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#07111F] text-[#D9B45B]">
+                Rental Booking
+              </span>
+            </div>
+            <DialogTitle className="font-serif text-lg text-[#07111F] flex items-center gap-2 mt-1">
+              <KeyRound className="h-5 w-5 text-[#C89B3C]" />
+              Booking Details &amp; Verification
+            </DialogTitle>
+            <DialogDescription className="text-xs text-[#6B7280]">
+              Review tenant credentials, dates, pricing, and manual payment verification before approval.
+            </DialogDescription>
+          </DialogHeader>
+
+          {viewModalTarget && (
+            <div className="space-y-4 mt-2 text-xs">
+              {/* Property Details */}
+              <div className="p-3 bg-white rounded-xl border border-[#E8E1D4] flex items-center gap-3">
+                <div className="h-12 w-12 rounded-lg bg-[#07111F] overflow-hidden shrink-0">
+                  <img
+                    src={viewModalTarget.property?.images?.[0]?.url || "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800"}
+                    alt={viewModalTarget.property?.title}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h4 className="font-bold text-[#07111F] truncate">{viewModalTarget.property?.title}</h4>
+                  <p className="text-[11px] text-[#6B7280] flex items-center gap-1">
+                    <MapPin className="h-3 w-3 text-[#C89B3C]" />
+                    {viewModalTarget.property?.city || viewModalTarget.property?.location}
+                  </p>
+                </div>
+              </div>
+
+              {/* Customer Info */}
+              <div className="p-3 bg-[#FAF6EC] rounded-xl border border-[#E8DEC8] space-y-1">
+                <span className="text-[#6B7280] block text-[10px] uppercase font-bold">Tenant Information</span>
+                <p className="font-bold text-xs text-[#07111F]">{viewModalTarget.customer?.name}</p>
+                <p className="text-[11px] text-[#64748B]">{viewModalTarget.customer?.email}</p>
+                {viewModalTarget.customer?.phone && (
+                  <p className="text-[10px] font-mono text-[#8C6D23] font-semibold">{viewModalTarget.customer.phone}</p>
+                )}
+              </div>
+
+              {/* Status Grid */}
+              <div className="grid grid-cols-2 gap-2 bg-white p-3 rounded-xl border border-[#E8E1D4]">
+                <div>
+                  <span className="text-[#6B7280] block text-[10px] uppercase font-bold">Booking Status</span>
+                  <span className="font-bold text-xs text-[#07111F]">{viewModalTarget.status}</span>
+                </div>
+                <div>
+                  <span className="text-[#6B7280] block text-[10px] uppercase font-bold">Payment Status</span>
+                  <span className="font-bold text-xs text-[#8C6D23]">
+                    {viewModalTarget.transaction?.payments?.[0]?.status === "PAID"
+                      ? "PAID / VERIFIED"
+                      : "PENDING VERIFICATION"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Tenancy Dates */}
+              <div className="p-3 bg-white rounded-xl border border-[#E8E1D4] space-y-2">
+                <h5 className="font-bold text-[#07111F] text-xs">Tenancy Duration</h5>
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <div>
+                    <span className="text-[#6B7280] block">Check-in:</span>
+                    <span className="font-semibold text-[#07111F]">{fmt(viewModalTarget.startDate)}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#6B7280] block">Check-out:</span>
+                    <span className="font-semibold text-[#07111F]">{fmt(viewModalTarget.endDate)}</span>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-[#E8E1D4] flex justify-between text-[11px]">
+                  <span className="text-[#6B7280]">Contract Duration:</span>
+                  <span className="font-semibold text-[#07111F]">
+                    {viewModalTarget.periods}× {viewModalTarget.rentalPeriod?.toLowerCase()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Financial Breakdown */}
+              <div className="p-3 bg-white rounded-xl border border-[#E8E1D4] space-y-1.5 text-[11px]">
+                <h5 className="font-bold text-[#07111F] text-xs mb-2">Financial Breakdown</h5>
+                <div className="flex justify-between text-[#6B7280]">
+                  <span>Rent Amount:</span>
+                  <span className="font-semibold text-[#07111F]">{formatPrice(viewModalTarget.rentAmount)}</span>
+                </div>
+                {viewModalTarget.securityDeposit > 0 && (
+                  <div className="flex justify-between text-[#6B7280]">
+                    <span>Security Deposit:</span>
+                    <span className="font-semibold text-[#07111F]">{formatPrice(viewModalTarget.securityDeposit)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between pt-1.5 border-t border-[#E8E1D4] font-bold text-xs text-[#07111F]">
+                  <span>Total Due:</span>
+                  <span className="font-serif text-[#C89B3C] text-sm">{formatPrice(viewModalTarget.totalAmount)}</span>
+                </div>
+              </div>
+
+              {/* Payment Verification Data */}
+              {viewModalTarget.transaction?.payments?.[0] && (
+                <div className="p-3 bg-white rounded-xl border border-[#E8E1D4] space-y-2 text-[11px]">
+                  <h5 className="font-bold text-[#07111F] text-xs">Payment Verification Data</h5>
+                  <div className="flex justify-between">
+                    <span className="text-[#6B7280]">Payment Method:</span>
+                    <span className="font-bold text-[#07111F]">{viewModalTarget.transaction.payments[0].paymentMethod}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#6B7280]">Transaction Reference:</span>
+                    <span className="font-mono font-bold text-[#8C6D23]">{viewModalTarget.transaction.payments[0].transactionRef}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Review notes */}
+              {viewModalTarget.reviewNotes && (
+                <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px]">
+                  <span className="font-bold text-amber-900 block mb-0.5">Review Notes:</span>
+                  <p className="text-amber-800 italic">&ldquo;{viewModalTarget.reviewNotes}&rdquo;</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="mt-2 flex items-center justify-between">
+            <Button variant="outline" onClick={() => setViewModalTarget(null)} className="rounded-xl border-[#E8E1D4]">
+              Close
+            </Button>
+            {viewModalTarget && (viewModalTarget.status === "PENDING" || viewModalTarget.status === "UNDER_REVIEW") && (
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const t = viewModalTarget;
+                    setViewModalTarget(null);
+                    setRejectingReq(t);
+                  }}
+                  className="rounded-xl border-red-200 text-red-600 hover:bg-red-50 text-xs"
+                >
+                  <XCircle className="h-3.5 w-3.5" /> Reject
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const t = viewModalTarget;
+                    setViewModalTarget(null);
+                    handleReviewAction(t, "approve");
+                  }}
+                  className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Approve Booking
+                </Button>
+              </div>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

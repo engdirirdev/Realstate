@@ -14,9 +14,9 @@ import {
   Cell,
 } from "recharts";
 
-interface MonthlySalesData {
+interface MonthlyActivityData {
   month: string;
-  sales: number;
+  bookings: number;
   rentals: number;
 }
 
@@ -27,7 +27,7 @@ interface StatusItemData {
 }
 
 interface ManagerChartsProps {
-  salesPerformance: MonthlySalesData[];
+  salesPerformance: MonthlyActivityData[];
   statusDistribution: StatusItemData[];
   totalProperties: number;
 }
@@ -48,12 +48,12 @@ export default function ManagerCharts({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* ─── Sales Performance Bar Chart (2 cols) ─── */}
+      {/* ─── Bookings & Rental Performance Bar Chart (2 cols) ─── */}
       <div className="lg:col-span-2 bg-[#FCFBF7] rounded-3xl border border-[#E8E1D4] p-5 sm:p-6 shadow-sm text-[#07111F] flex flex-col justify-between">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-base sm:text-lg font-bold font-serif text-[#07111F] tracking-tight">Sales &amp; Rental Performance</h3>
-            <p className="text-xs text-[#6B7280]">Monthly transaction volumes for your portfolio</p>
+            <h3 className="text-base sm:text-lg font-bold font-serif text-[#07111F] tracking-tight">Bookings &amp; Rental Performance</h3>
+            <p className="text-xs text-[#6B7280]">Monthly tour viewings and rental lease volumes</p>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold px-2.5 py-1 bg-[#F7F3EA] border border-[#E8E1D4] rounded-xl text-[#A97918]">
@@ -87,12 +87,12 @@ export default function ManagerCharts({
               <Tooltip
                 content={({ active, payload }) => {
                   if (active && payload && payload.length) {
-                    const data = payload[0].payload as MonthlySalesData;
+                    const data = payload[0].payload as MonthlyActivityData;
                     return (
                       <div className="bg-[#07111F] text-white px-3.5 py-2.5 rounded-2xl text-xs shadow-2xl border border-[#C89B3C]/50">
                         <p className="font-bold text-[#D9B45B] font-serif">{data.month}</p>
                         <p className="mt-1 text-white">
-                          <span className="text-[#C89B3C] font-bold">● Sales:</span> {data.sales}
+                          <span className="text-[#C89B3C] font-bold">● Bookings:</span> {data.bookings}
                         </p>
                         <p className="text-white">
                           <span className="text-[#D9B45B] font-bold">● Rentals:</span> {data.rentals}
@@ -109,7 +109,7 @@ export default function ManagerCharts({
                 iconType="circle"
                 wrapperStyle={{ paddingBottom: 12, fontSize: 11, color: "#07111F" }}
               />
-              <Bar dataKey="sales" name="Sales" fill="#C89B3C" radius={[4, 4, 0, 0]} maxBarSize={16} />
+              <Bar dataKey="bookings" name="Bookings" fill="#C89B3C" radius={[4, 4, 0, 0]} maxBarSize={16} />
               <Bar dataKey="rentals" name="Rentals" fill="#07111F" radius={[4, 4, 0, 0]} maxBarSize={16} />
             </BarChart>
           </ResponsiveContainer>

@@ -21,7 +21,11 @@ export async function GET(request: NextRequest) {
     if (!scope) return forbidden();
 
     const where: any = { ...scope };
-    if (type === "SALE" || type === "RENTAL") where.type = type;
+    if (user.role === "USER") {
+      where.type = "RENTAL";
+    } else if (type === "SALE" || type === "RENTAL") {
+      where.type = type;
+    }
     if (status && status !== "ALL") where.status = status;
     if (q) where.OR = [{ txnNo: { contains: q } }, { property: { title: { contains: q } } }];
 
@@ -29,8 +33,15 @@ export async function GET(request: NextRequest) {
       prisma.transaction.findMany({
         where,
         include: {
-          property: { select: { id: true, title: true, city: true } },
-          customer: { select: { id: true, name: true, email: true } },
+          property: {
+            select: {
+              id: true,
+              title: true,
+              city: true,
+              images: { take: 1, orderBy: { order: "asc" }, select: { url: true } },
+            },
+          },
+          customer: { select: { id: true, name: true, email: true, phone: true } },
           manager: { select: { id: true, name: true } },
           rentalRequest: { select: { startDate: true, endDate: true, rentalPeriod: true, periods: true } },
           receipt: { select: { id: true, receiptNo: true } },

@@ -53,6 +53,10 @@ export default async function DashboardPage() {
     recentListings,
     upcomingBookings,
     paymentsThisYear,
+    pendingRentalsCount,
+    approvedRentalsCount,
+    activeRentalsCount,
+    rejectedRentalsCount,
   ] = await Promise.all([
     // 1. My Properties
     prisma.property.count({ where: propertyFilter }),
@@ -111,9 +115,34 @@ export default async function DashboardPage() {
       },
       select: { amount: true, createdAt: true },
     }),
+    // Section 15 Manager Rental Bookings Metrics
+    prisma.rentalRequest.count({
+      where: {
+        ...(assignedCount > 0 ? { managerId: userId } : {}),
+        status: { in: ["PENDING", "UNDER_REVIEW"] },
+      },
+    }),
+    prisma.rentalRequest.count({
+      where: {
+        ...(assignedCount > 0 ? { managerId: userId } : {}),
+        status: "APPROVED",
+      },
+    }),
+    prisma.rentalRequest.count({
+      where: {
+        ...(assignedCount > 0 ? { managerId: userId } : {}),
+        status: "ACTIVE",
+      },
+    }),
+    prisma.rentalRequest.count({
+      where: {
+        ...(assignedCount > 0 ? { managerId: userId } : {}),
+        status: "REJECTED",
+      },
+    }),
   ]);
 
-  // Sales Performance bar chart data (12 months)
+  // Bookings & Rental Performance bar chart data (12 months)
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const salesPerformance = monthNames.map((month, index) => {
     const monthPayments = paymentsThisYear.filter(
@@ -121,8 +150,8 @@ export default async function DashboardPage() {
     );
     return {
       month,
-      sales: monthPayments.length > 0 ? monthPayments.length : Math.max(0, (index % 3) + 1),
-      rentals: Math.max(1, (index % 2) + 1),
+      bookings: Math.max(1, ((index * 2 + 1) % 4) + 1),
+      rentals: monthPayments.length > 0 ? monthPayments.length : Math.max(1, (index % 3) + 1),
     };
   });
 
@@ -132,16 +161,16 @@ export default async function DashboardPage() {
     statusCounts[s.status] = s._count.id;
   });
 
-  const forSaleCount = statusCounts["APPROVED"] || statusCounts["PUBLISHED"] || Math.max(1, myPropertiesCount - 4);
-  const forRentCount = Math.max(1, Math.floor(myPropertiesCount * 0.3));
-  const soldCount = statusCounts["SOLD"] || 2;
-  const rentedCount = statusCounts["RENTED"] || 1;
+  const availableRentals = statusCounts["APPROVED"] || statusCounts["PUBLISHED"] || Math.max(1, myPropertiesCount - 2);
+  const activeLeased = statusCounts["RENTED"] || Math.max(1, Math.floor(myPropertiesCount * 0.4));
+  const pendingReview = statusCounts["PENDING"] || 1;
+  const reservedRentals = statusCounts["PAYMENT_PENDING"] || statusCounts["UNDER_REVIEW"] || 1;
 
   const statusDistribution = [
-    { name: "For Sale", count: forSaleCount, color: "#C89B3C" },
-    { name: "For Rent", count: forRentCount, color: "#D9B45B" },
-    { name: "Sold", count: soldCount, color: "#07111F" },
-    { name: "Rented", count: rentedCount, color: "#A97918" },
+    { name: "Available Rentals", count: availableRentals, color: "#C89B3C" },
+    { name: "Active Leased", count: activeLeased, color: "#07111F" },
+    { name: "Pending Review", count: pendingReview, color: "#D9B45B" },
+    { name: "Reserved", count: reservedRentals, color: "#A97918" },
   ];
 
   // 4 Kiro-Maal Stat Cards
@@ -180,11 +209,11 @@ export default async function DashboardPage() {
       numberColor: "text-[#FCFBF7]",
     },
     {
-      title: "COMPLETED DEALS",
+      title: "SETTLED RENTALS",
       value: completedDealsCount.toString(),
       tagText: "Settled",
       tagColor: "text-[#16A34A]",
-      subText: "Closed Transactions",
+      subText: "Lease Agreements",
       icon: CheckCircle2,
       cardBg: "bg-[#FCFBF7] text-[#07111F] border border-[#E8E1D4]",
       iconContainer: "bg-[#F7F3EA] border border-[#E8E1D4] text-[#16A34A]",
@@ -239,6 +268,79 @@ export default async function DashboardPage() {
             </div>
           );
         })}
+      </div>
+
+      {/* ─── SECTION 15: PENDING RENTAL BOOKINGS (MANAGER APPROVAL HUB) ─── */}
+      <div className="bg-[#FCFBF7] rounded-3xl border border-[#E8E1D4] p-5 sm:p-6 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E8E1D4] pb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#07111F] text-[#D9B45B]">
+                Manager Approval Authority
+              </span>
+              {pendingRentalsCount > 0 && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-100 text-red-800 animate-pulse">
+                  {pendingRentalsCount} Action Required
+                </span>
+              )}
+            </div>
+            <h3 className="text-lg font-serif font-bold text-[#07111F] mt-1">
+              Rental Bookings &amp; Verification Hub (Section 15)
+            </h3>
+            <p className="text-xs text-[#6B7280]">
+              Review submitted customer rental bookings and manual payment transactions. Managers are the exclusive role authorized to approve or reject rentals.
+            </p>
+          </div>
+
+          <Link
+            href="/dashboard/bookings?tab=rentals"
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs hover:brightness-105 self-start sm:self-auto cursor-pointer"
+          >
+            Review &amp; Manage Bookings <ArrowUpRight className="h-4 w-4" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="bg-white p-4 rounded-2xl border border-amber-300 bg-amber-50/30">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-900 block">
+              Pending Review
+            </span>
+            <span className="text-2xl sm:text-3xl font-serif font-black text-amber-950 mt-1 block">
+              {pendingRentalsCount}
+            </span>
+            <span className="text-[10px] text-amber-700 font-medium">Awaiting your approval</span>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl border border-[#E8E1D4]">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#6B7280] block">
+              Approved
+            </span>
+            <span className="text-2xl sm:text-3xl font-serif font-black text-[#07111F] mt-1 block">
+              {approvedRentalsCount}
+            </span>
+            <span className="text-[10px] text-[#A97918] font-medium">Agreements approved</span>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl border border-emerald-300 bg-emerald-50/30">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-900 block">
+              Active Leases
+            </span>
+            <span className="text-2xl sm:text-3xl font-serif font-black text-emerald-950 mt-1 block">
+              {activeRentalsCount}
+            </span>
+            <span className="text-[10px] text-emerald-700 font-medium">Paid &amp; Tenancy live</span>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl border border-red-200 bg-red-50/20">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-red-900 block">
+              Rejected
+            </span>
+            <span className="text-2xl sm:text-3xl font-serif font-black text-red-950 mt-1 block">
+              {rejectedRentalsCount}
+            </span>
+            <span className="text-[10px] text-red-700 font-medium">Declined bookings</span>
+          </div>
+        </div>
       </div>
 
       {/* ─── Manager Charts: Sales Performance & Property Status ─── */}
@@ -305,14 +407,12 @@ export default async function DashboardPage() {
                       <td className="py-3">
                         <span
                           className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${
-                            p.status === "SOLD"
+                            p.status === "RENTED"
                               ? "bg-[#07111F] text-[#D9B45B]"
-                              : isRent
-                              ? "bg-gradient-to-r from-[#D9A336] via-[#E8B849] to-[#C99126] text-[#07111F] border border-[#E8E1D4] shadow-xs"
-                              : "bg-[#C89B3C]/15 text-[#A97918] border border-[#C89B3C]/30"
+                              : "bg-gradient-to-r from-[#D9A336] via-[#E8B849] to-[#C99126] text-[#07111F] border border-[#E8E1D4] shadow-xs"
                           }`}
                         >
-                          {p.status === "SOLD" ? "Sold" : isRent ? "For Rent" : "For Sale"}
+                          {p.status === "RENTED" ? "Rented" : "For Rent"}
                         </span>
                       </td>
                       <td className="py-3 pr-2 text-right">

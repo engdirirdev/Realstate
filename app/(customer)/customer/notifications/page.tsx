@@ -54,9 +54,19 @@ export default async function CustomerNotificationsPage() {
               <div className="flex-1 min-w-0">
                 <h3 className="font-serif font-bold text-[#07111F] text-sm">{n.title}</h3>
                 <p className="text-xs text-[#6B7280] mt-0.5 leading-relaxed">{n.message}</p>
-                <p className="text-[10px] text-[#A97918] font-bold mt-2">
-                  {new Date(n.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                </p>
+                <div className="flex items-center justify-between mt-2">
+                  <p className="text-[10px] text-[#A97918] font-bold">
+                    {new Date(n.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                  {n.linkUrl && (
+                    <Link
+                      href={n.linkUrl}
+                      className="text-[11px] font-bold text-[#C89B3C] hover:text-[#A97918] transition-colors"
+                    >
+                      View Details →
+                    </Link>
+                  )}
+                </div>
               </div>
             </div>
           ))}

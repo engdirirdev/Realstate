@@ -67,7 +67,7 @@ export default async function ReceiptPage({ params }: Props) {
         {/* Navigation & Print Actions (Hidden on print) */}
         <div className="flex items-center justify-between gap-3 print:hidden">
           <Link
-            href={isAdmin ? "/admin/transactions" : isManager ? "/dashboard/requests" : "/customer/transactions"}
+            href={isAdmin ? "/admin/transactions" : isManager ? "/dashboard/transactions" : "/customer/transactions"}
             className="inline-flex items-center gap-1.5 text-xs font-bold text-[#07111F] hover:text-[#C89B3C] transition-colors"
           >
             <ArrowLeft className="h-4 w-4" /> Back to Portal

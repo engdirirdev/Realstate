@@ -22,6 +22,7 @@ export default function BrandLogo({
   return (
     <Link
       href={href}
+      prefetch={false}
       className={cn("inline-flex items-center gap-3 group", className)}
     >
       {/* Kiro-Maal Shield Logo Image */}

@@ -100,7 +100,8 @@ function UsersDirectoryContent() {
   };
 
   useEffect(() => {
-    const timer = setTimeout(() => fetchUsers(), 250);
+    const delay = searchQuery ? 250 : 0;
+    const timer = setTimeout(() => fetchUsers(), delay);
     return () => clearTimeout(timer);
   }, [searchQuery, activeTab, statusFilter]);
 

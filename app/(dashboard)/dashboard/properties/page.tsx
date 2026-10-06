@@ -38,8 +38,6 @@ export default async function ManagerPropertiesPage({
   const rejectedCount = allManagerProperties.filter((p) => p.status === "REJECTED" || p.approvalStatus === "REJECTED").length;
   const availableRentCount = allManagerProperties.filter((p) => p.listingType === "FOR_RENT" && (p.availabilityStatus === "AVAILABLE" || p.status === "APPROVED")).length;
   const rentedCount = allManagerProperties.filter((p) => p.availabilityStatus === "RENTED" || p.status === "RENTED").length;
-  const availableSaleCount = allManagerProperties.filter((p) => (p.listingType === "FOR_SALE" || !p.listingType) && (p.availabilityStatus === "AVAILABLE" || p.status === "APPROVED")).length;
-  const soldCount = allManagerProperties.filter((p) => p.availabilityStatus === "SOLD" || p.status === "SOLD").length;
   const totalViews = allManagerProperties.reduce((acc, p) => acc + (p.viewCount || 0), 0);
 
   const filterWhere: any = { managerId: session.user.id };
@@ -47,8 +45,6 @@ export default async function ManagerPropertiesPage({
     filterWhere.status = { in: ["APPROVED", "PUBLISHED"] };
   } else if (currentStatus === "RENTED") {
     filterWhere.OR = [{ status: "RENTED" }, { availabilityStatus: "RENTED" }];
-  } else if (currentStatus === "SOLD") {
-    filterWhere.OR = [{ status: "SOLD" }, { availabilityStatus: "SOLD" }];
   } else if (currentStatus) {
     filterWhere.status = currentStatus;
   }
@@ -60,7 +56,6 @@ export default async function ManagerPropertiesPage({
       inquiries: { select: { id: true } },
       bookings: { select: { id: true } },
       rentalRequests: { select: { id: true, status: true } },
-      purchaseRequests: { select: { id: true, status: true } },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -69,8 +64,7 @@ export default async function ManagerPropertiesPage({
     { label: "All Listings", value: "", count: totalCount },
     { label: "Approved Live", value: "APPROVED", count: approvedCount },
     { label: "Pending Review", value: "PENDING", count: pendingCount },
-    { label: "Rented", value: "RENTED", count: rentedCount },
-    { label: "Sold", value: "SOLD", count: soldCount },
+    { label: "Currently Rented", value: "RENTED", count: rentedCount },
     { label: "Action Required", value: "REJECTED", count: rejectedCount },
   ];
 
@@ -79,12 +73,12 @@ export default async function ManagerPropertiesPage({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FCFBF7] border border-[#C89B3C]/30 text-[#A97918] text-xs font-semibold uppercase tracking-wider mb-2 shadow-xs">
-            <Sparkles className="w-3.5 h-3.5 text-[#C89B3C]" /> Portfolio &amp; Availability Management
+            <Sparkles className="w-3.5 h-3.5 text-[#C89B3C]" /> Portfolio &amp; Rental Management
           </div>
           <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#07111F] flex items-center gap-2.5">
             <Building2 className="h-7 w-7 text-[#C89B3C]" /> My Listed Properties
           </h1>
-          <p className="text-[#6B7280] text-sm mt-1">{totalCount} total listings • {availableRentCount} for rent • {availableSaleCount} for sale • {rentedCount} rented • {soldCount} sold</p>
+          <p className="text-[#6B7280] text-sm mt-1">{totalCount} total listings • {availableRentCount} available for rent • {rentedCount} rented • {totalViews} total views</p>
         </div>
 
         <Link
@@ -96,9 +90,9 @@ export default async function ManagerPropertiesPage({
       </div>
 
       {/* KPI Stats Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <div className="bg-[#FCFBF7] rounded-2xl p-3.5 border border-[#E8E1D4] shadow-xs">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-[#6B7280]">Total</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[#6B7280]">Total Portfolio</p>
           <p className="text-xl font-serif font-bold text-[#07111F] mt-0.5">{totalCount}</p>
         </div>
         <div className="bg-[#FCFBF7] rounded-2xl p-3.5 border border-[#E8E1D4] shadow-xs">
@@ -118,12 +112,8 @@ export default async function ManagerPropertiesPage({
           <p className="text-xl font-serif font-bold text-indigo-700 mt-0.5">{rentedCount}</p>
         </div>
         <div className="bg-[#FCFBF7] rounded-2xl p-3.5 border border-[#E8E1D4] shadow-xs">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-[#A97918]">Available Sale</p>
-          <p className="text-xl font-serif font-bold text-[#A97918] mt-0.5">{availableSaleCount}</p>
-        </div>
-        <div className="bg-[#FCFBF7] rounded-2xl p-3.5 border border-[#E8E1D4] shadow-xs">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-700">Sold</p>
-          <p className="text-xl font-serif font-bold text-slate-700 mt-0.5">{soldCount}</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[#A97918]">Total Views</p>
+          <p className="text-xl font-serif font-bold text-[#A97918] mt-0.5">{totalViews}</p>
         </div>
       </div>
 
@@ -233,26 +223,26 @@ export default async function ManagerPropertiesPage({
 
                   {prop.listingType === "FOR_RENT" ? (
                     <Link
-                      href="/dashboard/rentals"
+                      href="/dashboard/bookings?tab=rentals"
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-[#07111F] bg-[#F7F3EA] border border-[#E8E1D4] hover:border-[#C89B3C] transition-all"
                     >
                       {prop.status === "RENTED" || prop.availabilityStatus === "RENTED" ? "Rental Details" : "Manage Rentals"}
                     </Link>
                   ) : (
                     <Link
-                      href="/dashboard/requests"
+                      href="/dashboard/transactions"
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-[#07111F] bg-[#F7F3EA] border border-[#E8E1D4] hover:border-[#C89B3C] transition-all"
                     >
-                      {prop.status === "SOLD" || prop.availabilityStatus === "SOLD" ? "Sale Details" : "Purchase Requests"}
+                      Payments &amp; Txns
                     </Link>
                   )}
 
-                  {(prop.status === "SOLD" || prop.status === "RENTED" || prop.availabilityStatus === "SOLD" || prop.availabilityStatus === "RENTED") && (
+                  {(prop.status === "RENTED" || prop.availabilityStatus === "RENTED") && (
                     <Link
                       href="/dashboard/transactions"
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-[#A97918] bg-[#FAF7F2] border border-[#C89B3C]/30 hover:border-[#C89B3C] transition-all"
                     >
-                      History
+                      Lease History
                     </Link>
                   )}
                 </div>

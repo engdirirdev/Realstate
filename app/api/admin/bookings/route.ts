@@ -18,9 +18,17 @@ export async function GET(request: NextRequest) {
     const bookings = await prisma.booking.findMany({
       where: whereClause,
       include: {
-        property: { select: { title: true, city: true, price: true } },
-        customer: { select: { name: true, email: true } },
-        manager: { select: { name: true, email: true } },
+        property: {
+          select: {
+            id: true,
+            title: true,
+            city: true,
+            price: true,
+            images: { take: 1, orderBy: { order: "asc" }, select: { url: true } },
+          },
+        },
+        customer: { select: { id: true, name: true, email: true, phone: true } },
+        manager: { select: { id: true, name: true, email: true } },
       },
       orderBy: { createdAt: "desc" },
     });

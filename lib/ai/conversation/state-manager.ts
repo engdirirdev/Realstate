@@ -576,7 +576,7 @@ export function updateConversationState(
   let activeResultSet = prevState.activeResultSet || [];
   if (currentSlots.excludedLocations && currentSlots.excludedLocations.length > 0 && activeResultSet.length > 0) {
     activeResultSet = activeResultSet.filter((p) => {
-      const pText = `${p.title || ""} ${p.location || ""} ${p.district || ""} ${p.city || ""} ${p.address || ""} ${p.description || ""}`.toLowerCase();
+      const pText = `${p.title || ""} ${(p as any).location || ""} ${(p as any).district || ""} ${p.city || ""} ${(p as any).address || ""} ${p.description || ""}`.toLowerCase();
       return !currentSlots.excludedLocations!.some((excl) => pText.includes(excl.toLowerCase()));
     });
   }

@@ -46,6 +46,7 @@ export interface ConversationSlotState {
   alternativeLocations?: string[];
   softPreferences?: string[];
   userReasoning?: string[];
+  proximity?: string;
 }
 
 export interface ResultItem {
@@ -129,6 +130,7 @@ export type ResponseType =
   | "REQUIREMENT_UPDATE"
   | "AMBIGUOUS"
   | "RESET"
+  | "REQUIREMENT_UPDATE"
   | "OUT_OF_SCOPE"
   | "MIXED_QUERY"
   | "ERROR";

@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
     const session = await auth();
     const { searchParams } = new URL(request.url);
     const mode = searchParams.get("mode");
+    const listingType = searchParams.get("listingType");
 
     if (mode === "my-properties" && session?.user?.id) {
       const properties = await prisma.property.findMany({
@@ -18,11 +19,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, properties });
     }
 
+    const where: any = {
+      status: { in: ["APPROVED", "PUBLISHED"] },
+      availabilityStatus: "AVAILABLE",
+      isActive: true,
+    };
+
+    if (listingType && ["FOR_RENT", "FOR_SALE"].includes(listingType.toUpperCase())) {
+      where.listingType = listingType.toUpperCase();
+    }
+
     const properties = await prisma.property.findMany({
-      where: { status: { in: ["APPROVED", "PUBLISHED"] } },
+      where,
       include: { images: { orderBy: { order: "asc" }, take: 1 } },
       orderBy: { createdAt: "desc" },
-      take: 30,
+      take: 50,
     });
 
     return NextResponse.json({ success: true, properties });
@@ -182,6 +193,9 @@ export async function POST(request: NextRequest) {
         lotSize: lotSize ? Number(lotSize) : parsedTypeDetails?.compoundSize ? Number(parsedTypeDetails.compoundSize) : null,
         yearBuilt: yearBuilt ? Number(yearBuilt) : null,
         status,
+        approvalStatus: submitForReview ? (isAdmin ? "APPROVED" : "PENDING_REVIEW") : "DRAFT",
+        availabilityStatus: "AVAILABLE",
+        isActive: status === "APPROVED",
         managerId: session.user.id,
         images: imageCreateList.length > 0 ? {
           create: imageCreateList,

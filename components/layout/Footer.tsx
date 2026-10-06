@@ -5,8 +5,8 @@ import BrandLogo from "@/components/layout/BrandLogo";
 const footerLinks = {
   Company: [
     { label: "About Us",  href: "/about" },
+    { label: "Services",  href: "/services" },
     { label: "Contact",   href: "/contact" },
-    { label: "Blog",      href: "#" },
   ],
   Properties: [
     { label: "Houses",      href: "/properties?type=HOUSE" },

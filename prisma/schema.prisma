@@ -236,8 +236,11 @@ model Property {
   rentPeriod      String?        // MONTHLY | WEEKLY | DAILY (FOR_RENT only)
   securityDeposit Float?         // FOR_RENT only
   typeDetails     String?        @db.Text // JSON object storing type-specific details
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  approvalStatus     String?        @default("APPROVED") // DRAFT | PENDING_REVIEW | APPROVED | REJECTED
+  availabilityStatus String?        @default("AVAILABLE") // AVAILABLE | BOOKING_PENDING | RENTED | RENT_EXPIRED | SOLD | INACTIVE
+  isActive           Boolean        @default(true)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
 
   // Relations
   manager          User?              @relation("ManagerProperties", fields: [managerId], references: [id], onDelete: SetNull)
@@ -263,6 +266,9 @@ model Property {
   @@index([type])
   @@index([bedrooms])
   @@index([status])
+  @@index([approvalStatus])
+  @@index([availabilityStatus])
+  @@index([isActive])
   @@index([listingType])
   @@index([isFeatured])
   @@index([managerId])

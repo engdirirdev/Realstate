@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     }
 
     const include = {
-      property: { select: { id: true, title: true, city: true, status: true, listingType: true } },
+      property: { select: { id: true, title: true, city: true, status: true, listingType: true, availabilityStatus: true, price: true } },
       customer: { select: { id: true, name: true, email: true, phone: true } },
       manager: { select: { id: true, name: true } },
       transaction: {

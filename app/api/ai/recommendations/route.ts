@@ -46,6 +46,7 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(30, Math.max(1, parseInt(searchParams.get("limit") || "10", 10)));
     const city = searchParams.get("city") || undefined;
     const type = searchParams.get("type") || undefined;
+    const listingType = searchParams.get("listingType") || undefined;
     const maxBudget = searchParams.get("maxBudget") ? parseFloat(searchParams.get("maxBudget")!) : undefined;
     const bedrooms = searchParams.get("bedrooms") ? parseInt(searchParams.get("bedrooms")!, 10) : undefined;
 
@@ -57,9 +58,18 @@ export async function GET(request: NextRequest) {
     // 2. Fetch or synthesize user's dynamic behavioral preference profile
     const learnedProfile = await buildUserProfile(userId);
 
-    // 3. Fetch candidate approved properties
+    // 3. Fetch candidate approved properties that are strictly AVAILABLE
+    const where: any = {
+      status: { in: ["APPROVED", "PUBLISHED"] },
+      availabilityStatus: "AVAILABLE",
+      isActive: true,
+    };
+    if (listingType && ["FOR_RENT", "FOR_SALE"].includes(listingType.toUpperCase())) {
+      where.listingType = listingType.toUpperCase();
+    }
+
     const properties = await prisma.property.findMany({
-      where: { status: "APPROVED" },
+      where,
       include: {
         images: { orderBy: { order: "asc" }, take: 1 },
         embedding: true,

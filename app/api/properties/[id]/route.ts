@@ -69,6 +69,10 @@ export async function PATCH(
       return NextResponse.json({ success: false, error: "Unauthorized. You cannot edit this property." }, { status: 403 });
     }
 
+    if (!isAdmin && (existing.status === "SOLD" || existing.availabilityStatus === "SOLD")) {
+      return NextResponse.json({ success: false, error: "Sold properties cannot be edited." }, { status: 400 });
+    }
+
     const body = await req.json();
 
     const {
@@ -142,12 +146,31 @@ export async function PATCH(
 
     // Status logic:
     if (isAdmin) {
-      if (requestedStatus) updateData.status = requestedStatus;
+      if (requestedStatus) {
+        updateData.status = requestedStatus;
+        if (requestedStatus === "APPROVED" || requestedStatus === "PUBLISHED") {
+          updateData.approvalStatus = "APPROVED";
+          updateData.availabilityStatus = "AVAILABLE";
+          updateData.isActive = true;
+          updateData.rejectionReason = null;
+        } else if (requestedStatus === "REJECTED") {
+          updateData.approvalStatus = "REJECTED";
+          updateData.availabilityStatus = "INACTIVE";
+          updateData.isActive = false;
+        } else if (requestedStatus === "SOLD") {
+          updateData.availabilityStatus = "SOLD";
+          updateData.isActive = false;
+        } else if (requestedStatus === "RENTED") {
+          updateData.availabilityStatus = "RENTED";
+          updateData.isActive = false;
+        }
+      }
       if (isFeatured !== undefined) updateData.isFeatured = isFeatured;
       if (rejectionReason !== undefined) updateData.rejectionReason = rejectionReason;
     } else {
       if (submitForReview) {
         updateData.status = "PENDING";
+        updateData.approvalStatus = "PENDING_REVIEW";
         updateData.rejectionReason = null;
       }
     }

@@ -452,6 +452,8 @@ export async function searchDatabaseProperties(
   } else {
     // PUBLIC and CUSTOMER users can ONLY EVER view APPROVED or PUBLISHED available properties
     where.status = { in: ["APPROVED", "PUBLISHED"] };
+    where.availabilityStatus = "AVAILABLE";
+    where.isActive = true;
   }
 
   // STRICT LISTING TYPE FILTERING (FOR_SALE vs FOR_RENT)

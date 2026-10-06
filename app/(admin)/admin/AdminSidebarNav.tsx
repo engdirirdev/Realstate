@@ -10,15 +10,15 @@ import {
   MapPin,
   Users,
   UserCheck,
-  Shield,
   CreditCard,
   MessageSquare,
   Calendar,
   BarChart3,
   ScrollText,
   Settings,
-  FileText,
   History,
+  BadgeDollarSign,
+  Key,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -47,25 +47,25 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    title: "APPOINTMENTS",
-    items: [
-      { href: "/admin/bookings", label: "Tour Bookings", icon: Calendar },
-    ],
-  },
-  {
-    title: "USERS",
-    items: [
-      { href: "/admin/users?role=CUSTOMER", label: "Customers", icon: Users },
-      { href: "/admin/users?role=USERS", label: "Users", icon: UserCheck },
-    ],
-  },
-  {
     title: "TRANSACTIONS & SETTLEMENTS",
     items: [
-      { href: "/admin/requests", label: "Purchase & Rental Requests", icon: FileText },
-      { href: "/admin/transactions", label: "Transactions Ledger", icon: History },
-      { href: "/admin/payments", label: "Payments", icon: CreditCard },
-      { href: "/admin/messages", label: "Contact Requests", icon: MessageSquare },
+      { href: "/admin/sales", label: "Sales Management", icon: BadgeDollarSign },
+      { href: "/admin/requests", label: "Rentals & Leases", icon: Key },
+      { href: "/admin/transactions", label: "Payments & Transactions", icon: CreditCard },
+    ],
+  },
+  {
+    title: "CLIENT ENGAGEMENT",
+    items: [
+      { href: "/admin/bookings", label: "Tour Bookings", icon: Calendar },
+      { href: "/admin/messages", label: "Contact Inquiries", icon: MessageSquare },
+    ],
+  },
+  {
+    title: "USERS & CLIENTS",
+    items: [
+      { href: "/admin/users?role=CUSTOMER", label: "Customers", icon: Users },
+      { href: "/admin/users?role=USER", label: "Managers", icon: UserCheck },
     ],
   },
   {
@@ -92,7 +92,9 @@ export default function AdminSidebarNav() {
           )}
           {group.items.map(({ href, label, icon: Icon }) => {
             const isActive =
-              pathname === href || (label === "Dashboard" && pathname === "/admin");
+              pathname === href ||
+              (label === "Dashboard" && pathname === "/admin") ||
+              (href === "/admin/transactions" && (pathname === "/admin/transactions" || pathname === "/admin/payments"));
             return (
               <Link
                 key={href + label}

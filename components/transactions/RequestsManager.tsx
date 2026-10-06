@@ -22,8 +22,16 @@ const fmt = (d?: string | null) => (d ? new Date(d).toLocaleDateString() : "—"
  * Staff view of purchase / rental requests. Scope (own vs all) is enforced by the API
  * from the session role — this component only renders what the API returns.
  */
-export default function RequestsManager({ isAdmin = false }: { isAdmin?: boolean }) {
-  const [kind, setKind] = useState<Kind>("purchase");
+export default function RequestsManager({
+  isAdmin = false,
+  defaultKind = "purchase",
+  hideKindTabs = false,
+}: {
+  isAdmin?: boolean;
+  defaultKind?: Kind;
+  hideKindTabs?: boolean;
+}) {
+  const [kind, setKind] = useState<Kind>(defaultKind);
   const [status, setStatus] = useState("ALL");
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
@@ -78,27 +86,29 @@ export default function RequestsManager({ isAdmin = false }: { isAdmin?: boolean
     }
   };
 
-  const canAct = (r: any) => ["PENDING", "UNDER_REVIEW"].includes(r.status);
+  const canAct = (r: any) => ["PENDING", "UNDER_REVIEW"].includes(r.status) && (kind === "rental" || isAdmin);
 
   return (
     <div className="space-y-5">
       {/* Tabs */}
-      <div className="inline-flex rounded-xl border border-[#E8E1D4] bg-[#FCFBF7] p-1">
-        {(["purchase", "rental"] as Kind[]).map((k) => (
-          <button
-            key={k}
-            onClick={() => {
-              setKind(k);
-              setPage(1);
-            }}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-              kind === k ? "bg-[#07111F] text-[#D9B45B]" : "text-[#6B7280] hover:text-[#07111F]"
-            }`}
-          >
-            {k === "purchase" ? "Purchase Requests" : "Rental Requests"}
-          </button>
-        ))}
-      </div>
+      {!hideKindTabs && (
+        <div className="inline-flex rounded-xl border border-[#E8E1D4] bg-[#FCFBF7] p-1">
+          {(["purchase", "rental"] as Kind[]).map((k) => (
+            <button
+              key={k}
+              onClick={() => {
+                setKind(k);
+                setPage(1);
+              }}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                kind === k ? "bg-[#07111F] text-[#D9B45B]" : "text-[#6B7280] hover:text-[#07111F]"
+              }`}
+            >
+              {k === "purchase" ? "Purchase Requests" : "Rental Requests"}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">

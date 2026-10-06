@@ -121,7 +121,10 @@ export async function createPurchaseRequest(customerId: string, propertyId: stri
     if ((property.listingType || "FOR_SALE") !== "FOR_SALE") {
       throw new TxnError("This property is not listed for sale.");
     }
-    if (!(AVAILABLE_STATUSES as readonly string[]).includes(property.status)) {
+    if (
+      !(AVAILABLE_STATUSES as readonly string[]).includes(property.status) ||
+      (property.availabilityStatus && property.availabilityStatus !== "AVAILABLE")
+    ) {
       throw new TxnError(NO_LONGER_AVAILABLE, 409);
     }
     if (property.managerId === customerId) {
@@ -181,7 +184,10 @@ export async function createRentalRequest(
     const property = await lockProperty(tx, propertyId);
 
     if (property.listingType !== "FOR_RENT") throw new TxnError("This property is not listed for rent.");
-    if (!(AVAILABLE_STATUSES as readonly string[]).includes(property.status)) {
+    if (
+      !(AVAILABLE_STATUSES as readonly string[]).includes(property.status) ||
+      (property.availabilityStatus && property.availabilityStatus !== "AVAILABLE")
+    ) {
       throw new TxnError(NO_LONGER_AVAILABLE, 409);
     }
     if (property.managerId === customerId) throw new TxnError("You cannot rent your own listing.", 403);
@@ -264,8 +270,13 @@ export async function reviewRequest(
 
     if (action === "cancel") {
       if (!isCustomer && !isAdmin && !isOwnerManager) throw new TxnError("Forbidden.", 403);
-    } else if (!isAdmin && !(actor.role === "USER" && isOwnerManager)) {
-      throw new TxnError("You are not allowed to review this request.", 403);
+    } else {
+      if (kind === "purchase" && !isAdmin) {
+        throw new TxnError("Only administrators can approve or reject purchase requests.", 403);
+      }
+      if (kind === "rental" && !isAdmin && !isOwnerManager) {
+        throw new TxnError("Only the property manager or administrator can review rental requests.", 403);
+      }
     }
 
     const property = await lockProperty(tx, req.propertyId);
@@ -293,7 +304,10 @@ export async function reviewRequest(
       if (kind === "purchase") {
         if ((property.listingType || "FOR_SALE") !== "FOR_SALE") throw new TxnError("Property is not for sale.");
         amount = property.price;
-        await tx.property.update({ where: { id: property.id }, data: { status: "PAYMENT_PENDING" } });
+        await tx.property.update({
+          where: { id: property.id },
+          data: { status: "PAYMENT_PENDING", availabilityStatus: "BOOKING_PENDING" },
+        });
         // Reject every other open purchase request – the property is now reserved for this buyer.
         const others = await tx.purchaseRequest.findMany({
           where: { propertyId: property.id, id: { not: req.id }, status: { in: ["PENDING", "UNDER_REVIEW"] } },
@@ -365,7 +379,10 @@ export async function reviewRequest(
     });
     // Release the property if this request was holding it.
     if (kind === "purchase" && req.status === "PAYMENT_PENDING" && property.status === "PAYMENT_PENDING") {
-      await tx.property.update({ where: { id: property.id }, data: { status: "APPROVED" } });
+      await tx.property.update({
+        where: { id: property.id },
+        data: { status: "APPROVED", availabilityStatus: "AVAILABLE" },
+      });
     }
     const label = action === "reject" ? "Rejected" : "Cancelled";
     if (actor.id !== req.customerId) {
@@ -425,7 +442,7 @@ export async function payTransaction(transactionId: string, customerId: string, 
       // Atomic guard: only flip to SOLD if the property is still reserved for this sale.
       const flipped = await tx.property.updateMany({
         where: { id: property.id, status: "PAYMENT_PENDING" },
-        data: { status: "SOLD" },
+        data: { status: "SOLD", availabilityStatus: "SOLD", isActive: false },
       });
       if (flipped.count !== 1) throw new TxnError(NO_LONGER_AVAILABLE, 409);
       await tx.purchaseRequest.update({ where: { id: req.id }, data: { status: "COMPLETED", completedAt: now } });
@@ -437,9 +454,10 @@ export async function payTransaction(transactionId: string, customerId: string, 
         throw new TxnError(PERIOD_UNAVAILABLE, 409);
       }
       await tx.rentalRequest.update({ where: { id: req.id }, data: { status: "ACTIVE" } });
-      if (req.startDate <= now && req.endDate > now && ["APPROVED", "PUBLISHED"].includes(property.status)) {
-        await tx.property.update({ where: { id: property.id }, data: { status: "RENTED" } });
-      }
+      await tx.property.update({
+        where: { id: property.id },
+        data: { status: "RENTED", availabilityStatus: "RENTED", isActive: false },
+      });
       nextTxnStatus = "ACTIVE";
     }
 
@@ -545,7 +563,10 @@ export async function syncRentalLifecycle(force = false) {
           where: { propertyId: r.propertyId, status: "ACTIVE", startDate: { lte: now }, endDate: { gt: now } },
         });
         if (!stillActive) {
-          await tx.property.updateMany({ where: { id: r.propertyId, status: "RENTED" }, data: { status: "APPROVED" } });
+          await tx.property.updateMany({
+            where: { id: r.propertyId, status: "RENTED" },
+            data: { status: "APPROVED", availabilityStatus: "AVAILABLE", isActive: true },
+          });
         }
         await notifyUser(tx, r.customerId, "Rental Expired", `Your rental ${r.requestNo} has ended.`, "/customer/transactions");
       });
@@ -558,10 +579,212 @@ export async function syncRentalLifecycle(force = false) {
     for (const r of starting) {
       await prisma.property.updateMany({
         where: { id: r.propertyId, status: { in: ["APPROVED", "PUBLISHED"] } },
-        data: { status: "RENTED" },
+        data: { status: "RENTED", availabilityStatus: "RENTED", isActive: false },
       });
     }
   } catch (e) {
     console.error("[syncRentalLifecycle]", e);
   }
+}
+
+// ----------------------------------------------------------------
+// MANAGER DIRECT RENTAL CREATION
+// ----------------------------------------------------------------
+
+export async function createDirectRental(
+  actor: Actor,
+  params: {
+    propertyId: string;
+    customerId: string;
+    startDate: string | Date;
+    endDate: string | Date;
+    rentAmount?: number;
+    securityDeposit?: number;
+    paymentStatus?: "PAID" | "PENDING";
+    notes?: string;
+  }
+) {
+  const isAdmin = actor.role === "ADMIN";
+  const isManager = actor.role === "USER" || isAdmin;
+  if (!isManager) {
+    throw new TxnError("Only property managers and administrators can create direct rentals.", 403);
+  }
+
+  const start = startOfDay(new Date(params.startDate));
+  const end = startOfDay(new Date(params.endDate));
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    throw new TxnError("Please choose valid rental dates.");
+  }
+  if (end <= start) {
+    throw new TxnError("The end date must be after the check-in date.");
+  }
+
+  const now = new Date();
+  const paymentStatus = params.paymentStatus === "PAID" ? "PAID" : "PENDING";
+
+  return prisma.$transaction(async (tx) => {
+    const property = await lockProperty(tx, params.propertyId);
+
+    if (!isAdmin && property.managerId !== actor.id) {
+      throw new TxnError("You can only create direct rentals for your own listings.", 403);
+    }
+    if (property.listingType !== "FOR_RENT") {
+      throw new TxnError("This property is not listed for rent.");
+    }
+    if (property.status === "SOLD" || property.availabilityStatus === "SOLD") {
+      throw new TxnError("This property has already been sold.", 409);
+    }
+    if (property.status === "REJECTED" || property.status === "DRAFT") {
+      throw new TxnError("Only approved properties can be rented.", 400);
+    }
+
+    // Verify Customer exists
+    const customer = await tx.user.findUnique({
+      where: { id: params.customerId },
+      select: { id: true, name: true, email: true },
+    });
+    if (!customer) {
+      throw new TxnError("Customer account not found.", 404);
+    }
+
+    // Prevent double / overlapping rental
+    if (await hasRentalOverlap(tx, property.id, start, end)) {
+      throw new TxnError(PERIOD_UNAVAILABLE, 409);
+    }
+
+    const calc = computeRental(
+      property.price,
+      property.rentPeriod,
+      property.securityDeposit,
+      start,
+      end
+    );
+
+    const rentAmount = Number(params.rentAmount) > 0 ? Number(params.rentAmount) : calc.rentAmount;
+    const securityDeposit =
+      params.securityDeposit !== undefined && params.securityDeposit !== null && Number(params.securityDeposit) >= 0
+        ? Number(params.securityDeposit)
+        : calc.securityDeposit;
+    const totalAmount = rentAmount * calc.periods + securityDeposit;
+
+    const reqStatus = paymentStatus === "PAID" ? "ACTIVE" : "APPROVED";
+
+    const request = await tx.rentalRequest.create({
+      data: {
+        requestNo: genNo("RNT"),
+        customerId: customer.id,
+        propertyId: property.id,
+        managerId: property.managerId || actor.id,
+        startDate: start,
+        endDate: end,
+        rentalPeriod: calc.period,
+        periods: calc.periods,
+        rentAmount,
+        securityDeposit,
+        totalAmount,
+        currency: property.currency,
+        status: reqStatus,
+        notes: params.notes?.trim() || null,
+        reviewNotes: "Direct rental agreement created by manager.",
+        reviewedById: actor.id,
+        reviewedAt: now,
+      },
+    });
+
+    const txnStatus = paymentStatus === "PAID" ? "ACTIVE" : "PAYMENT_PENDING";
+    const transaction = await tx.transaction.create({
+      data: {
+        txnNo: genNo("TXN"),
+        type: "RENTAL",
+        customerId: customer.id,
+        managerId: property.managerId || actor.id,
+        propertyId: property.id,
+        amount: totalAmount,
+        currency: property.currency,
+        status: txnStatus,
+        rentalRequestId: request.id,
+        completedAt: paymentStatus === "PAID" ? now : null,
+      },
+    });
+
+    let paymentRecord: any = null;
+    let receiptRecord: any = null;
+
+    if (paymentStatus === "PAID") {
+      paymentRecord = await tx.payment.create({
+        data: {
+          transactionId: transaction.id,
+          propertyId: property.id,
+          customerId: customer.id,
+          managerId: property.managerId || actor.id,
+          amount: totalAmount,
+          currency: property.currency,
+          paymentMethod: "DIRECT / CASH",
+          status: "PAID",
+          transactionRef: genNo("PAY"),
+          paidAt: now,
+        },
+      });
+
+      receiptRecord = await tx.receipt.create({
+        data: {
+          receiptNo: genNo("RCP"),
+          transactionId: transaction.id,
+          paymentId: paymentRecord.id,
+          details: JSON.stringify({
+            txnNo: transaction.txnNo,
+            type: "RENTAL",
+            customerName: customer.name,
+            customerEmail: customer.email,
+            propertyId: property.id,
+            propertyTitle: property.title,
+            propertyCity: property.city,
+            amount: totalAmount,
+            currency: property.currency,
+            paymentMethod: "DIRECT / CASH",
+            paymentRef: paymentRecord.transactionRef,
+            paymentStatus: "PAID",
+            paidAt: now.toISOString(),
+            startDate: start.toISOString(),
+            endDate: end.toISOString(),
+            rentalPeriod: calc.period,
+            periods: calc.periods,
+            rentAmount,
+            securityDeposit,
+          }),
+        },
+      });
+
+      // Update property availability to RENTED
+      if (start <= now && end > now) {
+        await tx.property.update({
+          where: { id: property.id },
+          data: { status: "RENTED", availabilityStatus: "RENTED", isActive: false },
+        });
+      } else {
+        await tx.property.update({
+          where: { id: property.id },
+          data: { status: "RENTED", availabilityStatus: "RENTED", isActive: false },
+        });
+      }
+    } else {
+      // Pending payment
+      await tx.property.update({
+        where: { id: property.id },
+        data: { status: "PAYMENT_PENDING", availabilityStatus: "BOOKING_PENDING" },
+      });
+    }
+
+    await notifyUser(
+      tx,
+      customer.id,
+      "New Rental Agreement Created 🏠",
+      `Your manager created a rental agreement (${request.requestNo}) for "${property.title}".`,
+      "/customer/transactions"
+    );
+
+    await audit(tx, actor.id, "MANAGER_DIRECT_RENTAL_CREATED", "RentalRequest", request.id, property.title);
+
+    return { request, transaction, payment: paymentRecord, receipt: receiptRecord };
+  });
 }

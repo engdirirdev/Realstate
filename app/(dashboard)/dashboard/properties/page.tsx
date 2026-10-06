@@ -28,19 +28,27 @@ export default async function ManagerPropertiesPage({
 
   const allManagerProperties = await prisma.property.findMany({
     where: { managerId: session.user.id },
-    select: { id: true, status: true, viewCount: true },
+    select: { id: true, status: true, approvalStatus: true, availabilityStatus: true, listingType: true, viewCount: true },
   });
 
   const totalCount = allManagerProperties.length;
-  const approvedCount = allManagerProperties.filter((p) => p.status === "APPROVED" || p.status === "PUBLISHED").length;
-  const pendingCount = allManagerProperties.filter((p) => p.status === "PENDING").length;
-  const draftCount = allManagerProperties.filter((p) => p.status === "DRAFT").length;
-  const rejectedCount = allManagerProperties.filter((p) => p.status === "REJECTED").length;
+  const approvedCount = allManagerProperties.filter((p) => p.status === "APPROVED" || p.status === "PUBLISHED" || p.approvalStatus === "APPROVED").length;
+  const pendingCount = allManagerProperties.filter((p) => p.status === "PENDING" || p.approvalStatus === "PENDING_REVIEW").length;
+  const draftCount = allManagerProperties.filter((p) => p.status === "DRAFT" || p.approvalStatus === "DRAFT").length;
+  const rejectedCount = allManagerProperties.filter((p) => p.status === "REJECTED" || p.approvalStatus === "REJECTED").length;
+  const availableRentCount = allManagerProperties.filter((p) => p.listingType === "FOR_RENT" && (p.availabilityStatus === "AVAILABLE" || p.status === "APPROVED")).length;
+  const rentedCount = allManagerProperties.filter((p) => p.availabilityStatus === "RENTED" || p.status === "RENTED").length;
+  const availableSaleCount = allManagerProperties.filter((p) => (p.listingType === "FOR_SALE" || !p.listingType) && (p.availabilityStatus === "AVAILABLE" || p.status === "APPROVED")).length;
+  const soldCount = allManagerProperties.filter((p) => p.availabilityStatus === "SOLD" || p.status === "SOLD").length;
   const totalViews = allManagerProperties.reduce((acc, p) => acc + (p.viewCount || 0), 0);
 
   const filterWhere: any = { managerId: session.user.id };
   if (currentStatus === "APPROVED") {
     filterWhere.status = { in: ["APPROVED", "PUBLISHED"] };
+  } else if (currentStatus === "RENTED") {
+    filterWhere.OR = [{ status: "RENTED" }, { availabilityStatus: "RENTED" }];
+  } else if (currentStatus === "SOLD") {
+    filterWhere.OR = [{ status: "SOLD" }, { availabilityStatus: "SOLD" }];
   } else if (currentStatus) {
     filterWhere.status = currentStatus;
   }
@@ -51,6 +59,8 @@ export default async function ManagerPropertiesPage({
       images: { orderBy: { order: "asc" }, take: 1 },
       inquiries: { select: { id: true } },
       bookings: { select: { id: true } },
+      rentalRequests: { select: { id: true, status: true } },
+      purchaseRequests: { select: { id: true, status: true } },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -59,7 +69,8 @@ export default async function ManagerPropertiesPage({
     { label: "All Listings", value: "", count: totalCount },
     { label: "Approved Live", value: "APPROVED", count: approvedCount },
     { label: "Pending Review", value: "PENDING", count: pendingCount },
-    { label: "Drafts", value: "DRAFT", count: draftCount },
+    { label: "Rented", value: "RENTED", count: rentedCount },
+    { label: "Sold", value: "SOLD", count: soldCount },
     { label: "Action Required", value: "REJECTED", count: rejectedCount },
   ];
 
@@ -68,12 +79,12 @@ export default async function ManagerPropertiesPage({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FCFBF7] border border-[#C89B3C]/30 text-[#A97918] text-xs font-semibold uppercase tracking-wider mb-2 shadow-xs">
-            <Sparkles className="w-3.5 h-3.5 text-[#C89B3C]" /> Portfolio Management
+            <Sparkles className="w-3.5 h-3.5 text-[#C89B3C]" /> Portfolio &amp; Availability Management
           </div>
           <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#07111F] flex items-center gap-2.5">
             <Building2 className="h-7 w-7 text-[#C89B3C]" /> My Listed Properties
           </h1>
-          <p className="text-[#6B7280] text-sm mt-1">{totalCount} property listings in your portfolio • {totalViews} client impressions</p>
+          <p className="text-[#6B7280] text-sm mt-1">{totalCount} total listings • {availableRentCount} for rent • {availableSaleCount} for sale • {rentedCount} rented • {soldCount} sold</p>
         </div>
 
         <Link
@@ -85,22 +96,34 @@ export default async function ManagerPropertiesPage({
       </div>
 
       {/* KPI Stats Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-        <div className="bg-[#FCFBF7] rounded-2xl p-4 border border-[#E8E1D4] shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-wider text-[#6B7280]">Approved Live</p>
-          <p className="text-2xl font-serif font-bold text-[#07111F] mt-0.5">{approvedCount}</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+        <div className="bg-[#FCFBF7] rounded-2xl p-3.5 border border-[#E8E1D4] shadow-xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[#6B7280]">Total</p>
+          <p className="text-xl font-serif font-bold text-[#07111F] mt-0.5">{totalCount}</p>
         </div>
-        <div className="bg-[#FCFBF7] rounded-2xl p-4 border border-[#E8E1D4] shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-wider text-[#6B7280]">Under Review</p>
-          <p className="text-2xl font-serif font-bold text-amber-700 mt-0.5">{pendingCount}</p>
+        <div className="bg-[#FCFBF7] rounded-2xl p-3.5 border border-[#E8E1D4] shadow-xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Pending Review</p>
+          <p className="text-xl font-serif font-bold text-amber-700 mt-0.5">{pendingCount}</p>
         </div>
-        <div className="bg-[#FCFBF7] rounded-2xl p-4 border border-[#E8E1D4] shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-wider text-[#6B7280]">Draft Portfolios</p>
-          <p className="text-2xl font-serif font-bold text-[#6B7280] mt-0.5">{draftCount}</p>
+        <div className="bg-[#FCFBF7] rounded-2xl p-3.5 border border-[#E8E1D4] shadow-xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Approved Live</p>
+          <p className="text-xl font-serif font-bold text-emerald-700 mt-0.5">{approvedCount}</p>
         </div>
-        <div className="bg-[#FCFBF7] rounded-2xl p-4 border border-[#E8E1D4] shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-wider text-[#6B7280]">Total Impressions</p>
-          <p className="text-2xl font-serif font-bold text-[#A97918] mt-0.5">{totalViews}</p>
+        <div className="bg-[#FCFBF7] rounded-2xl p-3.5 border border-[#E8E1D4] shadow-xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-blue-700">Available Rent</p>
+          <p className="text-xl font-serif font-bold text-blue-700 mt-0.5">{availableRentCount}</p>
+        </div>
+        <div className="bg-[#FCFBF7] rounded-2xl p-3.5 border border-[#E8E1D4] shadow-xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-700">Currently Rented</p>
+          <p className="text-xl font-serif font-bold text-indigo-700 mt-0.5">{rentedCount}</p>
+        </div>
+        <div className="bg-[#FCFBF7] rounded-2xl p-3.5 border border-[#E8E1D4] shadow-xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[#A97918]">Available Sale</p>
+          <p className="text-xl font-serif font-bold text-[#A97918] mt-0.5">{availableSaleCount}</p>
+        </div>
+        <div className="bg-[#FCFBF7] rounded-2xl p-3.5 border border-[#E8E1D4] shadow-xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-700">Sold</p>
+          <p className="text-xl font-serif font-bold text-slate-700 mt-0.5">{soldCount}</p>
         </div>
       </div>
 
@@ -169,9 +192,13 @@ export default async function ManagerPropertiesPage({
                 </div>
 
                 {/* Status Badges & Actions */}
-                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                    prop.status === "APPROVED" || prop.status === "PUBLISHED"
+                    prop.status === "SOLD" || prop.availabilityStatus === "SOLD"
+                      ? "bg-slate-900 text-slate-100 border border-slate-700"
+                      : prop.status === "RENTED" || prop.availabilityStatus === "RENTED"
+                      ? "bg-indigo-900 text-indigo-100 border border-indigo-700"
+                      : prop.status === "APPROVED" || prop.status === "PUBLISHED"
                       ? "bg-[#07111F] text-[#D9B45B] border border-[#C89B3C]/40"
                       : prop.status === "REJECTED"
                       ? "bg-red-50 text-red-700 border border-red-200"
@@ -179,15 +206,12 @@ export default async function ManagerPropertiesPage({
                       ? "bg-amber-50 text-amber-800 border border-amber-200"
                       : "bg-[#F7F3EA] text-[#6B7280] border border-[#E8E1D4]"
                   }`}>
-                    {prop.status}
+                    {prop.availabilityStatus === "SOLD" || prop.status === "SOLD"
+                      ? "SOLD"
+                      : prop.availabilityStatus === "RENTED" || prop.status === "RENTED"
+                      ? "RENTED"
+                      : prop.status}
                   </span>
-
-                  <Link
-                    href={`/dashboard/properties/${prop.id}/edit`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-[#07111F] bg-[#FCFBF7] border border-[#C89B3C]/40 hover:bg-[#F7F3EA] hover:border-[#C89B3C] transition-all shadow-2xs"
-                  >
-                    <Edit3 className="h-3.5 w-3.5 text-[#C89B3C]" /> Edit
-                  </Link>
 
                   <Link
                     href={`/properties/${prop.id}`}
@@ -196,6 +220,41 @@ export default async function ManagerPropertiesPage({
                   >
                     <Eye className="h-3.5 w-3.5 text-[#6B7280]" /> View
                   </Link>
+
+                  {/* State-aware action buttons */}
+                  {prop.status !== "SOLD" && prop.availabilityStatus !== "SOLD" && (
+                    <Link
+                      href={`/dashboard/properties/${prop.id}/edit`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-[#07111F] bg-[#FCFBF7] border border-[#C89B3C]/40 hover:bg-[#F7F3EA] hover:border-[#C89B3C] transition-all shadow-2xs"
+                    >
+                      <Edit3 className="h-3.5 w-3.5 text-[#C89B3C]" /> Edit
+                    </Link>
+                  )}
+
+                  {prop.listingType === "FOR_RENT" ? (
+                    <Link
+                      href="/dashboard/rentals"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-[#07111F] bg-[#F7F3EA] border border-[#E8E1D4] hover:border-[#C89B3C] transition-all"
+                    >
+                      {prop.status === "RENTED" || prop.availabilityStatus === "RENTED" ? "Rental Details" : "Manage Rentals"}
+                    </Link>
+                  ) : (
+                    <Link
+                      href="/dashboard/requests"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-[#07111F] bg-[#F7F3EA] border border-[#E8E1D4] hover:border-[#C89B3C] transition-all"
+                    >
+                      {prop.status === "SOLD" || prop.availabilityStatus === "SOLD" ? "Sale Details" : "Purchase Requests"}
+                    </Link>
+                  )}
+
+                  {(prop.status === "SOLD" || prop.status === "RENTED" || prop.availabilityStatus === "SOLD" || prop.availabilityStatus === "RENTED") && (
+                    <Link
+                      href="/dashboard/transactions"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-[#A97918] bg-[#FAF7F2] border border-[#C89B3C]/30 hover:border-[#C89B3C] transition-all"
+                    >
+                      History
+                    </Link>
+                  )}
                 </div>
               </div>
 

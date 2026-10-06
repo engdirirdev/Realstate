@@ -51,9 +51,18 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     if (isFeatured !== undefined) updateData.isFeatured = isFeatured;
 
     if (status === "REJECTED") {
+      updateData.approvalStatus = "REJECTED";
+      updateData.availabilityStatus = "INACTIVE";
+      updateData.isActive = false;
       updateData.rejectionReason = rejectionReason || "Property listing requires additional details or higher quality photos.";
     } else if (status === "APPROVED" || status === "PUBLISHED") {
+      updateData.approvalStatus = "APPROVED";
+      updateData.availabilityStatus = "AVAILABLE";
+      updateData.isActive = true;
       updateData.rejectionReason = null;
+    } else if (status === "INACTIVE" || status === "UNAVAILABLE") {
+      updateData.availabilityStatus = "INACTIVE";
+      updateData.isActive = false;
     }
 
     const property = await prisma.property.update({

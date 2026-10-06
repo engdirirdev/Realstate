@@ -18,16 +18,7 @@ export const metadata: Metadata = {
   title: "Browse Properties – Customer Portal | Kiro-Maal Real Estate",
 };
 
-const CITIES = [
-  "All Cities",
-  "Mogadishu",
-  "Hargeisa",
-  "Bosaso",
-  "Kismayo",
-  "Garowe",
-  "Baydhabo",
-  "Berbera",
-];
+
 
 const TYPES = [
   { value: "", label: "All Types" },
@@ -71,7 +62,7 @@ export default async function CustomerPropertiesPage({
   else if (sort === "price_desc") orderBy = { price: "desc" };
   else if (sort === "area_desc") orderBy = { area: "desc" };
 
-  const [properties, userFavorites] = await Promise.all([
+  const [properties, userFavorites, registeredLocations, propertyCities] = await Promise.all([
     prisma.property.findMany({
       where,
       include: {
@@ -84,7 +75,33 @@ export default async function CustomerPropertiesPage({
       where: { userId: session.user.id },
       select: { propertyId: true },
     }),
+    prisma.location.findMany({
+      select: { city: true, region: true },
+      orderBy: { city: "asc" },
+    }),
+    prisma.property.findMany({
+      where: { isActive: true },
+      select: { city: true },
+      distinct: ["city"],
+      orderBy: { city: "asc" },
+    }),
   ]);
+
+  const cityMap = new Map<string, { city: string; region?: string }>();
+  for (const loc of registeredLocations) {
+    if (loc.city) {
+      cityMap.set(loc.city.trim().toLowerCase(), {
+        city: loc.city.trim(),
+        region: loc.region?.trim(),
+      });
+    }
+  }
+  for (const p of propertyCities) {
+    if (p.city && !cityMap.has(p.city.trim().toLowerCase())) {
+      cityMap.set(p.city.trim().toLowerCase(), { city: p.city.trim() });
+    }
+  }
+  const availableCities = Array.from(cityMap.values()).sort((a, b) => a.city.localeCompare(b.city));
 
   const favoriteIds = new Set(userFavorites.map((f) => f.propertyId));
 
@@ -142,11 +159,12 @@ export default async function CustomerPropertiesPage({
             <select
               name="city"
               defaultValue={city}
-              className="w-full px-3 py-2 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs font-medium focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] outline-hidden transition-all"
+              className="w-full px-3 py-2 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs font-semibold focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] outline-hidden transition-all"
             >
-              {CITIES.map((c) => (
-                <option key={c} value={c === "All Cities" ? "" : c}>
-                  {c}
+              <option value="">All Registered Cities</option>
+              {availableCities.map((c) => (
+                <option key={c.city} value={c.city}>
+                  {c.city} {c.region ? `(${c.region})` : ""}
                 </option>
               ))}
             </select>

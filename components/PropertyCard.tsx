@@ -116,9 +116,9 @@ export default function PropertyCard({
         <div className="absolute top-3 left-3 flex flex-wrap items-center gap-1.5 max-w-[80%]">
           <span
             className={cn(
-              "px-2.5 py-1 rounded-full text-xs font-bold shadow-xs uppercase tracking-wider",
+              "px-2.5 py-1 rounded-full text-xs font-extrabold shadow-xs uppercase tracking-wider transition-all",
               isRent
-                ? "bg-[#FCFBF7]/95 text-[#07111F] border border-[#E8E1D4] backdrop-blur-xs"
+                ? "bg-gradient-to-r from-[#D9A336] via-[#E8B849] to-[#C99126] text-[#07111F] border border-[#E8B849]/80 shadow-md shadow-[#C99126]/20 backdrop-blur-xs"
                 : "bg-[#07111F]/90 text-[#D9B45B] border border-[#C89B3C]/50 backdrop-blur-xs"
             )}
           >

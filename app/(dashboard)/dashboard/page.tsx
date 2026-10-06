@@ -304,11 +304,11 @@ export default async function DashboardPage() {
                       </td>
                       <td className="py-3">
                         <span
-                          className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                          className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${
                             p.status === "SOLD"
                               ? "bg-[#07111F] text-[#D9B45B]"
                               : isRent
-                              ? "bg-[#F7F3EA] text-[#07111F] border border-[#E8E1D4]"
+                              ? "bg-gradient-to-r from-[#D9A336] via-[#E8B849] to-[#C99126] text-[#07111F] border border-[#E8E1D4] shadow-xs"
                               : "bg-[#C89B3C]/15 text-[#A97918] border border-[#C89B3C]/30"
                           }`}
                         >

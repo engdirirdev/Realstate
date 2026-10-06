@@ -13,23 +13,13 @@ export async function GET() {
       },
     });
 
-    const defaultCities = [
-      "Mogadishu",
-      "Hargeisa",
-      "Bosaso",
-      "Garowe",
-      "Kismayo",
-      "Berbera",
-      "Baydhabo",
-    ];
-
-    const dbCities = locations.map((l) => l.city.trim());
-    const allCities = Array.from(new Set([...defaultCities, ...dbCities])).sort();
+    const registeredCities = locations.map((l) => l.city.trim());
+    const cities = registeredCities.length > 0 ? Array.from(new Set(registeredCities)).sort() : ["Mogadishu"];
 
     return NextResponse.json({
       success: true,
       locations,
-      cities: allCities,
+      cities,
     });
   } catch (error) {
     return NextResponse.json(

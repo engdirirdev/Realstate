@@ -52,12 +52,41 @@ import {
 } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import {
-  PROPERTY_TYPES,
   TYPE_AMENITIES,
   PropertyTypeCode,
   validatePropertyTypeForm,
 } from "@/lib/property-type-specs";
 import { getPropertyTypeLabel } from "@/lib/utils";
+
+interface CategoryOption {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+}
+
+function mapCategoryToPropertyType(name: string, slug?: string): PropertyTypeCode {
+  const s = `${slug || ""} ${name}`.toLowerCase();
+  if (s.includes("apartment") || s.includes("flat") || s.includes("condo") || s.includes("penthouse")) return "APARTMENT";
+  if (s.includes("villa") || s.includes("estate") || s.includes("mansion")) return "VILLA";
+  if (s.includes("land") || s.includes("plot") || s.includes("farm") || s.includes("acre")) return "LAND";
+  if (s.includes("office")) return "OFFICE";
+  if (s.includes("warehouse") || s.includes("depot") || s.includes("storage") || s.includes("industrial") || s.includes("logistics")) return "WAREHOUSE";
+  if (s.includes("shop") || s.includes("retail") || s.includes("store") || s.includes("mall")) return "SHOP";
+  if (s.includes("commercial") || s.includes("business") || s.includes("plaza")) return "COMMERCIAL";
+  if (s.includes("townhouse")) return "HOUSE";
+  if (s.includes("studio")) return "APARTMENT";
+  if (s.includes("house") || s.includes("home") || s.includes("residential")) return "HOUSE";
+  return "OTHER";
+}
+
+function getCategoryBadge(name: string, slug?: string): string {
+  const s = `${slug || ""} ${name}`.toLowerCase();
+  if (s.includes("commercial") || s.includes("office") || s.includes("business") || s.includes("retail") || s.includes("shop")) return "COMMERCIAL";
+  if (s.includes("land") || s.includes("plot") || s.includes("acre") || s.includes("farm")) return "LAND";
+  if (s.includes("industrial") || s.includes("warehouse") || s.includes("depot")) return "INDUSTRIAL";
+  return "RESIDENTIAL";
+}
 
 interface DynamicPropertyFormProps {
   initialData?: any;
@@ -88,31 +117,96 @@ export default function DynamicPropertyForm({
   const [showCoverUrlInput, setShowCoverUrlInput] = useState(false);
   const [showGalleryUrlInput, setShowGalleryUrlInput] = useState(false);
 
-  // Cities from database
-  const [cities, setCities] = useState<string[]>([
-    "Mogadishu",
-    "Hargeisa",
-    "Bosaso",
-    "Kismayo",
-    "Garowe",
-    "Baydhabo",
-    "Berbera",
-  ]);
+  // Registered Categories and Cities from Database
+  const [registeredCategories, setRegisteredCategories] = useState<CategoryOption[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState<boolean>(true);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
+  const [selectedCategoryName, setSelectedCategoryName] = useState<string>("");
+  const [cities, setCities] = useState<string[]>([]);
+  const [loadingCities, setLoadingCities] = useState<boolean>(true);
 
   useEffect(() => {
-    async function loadCities() {
+    async function loadData() {
       try {
-        const res = await fetch("/api/locations");
-        const data = await res.json();
-        if (data.success && Array.isArray(data.cities) && data.cities.length > 0) {
-          setCities(data.cities);
+        const [catRes, locRes] = await Promise.all([
+          fetch("/api/categories"),
+          fetch("/api/locations"),
+        ]);
+        const catData = await catRes.json();
+        const locData = await locRes.json();
+
+        if (catData.success && Array.isArray(catData.categories)) {
+          setRegisteredCategories(catData.categories);
+
+          if (catData.categories.length > 0) {
+            let matchedCat: CategoryOption | undefined;
+            if (initialData?.typeDetails) {
+              try {
+                const details =
+                  typeof initialData.typeDetails === "string"
+                    ? JSON.parse(initialData.typeDetails)
+                    : initialData.typeDetails;
+                if (details?.categoryId) {
+                  matchedCat = catData.categories.find(
+                    (c: CategoryOption) => c.id === details.categoryId
+                  );
+                }
+                if (!matchedCat && details?.categoryName) {
+                  matchedCat = catData.categories.find(
+                    (c: CategoryOption) =>
+                      c.name.toLowerCase() === details.categoryName.toLowerCase()
+                  );
+                }
+              } catch {}
+            }
+            if (!matchedCat && initialData?.type) {
+              matchedCat = catData.categories.find(
+                (c: CategoryOption) =>
+                  mapCategoryToPropertyType(c.name, c.slug) === initialData.type
+              );
+            }
+            if (!matchedCat && !initialData?.id) {
+              matchedCat = catData.categories[0];
+            }
+
+            if (matchedCat) {
+              setSelectedCategoryId(matchedCat.id);
+              setSelectedCategoryName(matchedCat.name);
+              const mappedType = mapCategoryToPropertyType(matchedCat.name, matchedCat.slug);
+              if (!initialData?.type) {
+                handleTypeChange(mappedType);
+              }
+            }
+          }
+        }
+
+        if (locData.success && Array.isArray(locData.cities)) {
+          setCities(locData.cities);
+          if (locData.cities.length > 0) {
+            setCommon((prev) => {
+              if (!prev.city || !locData.cities.includes(prev.city)) {
+                return { ...prev, city: locData.cities[0] };
+              }
+              return prev;
+            });
+          }
         }
       } catch (err) {
-        console.error("Failed to load cities", err);
+        console.error("Failed to load registered categories or locations", err);
+      } finally {
+        setLoadingCategories(false);
+        setLoadingCities(false);
       }
     }
-    loadCities();
-  }, []);
+    loadData();
+  }, [initialData]);
+
+  const handleCategorySelect = (cat: CategoryOption) => {
+    setSelectedCategoryId(cat.id);
+    setSelectedCategoryName(cat.name);
+    const mappedType = mapCategoryToPropertyType(cat.name, cat.slug);
+    handleTypeChange(mappedType);
+  };
 
   // Form State
   const [selectedType, setSelectedType] = useState<PropertyTypeCode>(
@@ -236,7 +330,11 @@ export default function DynamicPropertyForm({
       if (initialData.typeDetails) {
         try {
           const parsed = typeof initialData.typeDetails === "string" ? JSON.parse(initialData.typeDetails) : initialData.typeDetails;
-          if (parsed && typeof parsed === "object") setTypeDetails(parsed);
+          if (parsed && typeof parsed === "object") {
+            setTypeDetails(parsed);
+            if (parsed.categoryId) setSelectedCategoryId(parsed.categoryId);
+            if (parsed.categoryName) setSelectedCategoryName(parsed.categoryName);
+          }
         } catch {}
       }
     }
@@ -552,6 +650,17 @@ export default function DynamicPropertyForm({
       typeDetails,
     });
 
+    if (stepNumber === 1) {
+      if (registeredCategories.length > 0 && !selectedCategoryId && !selectedCategoryName) {
+        toast({
+          title: "Selection Required",
+          description: "Please select a registered property classification to proceed.",
+          variant: "destructive",
+        });
+        return false;
+      }
+    }
+
     if (stepNumber === 2) {
       const step2Errors: Record<string, string> = {};
       if (errors.title) step2Errors.title = errors.title;
@@ -667,7 +776,11 @@ export default function DynamicPropertyForm({
         floorPlanUrl: media.floorPlanUrl || null,
         virtualTourUrl: media.virtualTourUrl || null,
         amenities: selectedAmenities,
-        typeDetails,
+        typeDetails: {
+          ...typeDetails,
+          categoryId: selectedCategoryId,
+          categoryName: selectedCategoryName,
+        },
         submitForReview,
       };
 
@@ -811,52 +924,75 @@ export default function DynamicPropertyForm({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-            {PROPERTY_TYPES.map((pt) => {
-              const isSelected = selectedType === pt.code;
-              return (
-                <div
-                  key={pt.code}
-                  onClick={() => handleTypeChange(pt.code)}
-                  className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 text-left relative ${
-                    isSelected
-                      ? "border-[#C89B3C] bg-[#C89B3C]/10 shadow-sm ring-2 ring-[#C89B3C]/20"
-                      : "border-[#E8E1D4] bg-[#FCFBF7] hover:border-[#C89B3C]/50 hover:bg-[#F7F3EA]"
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#07111F] text-[#D9B45B]">
-                        {pt.category}
-                      </span>
-                      {isSelected && (
-                        <CheckCircle2 className="h-5 w-5 text-[#C89B3C] fill-[#C89B3C] text-white" />
-                      )}
-                    </div>
-                    <h3 className="font-serif font-bold text-base text-[#07111F]">
-                      {pt.label}
-                    </h3>
-                    <p className="text-[11px] text-[#6B7280] mt-1 line-clamp-2">
-                      {pt.description}
-                    </p>
-                  </div>
+            {loadingCategories ? (
+              <div className="col-span-full py-12 flex flex-col items-center justify-center text-[#6B7280] space-y-2">
+                <Loader2 className="h-6 w-6 animate-spin text-[#C89B3C]" />
+                <span className="text-xs font-semibold">Loading registered categories...</span>
+              </div>
+            ) : registeredCategories.length === 0 ? (
+              <div className="col-span-full py-12 text-center text-[#6B7280] space-y-2 bg-[#F7F3EA] rounded-2xl border border-[#E8E1D4] p-6">
+                <AlertCircle className="h-8 w-8 text-[#C89B3C] mx-auto" />
+                <p className="text-sm font-bold text-[#07111F]">No Property Categories Registered</p>
+                <p className="text-xs">
+                  Please register property classifications in Admin &gt; Categories first.
+                </p>
+              </div>
+            ) : (
+              registeredCategories.map((cat) => {
+                const isSelected =
+                  selectedCategoryId === cat.id ||
+                  (!selectedCategoryId && selectedCategoryName === cat.name);
+                const badge = getCategoryBadge(cat.name, cat.slug);
 
-                  <div className="pt-2 border-t border-[#E8E1D4]/60 flex items-center justify-between text-[11px] font-bold text-[#A97918]">
-                    <span>{isSelected ? "Selected ✓" : "Select Category"}</span>
-                    <ArrowRight className="h-3.5 w-3.5" />
+                return (
+                  <div
+                    key={cat.id}
+                    onClick={() => handleCategorySelect(cat)}
+                    className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 text-left relative ${
+                      isSelected
+                        ? "border-[#C89B3C] bg-[#C89B3C]/10 shadow-sm ring-2 ring-[#C89B3C]/20"
+                        : "border-[#E8E1D4] bg-[#FCFBF7] hover:border-[#C89B3C]/50 hover:bg-[#F7F3EA]"
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#07111F] text-[#D9B45B]">
+                          {badge}
+                        </span>
+                        {isSelected && (
+                          <CheckCircle2 className="h-5 w-5 text-[#C89B3C] fill-[#C89B3C] text-white" />
+                        )}
+                      </div>
+                      <h3 className="font-serif font-bold text-base text-[#07111F]">
+                        {cat.name}
+                      </h3>
+                      <p className="text-[11px] text-[#6B7280] mt-1 line-clamp-2">
+                        {cat.description || "Registered property classification category"}
+                      </p>
+                    </div>
+
+                    <div className="pt-2 border-t border-[#E8E1D4]/60 flex items-center justify-between text-[11px] font-bold text-[#A97918]">
+                      <span>{isSelected ? "Selected ✓" : "Select Category"}</span>
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
 
           <div className="pt-4 border-t border-[#E8E1D4] flex items-center justify-between">
             <p className="text-xs text-[#6B7280]">
-              Currently Selected: <strong className="text-[#07111F]">{getPropertyTypeLabel(selectedType)}</strong>
+              Currently Selected:{" "}
+              <strong className="text-[#07111F]">
+                {selectedCategoryName || getPropertyTypeLabel(selectedType)}
+              </strong>
             </p>
             <Button
               type="button"
               onClick={handleNextStep}
-              className="gap-2 bg-[#07111F] hover:bg-[#07111F]/90 text-[#FCFBF7] font-bold rounded-xl px-6 h-11 cursor-pointer"
+              disabled={loadingCategories || registeredCategories.length === 0}
+              className="gap-2 bg-[#07111F] hover:bg-[#07111F]/90 text-[#FCFBF7] font-bold rounded-xl px-6 h-11 cursor-pointer disabled:opacity-50"
             >
               Continue to Basic Details <ArrowRight className="h-4 w-4 text-[#D9B45B]" />
             </Button>
@@ -872,7 +1008,7 @@ export default function DynamicPropertyForm({
           <div className="border-b border-[#E8E1D4] pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#07111F] text-[#D9B45B] text-[10px] font-bold uppercase tracking-wider mb-2">
-                Step 2 of 5 • {getPropertyTypeLabel(selectedType)}
+                Step 2 of 5 • {selectedCategoryName || getPropertyTypeLabel(selectedType)}
               </span>
               <h2 className="text-2xl font-serif font-black text-[#07111F]">
                 Common Property Information
@@ -1017,12 +1153,20 @@ export default function DynamicPropertyForm({
                   onValueChange={(val) => setCommon((p) => ({ ...p, city: val }))}
                 >
                   <SelectTrigger className="h-11 border-[#E8E1D4] rounded-xl bg-[#FCFBF7] text-[#07111F]">
-                    <SelectValue placeholder="Select city" />
+                    <SelectValue placeholder={loadingCities ? "Loading registered cities..." : "Select city"} />
                   </SelectTrigger>
                   <SelectContent className="bg-[#FCFBF7] border-[#E8E1D4] max-h-60 overflow-y-auto">
-                    {cities.map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
-                    ))}
+                    {cities.length === 0 ? (
+                      <SelectItem value="none" disabled>
+                        No registered cities available
+                      </SelectItem>
+                    ) : (
+                      cities.map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {c}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -1135,7 +1279,7 @@ export default function DynamicPropertyForm({
               onClick={handleNextStep}
               className="gap-2 bg-[#07111F] hover:bg-[#07111F]/90 text-[#FCFBF7] font-bold rounded-xl px-6 h-11 cursor-pointer"
             >
-              Continue to {getPropertyTypeLabel(selectedType)} Specs <ArrowRight className="h-4 w-4 text-[#D9B45B]" />
+              Continue to {selectedCategoryName || getPropertyTypeLabel(selectedType)} Specs <ArrowRight className="h-4 w-4 text-[#D9B45B]" />
             </Button>
           </div>
         </div>
@@ -1151,7 +1295,7 @@ export default function DynamicPropertyForm({
               Step 3 of 5 • Dynamic Specifications
             </span>
             <h2 className="text-2xl font-serif font-black text-[#07111F]">
-              {getPropertyTypeLabel(selectedType)} Detailed Specifications
+              {selectedCategoryName || getPropertyTypeLabel(selectedType)} Detailed Specifications
             </h2>
             <p className="text-xs text-[#6B7280] mt-1">
               {selectedType === "LAND"
@@ -2553,7 +2697,7 @@ export default function DynamicPropertyForm({
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <span className="bg-[#07111F] text-[#D9B45B] px-2.5 py-0.5 rounded-lg text-xs font-bold uppercase tracking-wider">
-                    {getPropertyTypeLabel(selectedType)}
+                    {selectedCategoryName || getPropertyTypeLabel(selectedType)}
                   </span>
                   <span className="bg-[#C89B3C]/20 text-[#A97918] px-2.5 py-0.5 rounded-lg text-xs font-bold">
                     {listingType === "FOR_SALE" ? "For Sale" : "For Rent"}

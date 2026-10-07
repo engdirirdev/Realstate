@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
   Menu, X, ChevronDown, User, LogOut, Heart,
@@ -29,6 +29,7 @@ const publicNavLinks = [
 export default function Navbar() {
   const { data: session, status } = useSession();
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -71,6 +72,8 @@ export default function Navbar() {
                 <Link
                   key={href}
                   href={href}
+                  onMouseEnter={() => router.prefetch(href)}
+                  onPointerDown={() => router.prefetch(href)}
                   className={cn(
                     "px-3.5 py-1.5 rounded-xl text-sm font-semibold transition-all duration-150",
                     isActive
@@ -120,24 +123,44 @@ export default function Navbar() {
                     <DropdownMenuSeparator className="bg-[#E8E1D4]" />
                     {isAdmin ? (
                       <DropdownMenuItem asChild>
-                        <Link href="/admin" className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
+                        <Link
+                          href="/admin"
+                          onMouseEnter={() => router.prefetch("/admin")}
+                          onPointerDown={() => router.prefetch("/admin")}
+                          className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer"
+                        >
                           <LayoutDashboard className="h-4 w-4 text-[#C89B3C]" /> Admin Dashboard
                         </Link>
                       </DropdownMenuItem>
                     ) : isCustomer ? (
                       <>
                         <DropdownMenuItem asChild>
-                          <Link href="/customer" className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
+                          <Link
+                            href="/customer"
+                            onMouseEnter={() => router.prefetch("/customer")}
+                            onPointerDown={() => router.prefetch("/customer")}
+                            className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer"
+                          >
                             <LayoutDashboard className="h-4 w-4 text-[#C89B3C]" /> Customer Portal
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link href="/customer/favorites" className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
+                          <Link
+                            href="/customer/favorites"
+                            onMouseEnter={() => router.prefetch("/customer/favorites")}
+                            onPointerDown={() => router.prefetch("/customer/favorites")}
+                            className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer"
+                          >
                             <Heart className="h-4 w-4 text-[#C89B3C]" /> Saved Favorites
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link href="/customer/profile" className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
+                          <Link
+                            href="/customer/profile"
+                            onMouseEnter={() => router.prefetch("/customer/profile")}
+                            onPointerDown={() => router.prefetch("/customer/profile")}
+                            className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer"
+                          >
                             <User className="h-4 w-4 text-[#6B7280]" /> Profile Settings
                           </Link>
                         </DropdownMenuItem>
@@ -145,12 +168,22 @@ export default function Navbar() {
                     ) : (
                       <>
                         <DropdownMenuItem asChild>
-                          <Link href="/dashboard" className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
+                          <Link
+                            href="/dashboard"
+                            onMouseEnter={() => router.prefetch("/dashboard")}
+                            onPointerDown={() => router.prefetch("/dashboard")}
+                            className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer"
+                          >
                             <LayoutDashboard className="h-4 w-4 text-[#C89B3C]" /> Manager Dashboard
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link href="/dashboard/profile" className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
+                          <Link
+                            href="/dashboard/profile"
+                            onMouseEnter={() => router.prefetch("/dashboard/profile")}
+                            onPointerDown={() => router.prefetch("/dashboard/profile")}
+                            className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer"
+                          >
                             <User className="h-4 w-4 text-[#6B7280]" /> Profile Settings
                           </Link>
                         </DropdownMenuItem>
@@ -158,7 +191,12 @@ export default function Navbar() {
                     )}
                     <DropdownMenuSeparator className="bg-[#E8E1D4]" />
                     <DropdownMenuItem asChild>
-                      <Link href="/login?switch=true" className="flex items-center gap-2 text-[#6B7280] hover:text-[#C89B3C] hover:bg-[#F7F3EA] rounded-xl cursor-pointer">
+                      <Link
+                        href="/login?switch=true"
+                        onMouseEnter={() => router.prefetch("/login")}
+                        onPointerDown={() => router.prefetch("/login")}
+                        className="flex items-center gap-2 text-[#6B7280] hover:text-[#C89B3C] hover:bg-[#F7F3EA] rounded-xl cursor-pointer"
+                      >
                         <User className="h-4 w-4 text-[#C89B3C]" /> Switch Account
                       </Link>
                     </DropdownMenuItem>
@@ -172,7 +210,11 @@ export default function Navbar() {
                 </DropdownMenu>
               </div>
             ) : (
-              <Link href="/login">
+              <Link
+                href="/login"
+                onMouseEnter={() => router.prefetch("/login")}
+                onPointerDown={() => router.prefetch("/login")}
+              >
                 <Button size="sm" className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] hover:brightness-105 text-[#07111F] font-bold rounded-xl text-sm px-6 py-2 shadow-md shadow-[#C89B3C]/20 border border-[#A97918]/30 transition-all cursor-pointer">
                   Login
                 </Button>

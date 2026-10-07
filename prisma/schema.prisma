@@ -457,6 +457,10 @@ model RentalRequest {
   totalAmount     Float
   currency        String        @default("USD")
   status          RequestStatus @default(PENDING)
+  bookingStatus   String?       @default("PENDING") // PENDING | APPROVED | REJECTED | CANCELLED
+  rentalStatus    String?                           // ACTIVE | EXPIRED | COMPLETED | CANCELLED
+  agreementNo     String?
+  approvedAt      DateTime?
   notes           String?       @db.Text
   reviewNotes     String?       @db.Text
   reviewedById    String?
@@ -473,6 +477,9 @@ model RentalRequest {
   @@index([propertyId, startDate, endDate])
   @@index([managerId])
   @@index([status])
+  @@index([bookingStatus])
+  @@index([rentalStatus])
+  @@index([agreementNo])
   @@map("rental_requests")
 }
 

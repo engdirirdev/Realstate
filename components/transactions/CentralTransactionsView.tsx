@@ -19,9 +19,21 @@ import {
   RefreshCw,
   FileText,
   ExternalLink,
+  Building2,
+  MapPin,
+  Phone,
+  User,
+  Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+function getInitials(name?: string | null): string {
+  if (!name) return "CL";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 import {
   Dialog,
   DialogContent,
@@ -50,6 +62,23 @@ export default function CentralTransactionsView({
   const [activeTab, setActiveTab] = useState<"payments" | "ledger">(initialTab);
   const [selectedPayment, setSelectedPayment] = useState<any | null>(null);
 
+  // Sync initialTab when route or parent prop changes
+  useEffect(() => {
+    if (initialTab && initialTab !== activeTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
+  const handleTabChange = (newTab: "payments" | "ledger") => {
+    setActiveTab(newTab);
+    if (typeof window !== "undefined" && isAdmin) {
+      const target = newTab === "ledger" ? "/admin/transactions" : "/admin/payments";
+      if (window.location.pathname !== target) {
+        window.history.replaceState(null, "", target);
+      }
+    }
+  };
+
   // --- Payment Gateway Logs State ---
   const [paymentsQ, setPaymentsQ] = useState("");
   const [paymentsStatus, setPaymentsStatus] = useState("ALL");
@@ -67,7 +96,7 @@ export default function CentralTransactionsView({
   const [paymentsLoading, setPaymentsLoading] = useState(true);
 
   // --- Transactions Ledger State ---
-  const [ledgerType, setLedgerType] = useState<"ALL" | "SALE" | "RENTAL">("ALL");
+  const [ledgerType, setLedgerType] = useState<"ALL" | "SALE" | "RENTAL">(isAdmin ? "ALL" : "RENTAL");
   const [ledgerStatus, setLedgerStatus] = useState("ALL");
   const [ledgerQ, setLedgerQ] = useState("");
   const [ledgerPage, setLedgerPage] = useState(1);
@@ -151,12 +180,14 @@ export default function CentralTransactionsView({
         <div className="bg-[#FCFBF7] rounded-2xl p-5 shadow-sm border border-[#E8E1D4] flex items-center justify-between transition-all hover:border-[#C89B3C]/50">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wider text-[#6B7280]">
-              {isAdmin ? "Total Platform Settlement Volume" : "Portfolio Revenue Yield"}
+              {isAdmin ? "Total Platform Settlement Volume" : "Portfolio Rental Yield"}
             </p>
             <p className="text-2xl sm:text-3xl font-serif font-black text-[#07111F] mt-1">
               {formatPrice(totalSettlement)}
             </p>
-            <p className="text-[11px] text-[#A97918] mt-0.5 font-medium">Cleared Escrow Funds</p>
+            <p className="text-[11px] text-[#A97918] mt-0.5 font-medium">
+              {isAdmin ? "Cleared Escrow Funds" : "Cleared Rental Payments"}
+            </p>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-[#07111F] border border-[#C89B3C]/40 flex items-center justify-center text-[#D9B45B] shadow-inner shrink-0">
             <TrendingUp className="h-6 w-6" />
@@ -183,12 +214,14 @@ export default function CentralTransactionsView({
         <div className="bg-[#FCFBF7] rounded-2xl p-5 shadow-sm border border-[#E8E1D4] flex items-center justify-between transition-all hover:border-[#C89B3C]/50">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wider text-[#6B7280]">
-              Total Deal Agreements
+              {isAdmin ? "Total Deal Agreements" : "Total Rental Agreements"}
             </p>
             <p className="text-2xl sm:text-3xl font-serif font-black text-[#07111F] mt-1">
               {totalDealsCount}
             </p>
-            <p className="text-[11px] text-[#A97918] mt-0.5 font-medium">Sales Acquisitions &amp; Leases</p>
+            <p className="text-[11px] text-[#A97918] mt-0.5 font-medium">
+              {isAdmin ? "Sales Acquisitions & Leases" : "Verified Rental Leases"}
+            </p>
           </div>
           <div className="w-12 h-12 rounded-2xl bg-[#07111F] border border-[#C89B3C]/40 flex items-center justify-center text-[#D9B45B] shadow-inner shrink-0">
             <ScrollText className="h-6 w-6" />
@@ -204,7 +237,7 @@ export default function CentralTransactionsView({
           {/* 1st Tab: Payments & Escrow */}
           <button
             type="button"
-            onClick={() => setActiveTab("payments")}
+            onClick={() => handleTabChange("payments")}
             className={cn(
               "flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer",
               activeTab === "payments"
@@ -227,7 +260,7 @@ export default function CentralTransactionsView({
           {/* 2nd Tab: Transactions Ledger */}
           <button
             type="button"
-            onClick={() => setActiveTab("ledger")}
+            onClick={() => handleTabChange("ledger")}
             className={cn(
               "flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer",
               activeTab === "ledger"
@@ -236,7 +269,7 @@ export default function CentralTransactionsView({
             )}
           >
             <ScrollText className="w-4 h-4 text-[#C89B3C]" />
-            <span>Transactions Ledger</span>
+            <span>{isAdmin ? "Transactions Ledger" : "Rental Leases Ledger"}</span>
             <span
               className={cn(
                 "px-2 py-0.5 rounded-full text-[10px] font-mono",
@@ -315,82 +348,131 @@ export default function CentralTransactionsView({
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
-                  <thead className="bg-[#F7F3EA] text-[#07111F] uppercase text-[10px] font-bold tracking-wider border-b border-[#E8E1D4]">
+                  <thead className="bg-[#FAF6EC] text-[#475569] uppercase text-[10px] font-bold tracking-wider border-b border-[#E8E1D4]">
                     <tr>
-                      <th className="text-left p-3.5">Transaction Ref</th>
-                      <th className="text-left p-3.5">Property Listing</th>
-                      <th className="text-left p-3.5">Client / Buyer</th>
-                      <th className="text-left p-3.5">Assigned Advisor</th>
-                      <th className="text-left p-3.5">Settlement Amount</th>
-                      <th className="text-left p-3.5">Payment Method</th>
-                      <th className="text-left p-3.5">Escrow Status</th>
-                      <th className="text-left p-3.5">Date</th>
-                      <th className="text-right p-3.5">Action</th>
+                      <th className="text-left py-3.5 pl-4 pr-3">Transaction Ref</th>
+                      <th className="text-left py-3.5 px-3">Property Listing</th>
+                      <th className="text-left py-3.5 px-3">{isAdmin ? "Client / Buyer" : "Client / Tenant"}</th>
+                      {isAdmin && <th className="text-left py-3.5 px-3">Assigned Advisor</th>}
+                      <th className="text-left py-3.5 px-3">Settlement Amount</th>
+                      <th className="text-left py-3.5 px-3">Payment Method</th>
+                      <th className="text-left py-3.5 px-3">Escrow Status</th>
+                      <th className="text-left py-3.5 px-3">Date</th>
+                      <th className="text-right py-3.5 pl-3 pr-4">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#E8E1D4]">
+                  <tbody className="divide-y divide-[#E8E1D4]/80">
                     {paymentsData.payments.map((p) => (
-                      <tr key={p.id} className="hover:bg-[#F7F3EA]/50 transition-colors align-top">
-                        <td className="p-3.5 font-mono font-bold text-[#07111F] whitespace-nowrap">
-                          {p.transactionRef}
+                      <tr key={p.id} className="hover:bg-[#FAF6EC]/70 transition-colors align-middle">
+                        {/* Transaction Ref */}
+                        <td className="py-3.5 pl-4 pr-3 align-middle">
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#07111F]/5 border border-[#E8E1D4] text-[#07111F] font-mono font-bold text-xs tracking-tight shadow-2xs">
+                            <CreditCard className="h-3 w-3 text-[#C89B3C] shrink-0" />
+                            <span>{p.transactionRef}</span>
+                          </div>
                         </td>
-                        <td className="p-3.5">
-                          {p.property ? (
-                            <Link
-                              href={`/properties/${p.property.id}`}
-                              className="font-semibold text-[#07111F] hover:text-[#C89B3C] transition-colors"
-                              target="_blank"
-                            >
-                              {p.property.title}
-                            </Link>
-                          ) : (
-                            <span className="font-semibold text-[#07111F]">Platform Service</span>
-                          )}
-                          {p.property?.city && <p className="text-[#6B7280]">{p.property.city}</p>}
+
+                        {/* Property Listing */}
+                        <td className="py-3.5 px-3 align-middle">
+                          <div className="flex items-center gap-3">
+                            <div className="relative h-11 w-11 rounded-xl overflow-hidden bg-gradient-to-br from-[#07111F] to-[#1E293B] border border-[#E8E1D4] shrink-0 flex items-center justify-center shadow-2xs">
+                              {p.property?.images?.[0]?.url ? (
+                                <img
+                                  src={p.property.images[0].url}
+                                  alt={p.property?.title || "Property"}
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <Building2 className="h-5 w-5 text-[#C89B3C]" />
+                              )}
+                            </div>
+                            <div className="min-w-0 max-w-[220px] space-y-0.5">
+                              {p.property ? (
+                                <Link
+                                  href={`/properties/${p.property.id}`}
+                                  className="font-bold text-xs text-[#07111F] hover:text-[#C89B3C] transition-colors truncate block"
+                                  target="_blank"
+                                  title={p.property.title}
+                                >
+                                  {p.property.title}
+                                </Link>
+                              ) : (
+                                <span className="font-bold text-xs text-[#07111F]">Platform Service</span>
+                              )}
+                              <div className="flex items-center gap-1 text-[11px] text-[#64748B]">
+                                <MapPin className="h-3 w-3 text-[#C89B3C] shrink-0" />
+                                <span className="truncate">{p.property?.city || "Direct Escrow"}</span>
+                              </div>
+                            </div>
+                          </div>
                         </td>
-                        <td className="p-3.5">
-                          <p className="font-semibold text-[#07111F]">{p.customer?.name}</p>
-                          <p className="text-[#6B7280]">{p.customer?.email}</p>
+
+                        {/* Client */}
+                        <td className="py-3.5 px-3 align-middle">
+                          <div className="flex items-center gap-2.5">
+                            <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-[#07111F] to-[#1E293B] text-[#D9B45B] border border-[#C89B3C]/30 flex items-center justify-center font-bold text-[11px] shrink-0 shadow-2xs">
+                              {getInitials(p.customer?.name)}
+                            </div>
+                            <div className="min-w-0 space-y-0.5">
+                              <p className="font-semibold text-xs text-[#07111F] truncate">{p.customer?.name || "Anonymous Client"}</p>
+                              <p className="text-[11px] text-[#64748B] truncate">{p.customer?.email || "No email"}</p>
+                              {p.customer?.phone && (
+                                <p className="text-[10px] font-mono font-medium text-[#8C6D23] flex items-center gap-1">
+                                  <Phone className="h-2.5 w-2.5 text-[#C89B3C]" />
+                                  <span>{p.customer.phone}</span>
+                                </p>
+                              )}
+                            </div>
+                          </div>
                         </td>
-                        <td className="p-3.5 text-[#6B7280]">
-                          {p.manager?.name || "Kiro-Maal Concierge"}
+
+                        {/* Assigned Advisor (Admin only) */}
+                        {isAdmin && (
+                          <td className="py-3.5 px-3 align-middle">
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#FAF6EC] border border-[#E8E1D4] text-[11px] font-medium text-[#07111F]">
+                              <User className="h-3 w-3 text-[#C89B3C]" />
+                              <span>{p.manager?.name || "Kiro-Maal Concierge"}</span>
+                            </div>
+                          </td>
+                        )}
+
+                        {/* Settlement Amount */}
+                        <td className="py-3.5 px-3 whitespace-nowrap align-middle">
+                          <p className="font-serif font-black text-sm text-[#07111F] tracking-tight">
+                            {formatPrice(p.amount)}
+                          </p>
+                          <p className="text-[10px] font-medium text-[#64748B]">Settled Funds</p>
                         </td>
-                        <td className="p-3.5 font-serif font-bold text-[#07111F] whitespace-nowrap text-sm">
-                          {formatPrice(p.amount)}
-                        </td>
-                        <td className="p-3.5 text-[#6B7280] font-medium">
-                          {p.paymentMethod || "Direct Settlement"}
-                        </td>
-                        <td className="p-3.5">
-                          <span
-                            className={cn(
-                              "px-2.5 py-1 rounded-full text-[10px] font-bold inline-flex items-center gap-1",
-                              p.status === "PAID"
-                                ? "bg-[#07111F] text-[#D9B45B] border border-[#C89B3C]/40"
-                                : p.status === "PENDING"
-                                ? "bg-amber-100 text-amber-900 border border-amber-300"
-                                : "bg-red-100 text-red-900 border border-red-300"
-                            )}
-                          >
-                            {p.status === "PAID" ? (
-                              <CheckCircle2 className="h-3 w-3 text-[#D9B45B]" />
-                            ) : p.status === "PENDING" ? (
-                              <Clock className="h-3 w-3 text-amber-700" />
-                            ) : (
-                              <AlertCircle className="h-3 w-3 text-red-700" />
-                            )}
-                            {p.status}
+
+                        {/* Payment Method */}
+                        <td className="py-3.5 px-3 whitespace-nowrap align-middle">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#FAF6EC] border border-[#E8E1D4] text-[11px] font-medium text-[#07111F]">
+                            {p.paymentMethod || "Direct Settlement"}
                           </span>
                         </td>
-                        <td className="p-3.5 text-[#6B7280] whitespace-nowrap">{fmt(p.createdAt)}</td>
-                        <td className="p-3.5 text-right whitespace-nowrap">
+
+                        {/* Escrow Status */}
+                        <td className="py-3.5 px-3 whitespace-nowrap align-middle">
+                          <StatusBadge status={p.status} />
+                        </td>
+
+                        {/* Date */}
+                        <td className="py-3.5 px-3 whitespace-nowrap align-middle">
+                          <div className="flex items-center gap-1.5 text-xs font-semibold text-[#07111F]">
+                            <Calendar className="h-3 w-3 text-[#C89B3C]" />
+                            <span>{fmt(p.createdAt)}</span>
+                          </div>
+                        </td>
+
+                        {/* Action */}
+                        <td className="py-3.5 pl-3 pr-4 text-right whitespace-nowrap align-middle">
                           <div className="flex items-center justify-end gap-1.5">
                             {p.receipt ? (
                               <Link href={`/receipt/${p.receipt.id}`} target="_blank">
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="h-8 rounded-lg text-[11px] border-[#E8E1D4] hover:border-[#C89B3C] text-[#07111F] gap-1 cursor-pointer"
+                                  className="h-7 text-xs rounded-lg border-[#E8E1D4] hover:border-[#C89B3C] text-[#07111F] bg-[#FCFBF7] gap-1 cursor-pointer font-medium"
                                 >
                                   <Receipt className="h-3 w-3 text-[#C89B3C]" /> Receipt
                                 </Button>
@@ -403,7 +485,7 @@ export default function CentralTransactionsView({
                                   setLedgerQ(p.transaction.txnNo);
                                   setActiveTab("ledger");
                                 }}
-                                className="h-8 rounded-lg text-[11px] text-[#A97918] hover:text-[#07111F] gap-1 cursor-pointer"
+                                className="h-7 text-xs rounded-lg text-[#8C6D23] hover:text-[#07111F] hover:bg-[#FAF6EC] gap-1 cursor-pointer font-medium"
                               >
                                 View Deal
                               </Button>
@@ -413,7 +495,7 @@ export default function CentralTransactionsView({
                               size="sm"
                               variant="ghost"
                               onClick={() => setSelectedPayment(p)}
-                              className="h-8 rounded-lg text-[11px] text-[#6B7280] hover:text-[#07111F] gap-1 cursor-pointer"
+                              className="h-7 text-xs rounded-lg text-[#64748B] hover:text-[#07111F] hover:bg-[#FAF6EC] gap-1 cursor-pointer font-medium"
                               title="View Payment Breakdown"
                             >
                               <FileText className="h-3 w-3" /> Slip
@@ -437,25 +519,27 @@ export default function CentralTransactionsView({
         <div className="space-y-4">
           {/* Sub-Filters: Deal Type */}
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="inline-flex rounded-xl border border-[#E8E1D4] bg-[#FCFBF7] p-1">
-              {(["ALL", "SALE", "RENTAL"] as const).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => {
-                    setLedgerType(t);
-                    setLedgerPage(1);
-                  }}
-                  className={cn(
-                    "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer",
-                    ledgerType === t
-                      ? "bg-[#07111F] text-[#D9B45B]"
-                      : "text-[#6B7280] hover:text-[#07111F]"
-                  )}
-                >
-                  {t === "ALL" ? "All Deals" : t === "SALE" ? "Sales Transactions" : "Rental Leases"}
-                </button>
-              ))}
-            </div>
+            {isAdmin && (
+              <div className="inline-flex rounded-xl border border-[#E8E1D4] bg-[#FCFBF7] p-1">
+                {(["ALL", "SALE", "RENTAL"] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => {
+                      setLedgerType(t);
+                      setLedgerPage(1);
+                    }}
+                    className={cn(
+                      "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer",
+                      ledgerType === t
+                        ? "bg-[#07111F] text-[#D9B45B]"
+                        : "text-[#6B7280] hover:text-[#07111F]"
+                    )}
+                  >
+                    {t === "ALL" ? "All Deals" : t === "SALE" ? "Sales Transactions" : "Rental Leases"}
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div className="flex flex-wrap gap-1.5">
               {LEDGER_STATUSES.map((s) => (
@@ -503,105 +587,178 @@ export default function CentralTransactionsView({
                 <Inbox className="h-9 w-9 text-[#C89B3C]" />
                 <p className="text-sm font-bold text-[#07111F]">No transactions found</p>
                 <p className="text-xs text-[#6B7280]">
-                  Approved and completed property transactions will automatically record here.
+                  {isAdmin
+                    ? "Approved and completed property transactions will automatically record here."
+                    : "Approved and completed rental leases will automatically record here."}
                 </p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
-                  <thead className="bg-[#F7F3EA] text-[#07111F] uppercase text-[10px] font-bold tracking-wider border-b border-[#E8E1D4]">
+                  <thead className="bg-[#FAF6EC] text-[#475569] uppercase text-[10px] font-bold tracking-wider border-b border-[#E8E1D4]">
                     <tr>
-                      <th className="text-left p-3.5">Txn No</th>
-                      <th className="text-left p-3.5">Type</th>
-                      <th className="text-left p-3.5">Property Listing</th>
-                      <th className="text-left p-3.5">Customer</th>
-                      {isAdmin && <th className="text-left p-3.5">Assigned Advisor</th>}
-                      <th className="text-left p-3.5">Amount</th>
-                      <th className="text-left p-3.5">Deal Status</th>
-                      <th className="text-left p-3.5">Payment</th>
-                      <th className="text-left p-3.5">Date</th>
-                      <th className="text-right p-3.5">Receipt</th>
+                      <th className="text-left py-3.5 pl-4 pr-3">Txn No</th>
+                      {isAdmin && <th className="text-left py-3.5 px-3">Type</th>}
+                      <th className="text-left py-3.5 px-3">Property Listing</th>
+                      <th className="text-left py-3.5 px-3">{isAdmin ? "Customer" : "Tenant"}</th>
+                      {isAdmin && <th className="text-left py-3.5 px-3">Assigned Advisor</th>}
+                      <th className="text-left py-3.5 px-3">Amount</th>
+                      <th className="text-left py-3.5 px-3">Deal Status</th>
+                      <th className="text-left py-3.5 px-3">Payment</th>
+                      <th className="text-left py-3.5 px-3">Date</th>
+                      <th className="text-right py-3.5 pl-3 pr-4">Receipt</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#E8E1D4]">
+                  <tbody className="divide-y divide-[#E8E1D4]/80">
                     {ledgerData.items.map((t) => {
                       const payment = t.payments?.[0];
                       return (
-                        <tr key={t.id} className="hover:bg-[#F7F3EA]/50 transition-colors align-top">
-                          <td className="p-3.5 font-mono font-bold text-[#07111F] whitespace-nowrap">
-                            {t.txnNo}
+                        <tr key={t.id} className="hover:bg-[#FAF6EC]/70 transition-colors align-middle">
+                          {/* Txn No */}
+                          <td className="py-3.5 pl-4 pr-3 align-middle">
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#07111F]/5 border border-[#E8E1D4] text-[#07111F] font-mono font-bold text-xs tracking-tight shadow-2xs">
+                              <FileText className="h-3 w-3 text-[#C89B3C] shrink-0" />
+                              <span>{t.txnNo}</span>
+                            </div>
                           </td>
-                          <td className="p-3.5">
-                            <span
-                              className={cn(
-                                "px-2 py-0.5 rounded-md text-[10px] font-bold uppercase",
-                                t.type === "SALE"
-                                  ? "bg-amber-100 text-amber-900 border border-amber-300"
-                                  : "bg-blue-100 text-blue-900 border border-blue-300"
-                              )}
-                            >
-                              {t.type === "SALE" ? "Sale" : "Rental"}
-                            </span>
-                          </td>
-                          <td className="p-3.5">
-                            <Link
-                              href={`/properties/${t.property?.id}`}
-                              className="font-semibold text-[#07111F] hover:text-[#C89B3C] transition-colors"
-                              target="_blank"
-                            >
-                              {t.property?.title}
-                            </Link>
-                            <p className="text-[#6B7280]">{t.property?.city}</p>
-                            {t.rentalRequest && (
-                              <p className="text-[11px] text-[#A97918] mt-0.5">
-                                {fmt(t.rentalRequest.startDate)} → {fmt(t.rentalRequest.endDate)} (
-                                {t.rentalRequest.periods} {t.rentalRequest.rentalPeriod?.toLowerCase()})
-                              </p>
-                            )}
-                          </td>
-                          <td className="p-3.5">
-                            <p className="font-semibold text-[#07111F]">{t.customer?.name}</p>
-                            <p className="text-[#6B7280]">{t.customer?.email}</p>
-                          </td>
+
+                          {/* Type (Admin only) */}
                           {isAdmin && (
-                            <td className="p-3.5 text-[#6B7280]">
-                              {t.manager?.name || "Platform Direct"}
+                            <td className="py-3.5 px-3 align-middle">
+                              <span
+                                className={cn(
+                                  "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1 shadow-2xs",
+                                  t.type === "SALE"
+                                    ? "bg-amber-500/15 text-amber-950 border border-amber-500/40"
+                                    : "bg-blue-500/15 text-blue-950 border border-blue-500/40"
+                                )}
+                              >
+                                {t.type === "SALE" ? "Sale" : "Rental"}
+                              </span>
                             </td>
                           )}
-                          <td className="p-3.5 font-serif font-bold text-[#07111F] whitespace-nowrap text-sm">
-                            {formatPrice(t.amount)}
+
+                          {/* Property Listing */}
+                          <td className="py-3.5 px-3 align-middle">
+                            <div className="flex items-center gap-3">
+                              <div className="relative h-11 w-11 rounded-xl overflow-hidden bg-gradient-to-br from-[#07111F] to-[#1E293B] border border-[#E8E1D4] shrink-0 flex items-center justify-center shadow-2xs">
+                                {t.property?.images?.[0]?.url ? (
+                                  <img
+                                    src={t.property.images[0].url}
+                                    alt={t.property?.title || "Property"}
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  <Building2 className="h-5 w-5 text-[#C89B3C]" />
+                                )}
+                              </div>
+                              <div className="min-w-0 max-w-[220px] space-y-0.5">
+                                <Link
+                                  href={`/properties/${t.property?.id}`}
+                                  className="font-bold text-xs text-[#07111F] hover:text-[#C89B3C] transition-colors truncate block"
+                                  target="_blank"
+                                  title={t.property?.title}
+                                >
+                                  {t.property?.title}
+                                </Link>
+                                <div className="flex items-center gap-1 text-[11px] text-[#64748B]">
+                                  <MapPin className="h-3 w-3 text-[#C89B3C]" />
+                                  <span className="truncate">{t.property?.city || "Location on file"}</span>
+                                </div>
+                                {t.rentalRequest && (
+                                  <div className="text-[10px] font-medium text-[#8C6D23] flex items-center gap-1 mt-0.5">
+                                    <Calendar className="h-2.5 w-2.5 text-[#C89B3C]" />
+                                    <span>
+                                      {fmt(t.rentalRequest.startDate)} → {fmt(t.rentalRequest.endDate)} ({t.rentalRequest.periods}×)
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </td>
-                          <td className="p-3.5">
+
+                          {/* Customer */}
+                          <td className="py-3.5 px-3 align-middle">
+                            <div className="flex items-center gap-2.5">
+                              <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-[#07111F] to-[#1E293B] text-[#D9B45B] border border-[#C89B3C]/30 flex items-center justify-center font-bold text-[11px] shrink-0 shadow-2xs">
+                                {getInitials(t.customer?.name)}
+                              </div>
+                              <div className="min-w-0 space-y-0.5">
+                                <p className="font-semibold text-xs text-[#07111F] truncate">{t.customer?.name || "Anonymous Client"}</p>
+                                <p className="text-[11px] text-[#64748B] truncate">{t.customer?.email || "No email"}</p>
+                                {t.customer?.phone && (
+                                  <p className="text-[10px] font-mono font-medium text-[#8C6D23] flex items-center gap-1">
+                                    <Phone className="h-2.5 w-2.5 text-[#C89B3C]" />
+                                    <span>{t.customer.phone}</span>
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Assigned Advisor (Admin only) */}
+                          {isAdmin && (
+                            <td className="py-3.5 px-3 align-middle">
+                              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#FAF6EC] border border-[#E8E1D4] text-[11px] font-medium text-[#07111F]">
+                                <User className="h-3 w-3 text-[#C89B3C]" />
+                                <span>{t.manager?.name || "Platform Direct"}</span>
+                              </div>
+                            </td>
+                          )}
+
+                          {/* Amount */}
+                          <td className="py-3.5 px-3 whitespace-nowrap align-middle">
+                            <p className="font-serif font-black text-sm text-[#07111F] tracking-tight">
+                              {formatPrice(t.amount)}
+                            </p>
+                            <p className="text-[10px] font-medium text-[#64748B]">Deal Volume</p>
+                          </td>
+
+                          {/* Deal Status */}
+                          <td className="py-3.5 px-3 whitespace-nowrap align-middle">
                             <StatusBadge status={t.status} />
                           </td>
-                          <td className="p-3.5">
+
+                          {/* Payment */}
+                          <td className="py-3.5 px-3 whitespace-nowrap align-middle">
                             {payment ? (
-                              <div>
+                              <div className="space-y-1">
                                 <StatusBadge status={payment.status} />
-                                <p className="text-[10px] text-[#6B7280] mt-0.5">{payment.paymentMethod}</p>
+                                <p className="text-[10px] text-[#64748B] pl-1 font-medium">{payment.paymentMethod}</p>
                               </div>
                             ) : (
-                              <span className="text-[#6B7280] text-[11px]">Unpaid</span>
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-500/10 text-slate-700 border border-slate-300">
+                                Unpaid
+                              </span>
                             )}
                           </td>
-                          <td className="p-3.5 text-[#6B7280] whitespace-nowrap">{fmt(t.createdAt)}</td>
-                          <td className="p-3.5 text-right whitespace-nowrap">
+
+                          {/* Date */}
+                          <td className="py-3.5 px-3 whitespace-nowrap align-middle">
+                            <div className="flex items-center gap-1.5 text-xs font-semibold text-[#07111F]">
+                              <Calendar className="h-3 w-3 text-[#C89B3C]" />
+                              <span>{fmt(t.createdAt)}</span>
+                            </div>
+                          </td>
+
+                          {/* Receipt */}
+                          <td className="py-3.5 pl-3 pr-4 text-right whitespace-nowrap align-middle">
                             {t.receipt ? (
                               <Link href={`/receipt/${t.receipt.id}`} target="_blank">
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="h-8 rounded-lg text-[11px] border-[#E8E1D4] hover:border-[#C89B3C] gap-1 cursor-pointer"
+                                  className="h-7 text-xs rounded-lg border-[#E8E1D4] hover:border-[#C89B3C] text-[#07111F] bg-[#FCFBF7] gap-1 cursor-pointer font-medium"
                                 >
                                   <Receipt className="h-3 w-3 text-[#C89B3C]" /> Receipt
                                 </Button>
                               </Link>
                             ) : t.status === "PAYMENT_PENDING" ? (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                                Awaiting Payment
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-950 border border-amber-500/40">
+                                <Clock className="h-2.5 w-2.5 text-amber-700" /> Awaiting Payment
                               </span>
                             ) : (
-                              <span className="text-[#9CA3AF] text-[11px] italic">Not Settled</span>
+                              <span className="text-[#9CA3AF] text-xs italic">Not Settled</span>
                             )}
                           </td>
                         </tr>

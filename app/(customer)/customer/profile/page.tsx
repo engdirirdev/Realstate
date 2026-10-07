@@ -59,19 +59,28 @@ export default function CustomerProfilePage() {
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await fetch("/api/user/preferences", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(preferences),
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast({ title: "Preferences Saved! 🎉", description: "Your AI property recommendations have been updated." });
+      const [profileRes, prefRes] = await Promise.all([
+        fetch("/api/user/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(profile),
+        }),
+        fetch("/api/user/preferences", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(preferences),
+        }),
+      ]);
+
+      const [profData, prefData] = await Promise.all([profileRes.json(), prefRes.json()]);
+
+      if (profileRes.ok && prefRes.ok) {
+        toast({ title: "Profile & Preferences Saved! 🎉", description: "Your details and AI match settings have been updated." });
       } else {
-        toast({ title: "Error", description: data.error, variant: "destructive" });
+        toast({ title: "Update Notice", description: profData.error || prefData.error || "Some details could not be updated.", variant: "destructive" });
       }
     } catch {
-      toast({ title: "Error", description: "Failed to save preferences.", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to save profile.", variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -104,11 +113,22 @@ export default function CustomerProfilePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">Full Name</Label>
-                <Input value={profile.name} disabled className="bg-white border-[#E8E1D4] text-[#07111F] cursor-not-allowed" />
+                <Input
+                  value={profile.name}
+                  onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+                  placeholder="Your Full Name"
+                  required
+                  className="bg-white border-[#E8E1D4] text-[#07111F]"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">Phone Number</Label>
-                <Input value={profile.phone} disabled className="bg-white border-[#E8E1D4] text-[#07111F] cursor-not-allowed" placeholder="No phone saved" />
+                <Input
+                  value={profile.phone}
+                  onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                  className="bg-white border-[#E8E1D4] text-[#07111F]"
+                  placeholder="+252 61 XXXXXXX"
+                />
               </div>
             </div>
           </div>

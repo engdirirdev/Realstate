@@ -58,7 +58,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </aside>
 
       {/* ─── Main Content Area ─── */}
-      <div className="lg:ml-64 flex-1 flex flex-col min-h-screen bg-[#F7F3EA]">
+      <div className="lg:ml-64 flex-1 flex flex-col min-h-screen min-w-0 bg-[#F7F3EA]">
         <ManagerHeader
           userName={session.user?.name}
           userEmail={session.user?.email}
@@ -66,7 +66,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           unreadCount={unreadCount}
         />
 
-        <main className="flex-1 p-5 sm:p-7 lg:p-8 bg-[#F7F3EA]">
+        <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 bg-[#F7F3EA]">
           {children}
         </main>
       </div>

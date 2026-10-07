@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Building2,
@@ -9,6 +9,7 @@ import {
   PlusCircle,
   MessageSquare,
   Calendar,
+  CalendarCheck,
   TrendingUp,
   Sparkles,
   BarChart3,
@@ -51,18 +52,11 @@ const managerNavGroups: NavGroup[] = [
     ],
   },
   {
-    title: "APPOINTMENTS",
+    title: "TRANSACTIONS",
     items: [
-      { href: "/dashboard/bookings", label: "Tour Appointments", icon: Calendar },
-    ],
-  },
-  {
-    title: "DEALS & TRANSACTIONS",
-    items: [
-      { href: "/dashboard/rentals", label: "Rentals & Leases", icon: KeyRound },
-      { href: "/dashboard/requests", label: "Purchase & Rental Requests", icon: FileText },
-      { href: "/dashboard/transactions", label: "Transactions Ledger", icon: History },
-      { href: "/dashboard/payments", label: "Payments & Revenue", icon: CreditCard },
+      { href: "/dashboard/bookings", label: "Rental Bookings", icon: FileText },
+      { href: "/dashboard/rentals", label: "Rentals", icon: KeyRound },
+      { href: "/dashboard/transactions", label: "Payments & Transactions", icon: CreditCard },
     ],
   },
   {
@@ -70,7 +64,7 @@ const managerNavGroups: NavGroup[] = [
     items: [
       { href: "/dashboard/predictions", label: "Price Prediction", icon: TrendingUp },
       { href: "/dashboard/recommendations", label: "Recommendations", icon: Sparkles },
-      { href: "/dashboard/analytics", label: "Sales & Reports", icon: BarChart3 },
+      { href: "/dashboard/analytics", label: "Portfolio Analytics", icon: BarChart3 },
     ],
   },
   {
@@ -83,6 +77,7 @@ const managerNavGroups: NavGroup[] = [
 
 export default function DashboardSidebarNav() {
   const pathname = usePathname();
+  const router = useRouter();
 
   return (
     <nav className="flex-1 px-3 py-2 space-y-4 overflow-y-auto scrollbar-hide">
@@ -94,11 +89,20 @@ export default function DashboardSidebarNav() {
             </p>
           )}
           {group.items.map(({ href, label, icon: Icon }) => {
-            const isActive = pathname === href || (label === "Dashboard" && pathname === "/dashboard");
+            const isActive =
+              pathname === href ||
+              (label === "Dashboard" && pathname === "/dashboard") ||
+              (href === "/dashboard/bookings" && pathname === "/dashboard/bookings") ||
+              (href === "/dashboard/rentals" && pathname === "/dashboard/rentals") ||
+              (href === "/dashboard/transactions" && (pathname === "/dashboard/transactions" || pathname === "/dashboard/payments"));
             return (
               <Link
                 key={label + href}
                 href={href}
+                prefetch={false}
+                onMouseEnter={() => router.prefetch(href)}
+                onPointerDown={() => router.prefetch(href)}
+                onFocus={() => router.prefetch(href)}
                 className={cn(
                   "group flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200",
                   isActive

@@ -41,42 +41,14 @@ export const metadata: Metadata = {
 };
 
 import AIChatbot from "@/components/AIChatbot";
+import NavigationProgressBar from "@/components/layout/NavigationProgressBar";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning className={`${inter.variable} ${playfair.variable}`}>
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                function cleanAttrs(node) {
-                  if (!node || node.nodeType !== 1) return;
-                  if (node.hasAttribute('bis_skin_checked')) node.removeAttribute('bis_skin_checked');
-                  if (node.hasAttribute('bis_register')) node.removeAttribute('bis_register');
-                  for (var i = 0; i < node.children.length; i++) {
-                    cleanAttrs(node.children[i]);
-                  }
-                }
-                if (typeof document !== 'undefined') {
-                  cleanAttrs(document.documentElement);
-                  var observer = new MutationObserver(function(mutations) {
-                    for (var i = 0; i < mutations.length; i++) {
-                      var m = mutations[i];
-                      if (m.type === 'attributes' && (m.attributeName === 'bis_skin_checked' || m.attributeName === 'bis_register')) {
-                        m.target.removeAttribute(m.attributeName);
-                      }
-                    }
-                  });
-                  observer.observe(document.documentElement, { attributes: true, subtree: true, attributeFilter: ['bis_skin_checked', 'bis_register'] });
-                }
-              })();
-            `,
-          }}
-        />
-      </head>
       <body suppressHydrationWarning className="font-sans antialiased min-h-screen bg-white text-gray-900">
         <Providers>
+          <NavigationProgressBar />
           {children}
           <Toaster />
           <AIChatbot />

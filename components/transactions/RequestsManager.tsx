@@ -2,15 +2,49 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Loader2, CheckCircle2, XCircle, Eye, Search, ChevronLeft, ChevronRight, Inbox } from "lucide-react";
+import {
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  Eye,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Inbox,
+  FileText,
+  Building2,
+  MapPin,
+  Phone,
+  Calendar,
+  Clock,
+  Receipt,
+  User,
+  KeyRound,
+  ShieldCheck,
+  CreditCard,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { formatPrice } from "@/lib/utils";
 import StatusBadge from "./StatusBadge";
+
+function getInitials(name?: string | null): string {
+  if (!name) return "CL";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 
 type Kind = "purchase" | "rental";
 
@@ -19,8 +53,9 @@ const STATUSES = ["ALL", "PENDING", "UNDER_REVIEW", "PAYMENT_PENDING", "COMPLETE
 const fmt = (d?: string | null) => (d ? new Date(d).toLocaleDateString() : "—");
 
 /**
- * Staff view of purchase / rental requests. Scope (own vs all) is enforced by the API
- * from the session role — this component only renders what the API returns.
+ * Staff view of purchase / rental requests.
+ * Normal rental approval belongs ONLY to the Property Manager.
+ * Admins monitor, view details, view payments, but DO NOT approve or reject rental bookings.
  */
 export default function RequestsManager({
   isAdmin = false,
@@ -40,6 +75,7 @@ export default function RequestsManager({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState<any | null>(null);
   const [reason, setReason] = useState("");
+  const [viewingTarget, setViewingTarget] = useState<any | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -63,6 +99,7 @@ export default function RequestsManager({
   }, [load, q]);
 
   const act = async (r: any, action: "approve" | "reject" | "review", notes?: string) => {
+    // Backend will reject if Admin attempts to approve/reject rental booking
     setBusyId(r.id);
     try {
       const res = await fetch(`/api/requests/${kind}/${r.id}`, {
@@ -72,7 +109,14 @@ export default function RequestsManager({
       });
       const json = await res.json();
       if (json.success) {
-        toast({ title: action === "approve" ? "Request approved — customer can now pay" : action === "reject" ? "Request rejected" : "Moved under review" });
+        toast({
+          title:
+            action === "approve"
+              ? "Request approved successfully"
+              : action === "reject"
+              ? "Request rejected"
+              : "Moved under review",
+        });
         setRejecting(null);
         setReason("");
         load();
@@ -86,7 +130,11 @@ export default function RequestsManager({
     }
   };
 
-  const canAct = (r: any) => ["PENDING", "UNDER_REVIEW"].includes(r.status) && (kind === "rental" || isAdmin);
+  // Section 9 & 10: ADMIN MUST NOT HAVE APPROVE/REJECT FOR NORMAL RENTAL BOOKINGS
+  const canAct = (r: any) => {
+    if (kind === "rental" && isAdmin) return false;
+    return ["PENDING", "UNDER_REVIEW"].includes(r.status) && (kind === "rental" || isAdmin);
+  };
 
   return (
     <div className="space-y-5">
@@ -143,7 +191,7 @@ export default function RequestsManager({
       </div>
 
       {/* Table */}
-      <div className="bg-[#FCFBF7] rounded-2xl border border-[#E8E1D4] overflow-hidden">
+      <div className="bg-[#FCFBF7] rounded-2xl border border-[#E8E1D4] overflow-hidden shadow-xs">
         {loading ? (
           <div className="flex items-center justify-center py-16 text-[#6B7280] text-sm gap-2">
             <Loader2 className="h-4 w-4 animate-spin text-[#C89B3C]" /> Loading requests...
@@ -157,90 +205,210 @@ export default function RequestsManager({
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
-              <thead className="bg-[#F7F3EA] text-[#6B7280] uppercase text-[10px] tracking-wider">
+              <thead className="bg-[#FAF6EC] text-[#475569] uppercase text-[10px] font-bold tracking-wider border-b border-[#E8E1D4]">
                 <tr>
-                  <th className="text-left p-3">Request</th>
-                  <th className="text-left p-3">Customer</th>
-                  <th className="text-left p-3">Property</th>
-                  {kind === "rental" && <th className="text-left p-3">Period</th>}
-                  <th className="text-left p-3">Amount</th>
-                  <th className="text-left p-3">Status</th>
-                  <th className="text-left p-3">Payment</th>
-                  <th className="text-right p-3">Actions</th>
+                  <th className="text-left py-3.5 pl-4 pr-3">Request #</th>
+                  <th className="text-left py-3.5 px-3">Customer</th>
+                  <th className="text-left py-3.5 px-3">Property</th>
+                  {kind === "rental" && <th className="text-left py-3.5 px-3">Period</th>}
+                  <th className="text-left py-3.5 px-3">Amount</th>
+                  <th className="text-left py-3.5 px-3">Booking Status</th>
+                  <th className="text-left py-3.5 px-3">Payment</th>
+                  <th className="text-right py-3.5 pl-3 pr-4">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-[#E8E1D4]/80">
                 {data.items.map((r) => {
                   const amount = kind === "purchase" ? r.salePrice : r.totalAmount;
-                  const paid = r.transaction?.payments?.[0]?.status;
+                  const payment = r.transaction?.payments?.[0];
+                  const paid = payment?.status === "PAID";
+                  const pendingPayment = payment?.status === "PENDING";
+
                   return (
-                    <tr key={r.id} className="border-t border-[#E8E1D4] align-top">
-                      <td className="p-3">
-                        <p className="font-mono font-bold text-[#07111F]">{r.requestNo}</p>
-                        <p className="text-[#6B7280]">{fmt(r.createdAt)}</p>
+                    <tr key={r.id} className="hover:bg-[#FAF6EC]/70 transition-colors align-middle">
+                      {/* Request # */}
+                      <td className="py-3.5 pl-4 pr-3 align-middle">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#07111F]/5 border border-[#E8E1D4] text-[#07111F] font-mono font-bold text-xs tracking-tight shadow-2xs">
+                          <FileText className="h-3 w-3 text-[#C89B3C] shrink-0" />
+                          <span>{r.requestNo}</span>
+                        </div>
+                        <div className="text-[10px] text-[#64748B] mt-1 flex items-center gap-1 pl-0.5">
+                          <Clock className="h-2.5 w-2.5 text-[#C89B3C]" />
+                          <span>{fmt(r.createdAt)}</span>
+                        </div>
                       </td>
-                      <td className="p-3">
-                        <p className="font-semibold text-[#07111F]">{r.customer?.name}</p>
-                        <p className="text-[#6B7280]">{r.customer?.email}</p>
-                        {r.customer?.phone && <p className="text-[#6B7280]">{r.customer.phone}</p>}
+
+                      {/* Customer */}
+                      <td className="py-3.5 px-3 align-middle">
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-[#07111F] to-[#1E293B] text-[#D9B45B] border border-[#C89B3C]/30 flex items-center justify-center font-bold text-[11px] shrink-0 shadow-2xs">
+                            {getInitials(r.customer?.name)}
+                          </div>
+                          <div className="min-w-0 space-y-0.5">
+                            <p className="font-semibold text-xs text-[#07111F] truncate">{r.customer?.name || "Anonymous Client"}</p>
+                            <p className="text-[11px] text-[#64748B] truncate">{r.customer?.email || "No email"}</p>
+                            {r.customer?.phone && (
+                              <p className="text-[10px] font-mono font-medium text-[#8C6D23] flex items-center gap-1">
+                                <Phone className="h-2.5 w-2.5 text-[#C89B3C]" />
+                                <span>{r.customer.phone}</span>
+                              </p>
+                            )}
+                          </div>
+                        </div>
                       </td>
-                      <td className="p-3">
-                        <Link href={`/properties/${r.property?.id}`} className="font-semibold text-[#07111F] hover:text-[#C89B3C]" target="_blank">
-                          {r.property?.title}
-                        </Link>
-                        <p className="text-[#6B7280]">{r.property?.city}</p>
-                        {isAdmin && r.manager?.name && <p className="text-[#6B7280]">Mgr: {r.manager.name}</p>}
+
+                      {/* Property */}
+                      <td className="py-3.5 px-3 align-middle">
+                        <div className="flex items-center gap-3">
+                          <div className="relative h-11 w-11 rounded-xl overflow-hidden bg-gradient-to-br from-[#07111F] to-[#1E293B] border border-[#E8E1D4] shrink-0 flex items-center justify-center shadow-2xs">
+                            {r.property?.images?.[0]?.url ? (
+                              <img
+                                src={r.property.images[0].url}
+                                alt={r.property?.title || "Property"}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <Building2 className="h-5 w-5 text-[#C89B3C]" />
+                            )}
+                          </div>
+                          <div className="min-w-0 max-w-[220px] space-y-0.5">
+                            <Link
+                              href={`/properties/${r.property?.id || ""}`}
+                              className="font-bold text-xs text-[#07111F] hover:text-[#C89B3C] transition-colors truncate block"
+                              target="_blank"
+                              title={r.property?.title}
+                            >
+                              {r.property?.title || "Untitled Property"}
+                            </Link>
+                            <div className="flex items-center gap-1 text-[11px] text-[#64748B]">
+                              <MapPin className="h-3 w-3 text-[#C89B3C]" />
+                              <span className="truncate">{r.property?.city || "Location on file"}</span>
+                            </div>
+                            {r.manager?.name && (
+                              <div className="inline-flex items-center gap-1 text-[10px] text-[#07111F] bg-[#FAF6EC] px-1.5 py-0.5 rounded border border-[#E8E1D4]">
+                                <User className="h-2.5 w-2.5 text-[#C89B3C]" />
+                                <span>Manager: {r.manager.name}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </td>
+
+                      {/* Period (Rentals only) */}
                       {kind === "rental" && (
-                        <td className="p-3 whitespace-nowrap">
-                          <p>
-                            {fmt(r.startDate)} → {fmt(r.endDate)}
-                          </p>
-                          <p className="text-[#6B7280]">
-                            {r.periods} × {r.rentalPeriod?.toLowerCase()}
-                          </p>
+                        <td className="py-3.5 px-3 whitespace-nowrap align-middle">
+                          <div className="flex items-center gap-1.5 text-xs font-semibold text-[#07111F]">
+                            <Calendar className="h-3.5 w-3.5 text-[#C89B3C]" />
+                            <span>{fmt(r.startDate)} → {fmt(r.endDate)}</span>
+                          </div>
+                          <div className="text-[10px] text-[#64748B] mt-0.5 flex items-center gap-1.5 pl-5">
+                            <span className="px-1.5 py-0.5 rounded bg-[#FAF6EC] border border-[#E8DEC8] text-[#8C6D23] font-bold">
+                              {r.periods}× {r.rentalPeriod?.toLowerCase()}
+                            </span>
+                            <span>tenancy</span>
+                          </div>
                         </td>
                       )}
-                      <td className="p-3 font-bold text-[#07111F] whitespace-nowrap">
-                        {formatPrice(amount)}
-                        {kind === "rental" && r.securityDeposit > 0 && (
-                          <p className="text-[10px] font-normal text-[#6B7280]">incl. {formatPrice(r.securityDeposit)} deposit</p>
-                        )}
-                      </td>
-                      <td className="p-3">
-                        <StatusBadge status={r.status} />
-                        {r.reviewNotes && <p className="text-[10px] text-[#6B7280] mt-1 max-w-[160px]">{r.reviewNotes}</p>}
-                      </td>
-                      <td className="p-3">
-                        {r.transaction ? (
-                          <div className="space-y-1">
-                            <StatusBadge status={paid || (r.transaction.status === "PAYMENT_PENDING" ? "PENDING" : null)} />
-                            <p className="font-mono text-[10px] text-[#6B7280]">{r.transaction.txnNo}</p>
-                          </div>
+
+                      {/* Amount */}
+                      <td className="py-3.5 px-3 whitespace-nowrap align-middle">
+                        <p className="font-serif font-black text-sm text-[#07111F] tracking-tight">
+                          {formatPrice(amount)}
+                        </p>
+                        {kind === "rental" && r.securityDeposit > 0 ? (
+                          <p className="text-[10px] font-medium text-[#64748B]">incl. {formatPrice(r.securityDeposit)} dep.</p>
                         ) : (
-                          <span className="text-[#6B7280]">—</span>
+                          <p className="text-[10px] font-medium text-[#64748B]">{kind === "rental" ? "Total Contract" : "Purchase Price"}</p>
                         )}
                       </td>
-                      <td className="p-3">
-                        <div className="flex justify-end gap-1.5">
+
+                      {/* Status */}
+                      <td className="py-3.5 px-3 whitespace-nowrap align-middle">
+                        <StatusBadge status={r.status} />
+                        {r.reviewNotes && (
+                          <p className="text-[10px] italic text-[#64748B] mt-1 max-w-[160px] truncate" title={r.reviewNotes}>
+                            &ldquo;{r.reviewNotes}&rdquo;
+                          </p>
+                        )}
+                      </td>
+
+                      {/* Payment */}
+                      <td className="py-3.5 px-3 whitespace-nowrap align-middle">
+                        {paid ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-950 border border-emerald-500/40 shadow-2xs">
+                            <CheckCircle2 className="h-3 w-3 text-emerald-700" />
+                            PAID
+                          </span>
+                        ) : pendingPayment ? (
+                          <div className="space-y-0.5">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-950 border border-amber-500/40 shadow-2xs">
+                              <Clock className="h-3 w-3 text-amber-700" />
+                              PENDING
+                            </span>
+                            {payment?.transactionRef && (
+                              <p className="text-[9px] font-mono text-[#8C6D23] truncate max-w-[120px]">
+                                Ref: {payment.transactionRef}
+                              </p>
+                            )}
+                          </div>
+                        ) : r.transaction ? (
+                          <span className="text-[#64748B] text-xs font-mono">{r.transaction.status}</span>
+                        ) : (
+                          <span className="text-[#64748B] text-xs">—</span>
+                        )}
+                      </td>
+
+                      {/* Actions */}
+                      <td className="py-3.5 pl-3 pr-4 text-right whitespace-nowrap align-middle">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {/* Dedicated View Modal for full details */}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setViewingTarget(r)}
+                            className="h-7 text-xs rounded-lg border-[#E8E1D4] hover:border-[#C89B3C] text-[#07111F] bg-[#FCFBF7] gap-1 cursor-pointer font-medium"
+                          >
+                            <Eye className="h-3 w-3 text-[#C89B3C]" /> View
+                          </Button>
+
                           {r.transaction?.receipt && (
                             <Link href={`/receipt/${r.transaction.receipt.id}`} target="_blank">
-                              <Button size="sm" variant="outline" className="h-8 rounded-lg text-[11px] border-[#E8E1D4]">
-                                Receipt
+                              <Button size="sm" variant="outline" className="h-7 text-xs rounded-lg border-[#E8E1D4] hover:border-[#C89B3C] text-[#07111F] bg-[#FCFBF7] gap-1 cursor-pointer font-medium">
+                                <Receipt className="h-3 w-3 text-[#C89B3C]" /> Receipt
                               </Button>
                             </Link>
                           )}
+
+                          {/* Approve/Reject shown ONLY when allowed (NEVER for Admin on rental bookings) */}
                           {canAct(r) && (
                             <>
                               {r.status === "PENDING" && (
-                                <Button size="sm" variant="outline" disabled={busyId === r.id} onClick={() => act(r, "review")} className="h-8 rounded-lg text-[11px] border-[#E8E1D4] gap-1">
-                                  <Eye className="h-3 w-3" /> Review
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={busyId === r.id}
+                                  onClick={() => act(r, "review")}
+                                  className="h-7 text-xs rounded-lg border-[#E8E1D4] hover:border-[#C89B3C] text-[#07111F] bg-[#FCFBF7] gap-1 cursor-pointer font-medium"
+                                >
+                                  Review
                                 </Button>
                               )}
-                              <Button size="sm" disabled={busyId === r.id} onClick={() => act(r, "approve")} className="h-8 rounded-lg text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white gap-1">
-                                {busyId === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />} Approve
+                              <Button
+                                size="sm"
+                                disabled={busyId === r.id}
+                                onClick={() => act(r, "approve")}
+                                className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg gap-1 cursor-pointer shadow-2xs"
+                              >
+                                {busyId === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+                                Approve
                               </Button>
-                              <Button size="sm" variant="outline" disabled={busyId === r.id} onClick={() => setRejecting(r)} className="h-8 rounded-lg text-[11px] border-red-200 text-red-600 hover:bg-red-50 gap-1">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={busyId === r.id}
+                                onClick={() => setRejecting(r)}
+                                className="h-7 text-xs border-red-200 text-red-600 hover:bg-red-50 bg-red-50/40 rounded-lg gap-1 cursor-pointer"
+                              >
                                 <XCircle className="h-3 w-3" /> Reject
                               </Button>
                             </>
@@ -272,6 +440,144 @@ export default function RequestsManager({
           </div>
         </div>
       )}
+
+      {/* View Booking Details Modal (User Section 9) */}
+      <Dialog open={!!viewingTarget} onOpenChange={(o) => !o && setViewingTarget(null)}>
+        <DialogContent className="max-w-lg bg-[#FCFBF7] rounded-2xl border border-[#E8E1D4] p-6 shadow-xl">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-xs font-bold text-[#A97918]">#{viewingTarget?.requestNo}</span>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#07111F] text-[#D9B45B]">
+                {kind === "rental" ? "Rental Booking" : "Purchase Request"}
+              </span>
+            </div>
+            <DialogTitle className="font-serif text-lg text-[#07111F] flex items-center gap-2 mt-1">
+              <KeyRound className="h-5 w-5 text-[#C89B3C]" />
+              Booking &amp; Settlement Details
+            </DialogTitle>
+            <DialogDescription className="text-xs text-[#6B7280]">
+              Complete booking record for administrative oversight and audit tracking.
+            </DialogDescription>
+          </DialogHeader>
+
+          {viewingTarget && (
+            <div className="space-y-4 mt-2 text-xs">
+              {/* Property Details */}
+              <div className="p-3 bg-white rounded-xl border border-[#E8E1D4] flex items-center gap-3">
+                <div className="h-12 w-12 rounded-lg bg-[#07111F] overflow-hidden shrink-0">
+                  <img
+                    src={viewingTarget.property?.images?.[0]?.url || "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800"}
+                    alt={viewingTarget.property?.title}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h4 className="font-bold text-[#07111F] truncate">{viewingTarget.property?.title}</h4>
+                  <p className="text-[11px] text-[#6B7280] flex items-center gap-1">
+                    <MapPin className="h-3 w-3 text-[#C89B3C]" />
+                    {viewingTarget.property?.city || viewingTarget.property?.location}
+                  </p>
+                </div>
+              </div>
+
+              {/* Customer & Manager info */}
+              <div className="grid grid-cols-2 gap-2 bg-[#FAF6EC] p-3 rounded-xl border border-[#E8DEC8]">
+                <div>
+                  <span className="text-[#6B7280] block text-[10px] uppercase font-bold">Customer</span>
+                  <span className="font-bold text-xs text-[#07111F]">{viewingTarget.customer?.name}</span>
+                  <p className="text-[11px] text-[#64748B]">{viewingTarget.customer?.email}</p>
+                  {viewingTarget.customer?.phone && (
+                    <p className="text-[10px] font-mono text-[#8C6D23]">{viewingTarget.customer.phone}</p>
+                  )}
+                </div>
+                <div>
+                  <span className="text-[#6B7280] block text-[10px] uppercase font-bold">Assigned Manager</span>
+                  <span className="font-bold text-xs text-[#07111F]">{viewingTarget.manager?.name || "Unassigned"}</span>
+                  <p className="text-[11px] text-[#64748B]">{viewingTarget.manager?.email || "—"}</p>
+                  {viewingTarget.manager?.phone && (
+                    <p className="text-[10px] font-mono text-[#8C6D23]">{viewingTarget.manager.phone}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Status and dates */}
+              <div className="p-3 bg-white rounded-xl border border-[#E8E1D4] space-y-2 text-[11px]">
+                <div className="flex justify-between">
+                  <span className="text-[#6B7280]">Booking Status:</span>
+                  <span className="font-bold text-[#07111F]">{viewingTarget.status}</span>
+                </div>
+                {kind === "rental" && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-[#6B7280]">Check-in Date:</span>
+                      <span className="font-semibold text-[#07111F]">{fmt(viewingTarget.startDate)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#6B7280]">Check-out Date:</span>
+                      <span className="font-semibold text-[#07111F]">{fmt(viewingTarget.endDate)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-[#6B7280]">Tenancy Duration:</span>
+                      <span className="font-semibold text-[#07111F]">{viewingTarget.periods} {viewingTarget.rentalPeriod?.toLowerCase()}</span>
+                    </div>
+                  </>
+                )}
+                <div className="flex justify-between pt-1 border-t border-[#E8E1D4]">
+                  <span className="text-[#6B7280]">Total Amount:</span>
+                  <span className="font-serif font-black text-sm text-[#C89B3C]">
+                    {formatPrice(kind === "rental" ? viewingTarget.totalAmount : viewingTarget.salePrice)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Payment Details */}
+              {viewingTarget.transaction?.payments?.[0] && (
+                <div className="p-3 bg-white rounded-xl border border-[#E8E1D4] space-y-2 text-[11px]">
+                  <h5 className="font-bold text-[#07111F] text-xs">Payment Verification Data</h5>
+                  <div className="flex justify-between">
+                    <span className="text-[#6B7280]">Method:</span>
+                    <span className="font-bold text-[#07111F]">{viewingTarget.transaction.payments[0].paymentMethod}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#6B7280]">Transaction Reference:</span>
+                    <span className="font-mono font-bold text-[#8C6D23]">{viewingTarget.transaction.payments[0].transactionRef}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#6B7280]">Payment Status:</span>
+                    <span className="font-bold text-[#07111F]">
+                      {viewingTarget.transaction.payments[0].status === "PAID"
+                        ? "PAID / VERIFIED"
+                        : viewingTarget.transaction.payments[0].status === "PENDING"
+                        ? "PENDING VERIFICATION"
+                        : viewingTarget.transaction.payments[0].status}
+                    </span>
+                  </div>
+                  {viewingTarget.transaction.payments[0].paidAt && (
+                    <div className="flex justify-between">
+                      <span className="text-[#6B7280]">Verified At:</span>
+                      <span className="text-[#07111F]">{new Date(viewingTarget.transaction.payments[0].paidAt).toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Review notes / History */}
+              {viewingTarget.reviewNotes && (
+                <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px]">
+                  <span className="font-bold text-amber-900 block mb-0.5">Manager Review Notes:</span>
+                  <p className="text-amber-800 italic">&ldquo;{viewingTarget.reviewNotes}&rdquo;</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="mt-2">
+            <Button variant="outline" onClick={() => setViewingTarget(null)} className="rounded-xl border-[#E8E1D4]">
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Reject dialog */}
       <Dialog open={!!rejecting} onOpenChange={(o) => !o && setRejecting(null)}>

@@ -148,8 +148,8 @@ export default async function AdminPropertiesPage({
                       </td>
                       <td className="px-4 py-3.5">
                         <p className="text-[11px] text-[#A97918] uppercase tracking-wide font-bold">{getPropertyTypeLabel(p.type)}</p>
-                        <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                          p.listingType === "FOR_RENT" ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-800"
+                        <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-extrabold ${
+                          p.listingType === "FOR_RENT" ? "bg-gradient-to-r from-[#D9A336] via-[#E8B849] to-[#C99126] text-[#07111F] border border-[#E8B849]/70 shadow-xs" : "bg-[#07111F] text-[#D9B45B] border border-[#C89B3C]/40"
                         }`}>
                           {p.listingType === "FOR_RENT" ? "FOR RENT" : "FOR SALE"}
                         </span>

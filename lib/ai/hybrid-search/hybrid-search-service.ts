@@ -142,7 +142,9 @@ export async function executeHybridSearch(
   } else if (role === "USER" && userId) {
     baseWhere.status = "APPROVED";
   } else {
-    baseWhere.status = "APPROVED";
+    baseWhere.status = { in: ["APPROVED", "PUBLISHED"] };
+    baseWhere.availabilityStatus = "AVAILABLE";
+    baseWhere.isActive = true;
   }
 
   // 3. Build Structured SQL Where Clause from Hard Constraints

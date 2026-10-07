@@ -92,6 +92,13 @@ export default async function AdminPage() {
     paymentsThisYear,
     recentPropertiesList,
     recentCustomersList,
+    totalRentals,
+    pendingRentals,
+    activeRentals,
+    completedRentals,
+    rejectedRentals,
+    paymentPendingRentals,
+    paymentPaidRentals,
   ] = await Promise.all([
     // 1. Total Properties
     prisma.property.count(),
@@ -142,6 +149,14 @@ export default async function AdminPage() {
       orderBy: { createdAt: "desc" },
       take: 5,
     }),
+    // Section 14 Rental Bookings & Payment Metrics
+    prisma.rentalRequest.count(),
+    prisma.rentalRequest.count({ where: { status: { in: ["PENDING", "UNDER_REVIEW"] } } }),
+    prisma.rentalRequest.count({ where: { status: "ACTIVE" } }),
+    prisma.rentalRequest.count({ where: { status: { in: ["COMPLETED", "EXPIRED"] } } }),
+    prisma.rentalRequest.count({ where: { status: "REJECTED" } }),
+    prisma.payment.count({ where: { status: "PENDING" } }),
+    prisma.payment.count({ where: { status: "PAID" } }),
   ]);
 
   const totalRevenue = totalRevenueAgg._sum.amount || 0;
@@ -515,7 +530,78 @@ export default async function AdminPage() {
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
-          3. ANALYTICS (MONTHLY REVENUE & PROPERTY TYPES)
+          3. SECTION 14: RENTAL BOOKINGS & SETTLEMENT OVERSIGHT (ADMIN MONITORING)
+          ───────────────────────────────────────────────────────────── */}
+      <div className="bg-[#FCFBF7] rounded-2xl border border-[#E8E1D4] p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E8E1D4] pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#07111F] text-[#D9B45B] flex items-center justify-center shrink-0 border border-[#C89B3C]/30 shadow-xs">
+              <Key className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base sm:text-lg font-bold text-[#07111F] tracking-tight">
+                  Rental Bookings &amp; Tenancy Oversight
+                </h3>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#07111F] text-[#D9B45B]">
+                  Admin Monitoring Only
+                </span>
+              </div>
+              <p className="text-xs text-[#6B7280]">
+                Real-time platform metrics. Normal rental approvals belong exclusively to Property Managers.
+              </p>
+            </div>
+          </div>
+
+          <Link
+            href="/admin/bookings?tab=rentals"
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs hover:brightness-105 self-start sm:self-auto cursor-pointer"
+          >
+            View All Rental Bookings <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+          <div className="bg-white p-3.5 rounded-xl border border-[#E8E1D4]">
+            <span className="text-[10px] font-bold uppercase text-[#6B7280] block">Total Rentals</span>
+            <span className="text-xl font-black text-[#07111F] mt-1 block">{totalRentals}</span>
+            <span className="text-[10px] text-[#A97918] font-medium">All recorded</span>
+          </div>
+          <div className="bg-white p-3.5 rounded-xl border border-amber-200 bg-amber-50/20">
+            <span className="text-[10px] font-bold uppercase text-amber-800 block">Pending Rentals</span>
+            <span className="text-xl font-black text-amber-900 mt-1 block">{pendingRentals}</span>
+            <span className="text-[10px] text-amber-700 font-medium">Under Review</span>
+          </div>
+          <div className="bg-white p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/20">
+            <span className="text-[10px] font-bold uppercase text-emerald-800 block">Active Rentals</span>
+            <span className="text-xl font-black text-emerald-900 mt-1 block">{activeRentals}</span>
+            <span className="text-[10px] text-emerald-700 font-medium">Live Leases</span>
+          </div>
+          <div className="bg-white p-3.5 rounded-xl border border-[#E8E1D4]">
+            <span className="text-[10px] font-bold uppercase text-[#6B7280] block">Completed Rentals</span>
+            <span className="text-xl font-black text-[#07111F] mt-1 block">{completedRentals}</span>
+            <span className="text-[10px] text-[#6B7280] font-medium">Finished</span>
+          </div>
+          <div className="bg-white p-3.5 rounded-xl border border-red-200 bg-red-50/20">
+            <span className="text-[10px] font-bold uppercase text-red-800 block">Rejected Rentals</span>
+            <span className="text-xl font-black text-red-900 mt-1 block">{rejectedRentals}</span>
+            <span className="text-[10px] text-red-700 font-medium">Declined</span>
+          </div>
+          <div className="bg-white p-3.5 rounded-xl border border-amber-200 bg-amber-50/20">
+            <span className="text-[10px] font-bold uppercase text-amber-800 block">Payment Pending</span>
+            <span className="text-xl font-black text-amber-900 mt-1 block">{paymentPendingRentals}</span>
+            <span className="text-[10px] text-amber-700 font-medium">Verification</span>
+          </div>
+          <div className="bg-white p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/20">
+            <span className="text-[10px] font-bold uppercase text-emerald-800 block">Payment Paid</span>
+            <span className="text-xl font-black text-emerald-900 mt-1 block">{paymentPaidRentals}</span>
+            <span className="text-[10px] text-emerald-700 font-medium">Settled / Verified</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────────
+          4. ANALYTICS (MONTHLY REVENUE & PROPERTY TYPES)
           ───────────────────────────────────────────────────────────── */}
       <AdminCharts
         monthlyRevenue={monthlyRevenue}

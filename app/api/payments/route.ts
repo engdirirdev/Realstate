@@ -40,8 +40,15 @@ export async function GET(request: NextRequest) {
       prisma.payment.findMany({
         where: filterWhere,
         include: {
-          property: { select: { id: true, title: true, city: true } },
-          customer: { select: { id: true, name: true, email: true } },
+          property: {
+            select: {
+              id: true,
+              title: true,
+              city: true,
+              images: { take: 1, orderBy: { order: "asc" }, select: { url: true } },
+            },
+          },
+          customer: { select: { id: true, name: true, email: true, phone: true } },
           manager: { select: { id: true, name: true, email: true } },
           booking: { select: { id: true, status: true, totalPrice: true } },
           receipt: { select: { id: true, receiptNo: true } },
@@ -57,7 +64,7 @@ export async function GET(request: NextRequest) {
           })
         : Promise.resolve(null),
       prisma.transaction.count({
-        where: role === "USER" ? { managerId: userId } : role === "ADMIN" ? {} : { customerId: userId },
+        where: role === "USER" ? { managerId: userId, type: "RENTAL" } : role === "ADMIN" ? {} : { customerId: userId },
       }),
     ]);
 

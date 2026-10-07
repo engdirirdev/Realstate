@@ -9,29 +9,56 @@ interface HeroSearchBarProps {
   className?: string;
 }
 
+interface CategoryOption {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+function mapCategoryToPropertyType(name: string, slug?: string): string {
+  const s = `${slug || ""} ${name}`.toLowerCase();
+  if (s.includes("apartment") || s.includes("flat") || s.includes("condo") || s.includes("penthouse")) return "APARTMENT";
+  if (s.includes("villa") || s.includes("estate") || s.includes("mansion")) return "VILLA";
+  if (s.includes("land") || s.includes("plot") || s.includes("farm") || s.includes("acre")) return "LAND";
+  if (s.includes("office")) return "OFFICE";
+  if (s.includes("warehouse") || s.includes("depot") || s.includes("storage") || s.includes("industrial") || s.includes("logistics")) return "WAREHOUSE";
+  if (s.includes("shop") || s.includes("retail") || s.includes("store") || s.includes("mall")) return "SHOP";
+  if (s.includes("commercial") || s.includes("business") || s.includes("plaza")) return "COMMERCIAL";
+  if (s.includes("townhouse")) return "TOWNHOUSE";
+  if (s.includes("studio")) return "STUDIO";
+  if (s.includes("house") || s.includes("home") || s.includes("residential")) return "HOUSE";
+  return "OTHER";
+}
+
 export default function HeroSearchBar({ className }: HeroSearchBarProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"BUY" | "RENT" | "SELL" | "COMMERCIAL">("BUY");
   const [location, setLocation] = useState("");
   const [propertyType, setPropertyType] = useState("");
   const [priceRange, setPriceRange] = useState("");
-  const [cities, setCities] = useState<string[]>([
-    "Mogadishu", "Hargeisa", "Bosaso", "Garowe", "Kismayo", "Berbera", "Baydhabo"
-  ]);
+  const [cities, setCities] = useState<string[]>([]);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
 
   useEffect(() => {
-    async function loadCities() {
+    async function loadData() {
       try {
-        const res = await fetch("/api/locations");
-        const data = await res.json();
-        if (data.success && Array.isArray(data.cities) && data.cities.length > 0) {
-          setCities(data.cities);
+        const [locRes, catRes] = await Promise.all([
+          fetch("/api/locations"),
+          fetch("/api/categories"),
+        ]);
+        const locData = await locRes.json();
+        const catData = await catRes.json();
+        if (locData.success && Array.isArray(locData.cities)) {
+          setCities(locData.cities);
+        }
+        if (catData.success && Array.isArray(catData.categories)) {
+          setCategories(catData.categories);
         }
       } catch (err) {
-        console.error("Failed to load cities", err);
+        console.error("Failed to load search options", err);
       }
     }
-    loadCities();
+    loadData();
   }, []);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -120,13 +147,12 @@ export default function HeroSearchBar({ className }: HeroSearchBarProps) {
             onChange={(e) => setPropertyType(e.target.value)}
             className="w-full h-11 px-3 rounded-xl border border-[#E8E1D4] bg-[#FCFBF7] text-xs sm:text-sm text-[#07111F] focus:outline-none focus:border-[#C89B3C] focus:ring-1 focus:ring-[#C89B3C] transition-colors"
           >
-            <option value="ALL">All Types</option>
-            <option value="VILLA">Luxury Villa</option>
-            <option value="APARTMENT">Modern Apartment</option>
-            <option value="HOUSE">Family House</option>
-            <option value="OFFICE">Office Space</option>
-            <option value="LAND">Land Plot</option>
-            <option value="COMMERCIAL">Commercial Building</option>
+            <option value="ALL">All Categories</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={mapCategoryToPropertyType(cat.name, cat.slug)}>
+                {cat.name}
+              </option>
+            ))}
           </select>
         </div>
 

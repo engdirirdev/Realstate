@@ -47,6 +47,7 @@ export default function CustomerHeader({
       <div className="flex items-center gap-3 sm:gap-4">
         <Link
           href="/"
+          prefetch={false}
           className="hidden md:inline-flex items-center gap-1.5 text-xs font-semibold text-[#07111F] hover:text-[#C89B3C] bg-[#FCFBF7] hover:bg-[#F7F3EA] border border-[#E8E1D4] px-3 py-1.5 rounded-xl transition-colors"
         >
           <ExternalLink className="h-3.5 w-3.5 text-[#C89B3C]" />
@@ -56,6 +57,7 @@ export default function CustomerHeader({
         {/* Notifications */}
         <Link
           href="/customer/notifications"
+          prefetch={false}
           className="relative p-2.5 text-[#07111F] hover:text-[#C89B3C] hover:bg-[#F7F3EA] rounded-xl border border-[#E8E1D4] transition-colors"
           title="Notifications"
         >

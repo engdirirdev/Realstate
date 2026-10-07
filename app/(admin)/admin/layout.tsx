@@ -57,6 +57,7 @@ export default async function AdminLayout({
 
             <Link
               href="/admin/settings"
+              prefetch={false}
               className="text-[#D9A336] hover:text-white p-1 transition-colors shrink-0"
               title="Settings"
             >
@@ -69,7 +70,7 @@ export default async function AdminLayout({
       </aside>
 
       {/* ─── Main Content Area (Warm Cream #F5EFEB) ─── */}
-      <div className="lg:ml-64 flex-1 flex flex-col min-h-screen bg-[#F5EFEB]">
+      <div className="lg:ml-64 flex-1 flex flex-col min-h-screen min-w-0 bg-[#F5EFEB]">
         <AdminHeader
           userName={session.user?.name}
           userEmail={session.user?.email}
@@ -77,7 +78,7 @@ export default async function AdminLayout({
           unreadCount={unreadCount || 5}
         />
 
-        <main className="flex-1 p-5 sm:p-7 lg:p-8 bg-[#F5EFEB]">
+        <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 bg-[#F5EFEB]">
           {children}
         </main>
       </div>

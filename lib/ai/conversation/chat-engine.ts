@@ -139,8 +139,15 @@ async function executePropertySearchTool(
   responseType: ResponseType;
 }> {
   const searchFilter: any = {
-    status: "APPROVED",
+    status: { in: ["APPROVED", "PUBLISHED"] },
+    availabilityStatus: "AVAILABLE",
+    isActive: true,
   };
+
+  const listingType = (toolArgs as any).listingType || (state.slots as any).listingType;
+  if (listingType && ["FOR_RENT", "FOR_SALE"].includes(String(listingType).toUpperCase())) {
+    searchFilter.listingType = String(listingType).toUpperCase();
+  }
 
   const targetCity = toolArgs.city || state.slots.city;
   if (targetCity) {

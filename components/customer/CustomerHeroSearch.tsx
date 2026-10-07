@@ -7,6 +7,7 @@ import { Search } from "lucide-react";
 export default function CustomerHeroSearch() {
   const router = useRouter();
   const [dealType, setDealType] = useState<"BUY" | "RENT">("BUY");
+  const [keyword, setKeyword] = useState("");
   const [city, setCity] = useState("");
   const [propertyType, setPropertyType] = useState("");
   const [priceRange, setPriceRange] = useState("");
@@ -14,21 +15,32 @@ export default function CustomerHeroSearch() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const params = new URLSearchParams();
-    if (dealType === "RENT") params.set("type", "APARTMENT");
-    if (city) params.set("city", city);
+
+    // Strict listing type filter
+    params.set("listingType", dealType === "RENT" ? "FOR_RENT" : "FOR_SALE");
+
+    if (keyword.trim()) params.set("q", keyword.trim());
+    if (city && city !== "All Cities") params.set("city", city);
     if (propertyType) params.set("type", propertyType);
     if (priceRange) params.set("maxPrice", priceRange);
-    router.push(`/properties?${params.toString()}`);
+
+    router.push(`/customer/properties?${params.toString()}`);
   };
 
   return (
-    <form onSubmit={handleSearch} className="bg-[#FCFBF7]/95 backdrop-blur-md p-2.5 rounded-2xl shadow-xl border border-[#E8E1D4] flex flex-col md:flex-row items-center gap-2 max-w-2xl">
-      {/* Deal Type Switch */}
-      <div className="flex bg-[#F7F3EA] p-1 rounded-xl w-full md:w-auto">
+    <form
+      onSubmit={handleSearch}
+      className="bg-[#FCFBF7] p-2 sm:p-2.5 rounded-2xl shadow-xl border border-[#E8E1D4] flex flex-col md:flex-row items-stretch md:items-center gap-2 max-w-4xl"
+    >
+      {/* Deal Type Switch (Buy / Rent) */}
+      <div className="flex bg-[#F7F3EA] p-1 rounded-xl flex-shrink-0">
         <button
           type="button"
-          onClick={() => setDealType("BUY")}
-          className={`flex-1 md:flex-initial px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+          onClick={() => {
+            setDealType("BUY");
+            setPriceRange("");
+          }}
+          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             dealType === "BUY"
               ? "bg-gradient-to-r from-[#C89B3C] to-[#D9B45B] text-[#07111F] shadow-xs"
               : "text-[#6B7280] hover:text-[#07111F]"
@@ -38,8 +50,11 @@ export default function CustomerHeroSearch() {
         </button>
         <button
           type="button"
-          onClick={() => setDealType("RENT")}
-          className={`flex-1 md:flex-initial px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+          onClick={() => {
+            setDealType("RENT");
+            setPriceRange("");
+          }}
+          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             dealType === "RENT"
               ? "bg-gradient-to-r from-[#C89B3C] to-[#D9B45B] text-[#07111F] shadow-xs"
               : "text-[#6B7280] hover:text-[#07111F]"
@@ -49,53 +64,84 @@ export default function CustomerHeroSearch() {
         </button>
       </div>
 
-      {/* Location */}
-      <div className="w-full md:flex-1 px-2 border-y md:border-y-0 md:border-l border-[#E8E1D4] py-1 md:py-0">
-        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#A97918]">Location</label>
+      {/* Keyword Search */}
+      <div className="flex-1 px-3 py-1 border-y md:border-y-0 md:border-l border-[#E8E1D4]">
+        <label className="block text-[9px] font-bold uppercase tracking-wider text-[#A97918]">
+          Keyword / Location
+        </label>
+        <input
+          type="text"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          placeholder="Search properties, areas..."
+          className="w-full bg-transparent text-xs font-semibold text-[#07111F] placeholder:text-[#94A3B8] focus:outline-hidden"
+        />
+      </div>
+
+      {/* City Dropdown */}
+      <div className="w-full md:w-36 px-3 py-1 border-y md:border-y-0 md:border-l border-[#E8E1D4]">
+        <label className="block text-[9px] font-bold uppercase tracking-wider text-[#A97918]">
+          City
+        </label>
         <select
           value={city}
           onChange={(e) => setCity(e.target.value)}
-          className="w-full bg-transparent text-xs font-bold text-[#07111F] focus:outline-hidden cursor-pointer"
+          className="w-full bg-transparent text-xs font-semibold text-[#07111F] focus:outline-hidden cursor-pointer"
         >
-          <option value="">Select location</option>
+          <option value="">All Cities</option>
           <option value="Mogadishu">Mogadishu</option>
           <option value="Hargeisa">Hargeisa</option>
-          <option value="Bosaso">Bosaso</option>
           <option value="Garowe">Garowe</option>
+          <option value="Bosaso">Bosaso</option>
           <option value="Kismayo">Kismayo</option>
         </select>
       </div>
 
-      {/* Property Type */}
-      <div className="w-full md:flex-1 px-2 border-y md:border-y-0 md:border-l border-[#E8E1D4] py-1 md:py-0">
-        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#A97918]">Property Type</label>
+      {/* Property Type Dropdown */}
+      <div className="w-full md:w-32 px-3 py-1 border-y md:border-y-0 md:border-l border-[#E8E1D4]">
+        <label className="block text-[9px] font-bold uppercase tracking-wider text-[#A97918]">
+          Type
+        </label>
         <select
           value={propertyType}
           onChange={(e) => setPropertyType(e.target.value)}
-          className="w-full bg-transparent text-xs font-bold text-[#07111F] focus:outline-hidden cursor-pointer"
+          className="w-full bg-transparent text-xs font-semibold text-[#07111F] focus:outline-hidden cursor-pointer"
         >
           <option value="">All Types</option>
-          <option value="HOUSE">House</option>
-          <option value="APARTMENT">Apartment</option>
           <option value="VILLA">Villa</option>
-          <option value="LAND">Land</option>
+          <option value="APARTMENT">Apartment</option>
+          <option value="HOUSE">House</option>
           <option value="COMMERCIAL">Commercial</option>
+          <option value="LAND">Land</option>
         </select>
       </div>
 
-      {/* Price Range */}
-      <div className="w-full md:flex-1 px-2 border-y md:border-y-0 md:border-l border-[#E8E1D4] py-1 md:py-0">
-        <label className="block text-[10px] font-bold uppercase tracking-wider text-[#A97918]">Price Range</label>
+      {/* Price Range Dropdown (Context-aware for Rent vs Buy) */}
+      <div className="w-full md:w-32 px-3 py-1 border-y md:border-y-0 md:border-l border-[#E8E1D4]">
+        <label className="block text-[9px] font-bold uppercase tracking-wider text-[#A97918]">
+          Price Range
+        </label>
         <select
           value={priceRange}
           onChange={(e) => setPriceRange(e.target.value)}
-          className="w-full bg-transparent text-xs font-bold text-[#07111F] focus:outline-hidden cursor-pointer"
+          className="w-full bg-transparent text-xs font-semibold text-[#07111F] focus:outline-hidden cursor-pointer"
         >
           <option value="">Any Price</option>
-          <option value="50000">Under $50k</option>
-          <option value="150000">Under $150k</option>
-          <option value="300000">Under $300k</option>
-          <option value="500000">Under $500k</option>
+          {dealType === "RENT" ? (
+            <>
+              <option value="300">Under $300/mo</option>
+              <option value="600">Under $600/mo</option>
+              <option value="1200">Under $1,200/mo</option>
+              <option value="2500">Under $2,500/mo</option>
+            </>
+          ) : (
+            <>
+              <option value="50000">Under $50,000</option>
+              <option value="100000">Under $100,000</option>
+              <option value="250000">Under $250,000</option>
+              <option value="500000">Under $500,000</option>
+            </>
+          )}
         </select>
       </div>
 

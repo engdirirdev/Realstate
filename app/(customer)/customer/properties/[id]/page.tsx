@@ -86,14 +86,6 @@ export default async function CustomerPropertyDetailPage({ params }: Props) {
           <ArrowLeft className="h-4 w-4" />
           <span>Back to Properties</span>
         </Link>
-
-        <Link
-          href={`/customer/compare?ids=${property.id}`}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-[#07111F] hover:text-[#C89B3C] bg-[#FCFBF7] px-3.5 py-2 rounded-xl border border-[#E8E1D4] hover:border-[#C89B3C] transition-colors shadow-2xs"
-        >
-          <Scale className="h-4 w-4 text-[#C89B3C]" />
-          <span>Compare this Property</span>
-        </Link>
       </div>
 
       {/* ─── Hero Overview Card ─── */}

@@ -80,6 +80,7 @@ export default function AdminHeader({
           {/* Public Website Button */}
           <Link
             href="/"
+            prefetch={false}
             target="_blank"
             className="hidden md:inline-flex items-center gap-1.5 text-xs font-semibold text-[#07111F] hover:text-[#C89B3C] bg-white hover:bg-[#F7F3EA] border border-[#E8E1D4] px-3.5 py-2 rounded-xl transition-all shadow-xs group"
           >
@@ -90,6 +91,7 @@ export default function AdminHeader({
           {/* Notifications Button */}
           <Link
             href="/admin/messages"
+            prefetch={false}
             className="relative p-2.5 text-[#07111F] hover:text-[#C89B3C] bg-white hover:bg-[#F7F3EA] rounded-xl border border-[#E8E1D4] transition-all shadow-xs"
             title="Notifications & Contact Inquiries"
           >
@@ -155,6 +157,7 @@ export default function AdminHeader({
               <DropdownMenuItem asChild>
                 <Link
                   href="/admin/properties"
+                  prefetch={false}
                   className="flex items-center gap-2.5 text-xs font-semibold text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl px-2.5 py-2 cursor-pointer transition-colors"
                 >
                   <Building2 className="h-4 w-4 text-[#C89B3C]" />
@@ -165,6 +168,7 @@ export default function AdminHeader({
               <DropdownMenuItem asChild>
                 <Link
                   href="/admin/settings"
+                  prefetch={false}
                   className="flex items-center gap-2.5 text-xs font-semibold text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl px-2.5 py-2 cursor-pointer transition-colors"
                 >
                   <Settings className="h-4 w-4 text-[#C89B3C]" />
@@ -175,6 +179,7 @@ export default function AdminHeader({
               <DropdownMenuItem asChild>
                 <Link
                   href="/admin/audit-logs"
+                  prefetch={false}
                   className="flex items-center gap-2.5 text-xs font-semibold text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl px-2.5 py-2 cursor-pointer transition-colors"
                 >
                   <Shield className="h-4 w-4 text-[#C89B3C]" />
@@ -185,6 +190,7 @@ export default function AdminHeader({
               <DropdownMenuItem asChild>
                 <Link
                   href="/"
+                  prefetch={false}
                   target="_blank"
                   className="flex items-center gap-2.5 text-xs font-semibold text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl px-2.5 py-2 cursor-pointer transition-colors"
                 >

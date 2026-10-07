@@ -10,23 +10,28 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { formatPrice } from "@/lib/utils";
 import {
   ConversationState,
   ResultItem,
   ExtendedLanguage,
   ResponseType,
+  ReferenceResolution,
 } from "./types";
 import { detectConversationalLanguage } from "./language-manager";
 import {
   initializeConversationState,
   validatePropertyAgainstQuery,
+  attachActiveResultSet,
 } from "./state-manager";
 import { generateGroundedAIDAResponse } from "../orchestration/response-generator";
 import { validateGrounding } from "../orchestration/grounding-validator";
 import {
   geminiProvider,
   GeminiPropertySearchArgs,
+  GeminiConversationalDecision,
 } from "../providers/gemini-provider";
+import { openAIProvider } from "../providers/openai-provider";
 
 export interface ProcessTurnInput {
   sessionId: string;
@@ -188,15 +193,18 @@ async function executePropertySearchTool(
   // Execute database search with hard constraint filters
   let matchedProps: any[] = [];
   try {
-    matchedProps = await prisma.property.findMany({
-      where: searchFilter,
-      include: {
-        images: { orderBy: { order: "asc" }, take: 1 },
-        manager: { select: { name: true } },
-      },
-      take: 20,
-      orderBy: { createdAt: "desc" },
-    });
+    matchedProps = await Promise.race([
+      prisma.property.findMany({
+        where: searchFilter,
+        include: {
+          images: { orderBy: { order: "asc" }, take: 1 },
+          manager: { select: { name: true } },
+        },
+        take: 20,
+        orderBy: { createdAt: "desc" },
+      }),
+      new Promise<any[]>((resolve) => setTimeout(() => resolve([]), 800)),
+    ]);
   } catch {
     matchedProps = [];
   }
@@ -337,15 +345,52 @@ export async function processConversationalTurn(
   }
   state.language = activeLanguage;
 
-  // 3. GEMINI 3.8 FLASH IS THE SOLE CONVERSATIONAL & NATURAL LANGUAGE AUTHORITY
-  // Raw user message reaches Gemini with full history, context data, and active property inventory.
-  const geminiDecision = await geminiProvider.decideConversationalAction({
+  // 3. AI PROVIDER STRATEGY: GEMINI 3.8 FLASH (PRIMARY) -> OPENAI GPT-6 LUNA (FALLBACK) -> TECHNICAL NOTICE (LAST RESORT)
+  const turnContext = {
     userMessage: message,
     conversationHistory: history.map((h) => ({ role: h.role, content: h.content })),
     contextSlots: state.slots,
     activeResultSet: state.activeResultSet,
     preferredLanguage: activeLanguage,
-  });
+  };
+
+  let activeDecision: GeminiConversationalDecision | null = null;
+
+  // Attempt Primary Provider: Gemini 3.8 Flash
+  try {
+    const geminiDecision = await geminiProvider.decideConversationalAction(turnContext);
+    if (geminiDecision.success) {
+      activeDecision = geminiDecision;
+    } else {
+      console.warn(`[AIDA][AI] Gemini failed: ${geminiDecision.error || "decision unsuccessful"}`);
+    }
+  } catch (err: any) {
+    console.warn(`[AIDA][AI] Gemini failed with exception: ${err?.message || "error"}`);
+  }
+
+  // Attempt Secondary Fallback Provider: OpenAI GPT-6 Luna only when Gemini fails
+  if (!activeDecision && openAIProvider.isConfigured()) {
+    console.log("[AIDA][AI] Falling back to OpenAI GPT-6 Luna");
+    try {
+      const openAIDecision = await openAIProvider.decideConversationalAction(turnContext);
+      if (openAIDecision.success) {
+        activeDecision = openAIDecision;
+        console.log("[AIDA][AI] OpenAI fallback succeeded");
+      } else {
+        console.warn(`[AIDA][AI] OpenAI fallback failed: ${openAIDecision.error || "decision unsuccessful"}`);
+      }
+    } catch (err: any) {
+      console.warn(`[AIDA][AI] OpenAI fallback failed with exception: ${err?.message || "error"}`);
+    }
+  }
+
+  // Last Resort: If both providers fail, use safe generic technical notice
+  if (!activeDecision) {
+    console.warn("[AIDA][AI] Both Gemini and OpenAI failed. Using safe generic technical fallback.");
+    activeDecision = geminiProvider.safeGenericTechnicalFallback(turnContext, Date.now());
+  }
+
+  const conversationalDecision = activeDecision;
 
   let reply = "";
   let returnedProperties: ResultItem[] = [];
@@ -353,9 +398,9 @@ export async function processConversationalTurn(
   let responseType: ResponseType = "GENERAL_CONVERSATION";
   let shouldRenderPropertyCards = false;
 
-  // 4. Update Conversation State as Pure Data from Gemini's understanding
-  if (geminiDecision.contextUpdates) {
-    const cu = geminiDecision.contextUpdates;
+  // 4. Update Conversation State as Pure Data from AI's understanding
+  if (conversationalDecision.contextUpdates) {
+    const cu = conversationalDecision.contextUpdates;
     if (cu.city !== undefined) state.slots.city = cu.city;
     if (cu.district !== undefined) state.slots.district = cu.district;
     if (cu.maxPrice !== undefined) state.slots.maxPrice = cu.maxPrice;
@@ -387,13 +432,13 @@ export async function processConversationalTurn(
     }
   }
 
-  // 5. Handle Gemini Decision: Tool Call vs. Text Response
-  if (geminiDecision.type === "TOOL_CALL" && geminiDecision.toolCall && geminiDecision.toolCall.name === "search_properties") {
+  // 5. Handle AI Decision: Tool Call vs. Text Response
+  if (conversationalDecision.type === "TOOL_CALL" && conversationalDecision.toolCall && conversationalDecision.toolCall.name === "search_properties") {
     // -------------------------------------------------------------------------
-    // GEMINI TOOL CALL: search_properties
-    // Gemini decided that verified property inventory is needed to answer.
+    // AI TOOL CALL: search_properties
+    // AI decided that verified property inventory is needed to answer.
     // -------------------------------------------------------------------------
-    const toolArgs = geminiDecision.toolCall.args;
+    const toolArgs = conversationalDecision.toolCall.args;
 
     // Sync state slots with tool arguments
     if (toolArgs.city) state.slots.city = toolArgs.city;
@@ -427,7 +472,7 @@ export async function processConversationalTurn(
       state = attachActiveResultSet(state, returnedProperties);
     }
 
-    // Return verified database results to Gemini to generate the grounded natural response
+    // Return verified database results to AI to generate the grounded natural response
     const fallbackReply = returnedProperties.length > 0
       ? (toolArgs.prioritizeBest || message.includes("ugu fiican")
           ? `Waxaan kuu helay guryaha ugu fiican ee ku jira miisaaniyaddaada ($${state.slots.maxPrice || 500}). Halkan ka eeg xulashooyinka ugu dhow shuruudahaaga:`
@@ -453,23 +498,23 @@ export async function processConversationalTurn(
     reply = groundedAI?.replyText || fallbackReply;
   } else {
     // -------------------------------------------------------------------------
-    // GEMINI TEXT RESPONSE
-    // Gemini decided NO tool call is needed (greetings, advice, preferences,
+    // AI TEXT RESPONSE
+    // AI decided NO tool call is needed (greetings, advice, preferences,
     // casual chat, in-set property questions).
     // ZERO MySQL / Prisma queries executed!
     // -------------------------------------------------------------------------
-    reply = geminiDecision.replyText || "";
+    reply = conversationalDecision.replyText || "";
     returnedProperties = [];
     totalMatches = 0;
     shouldRenderPropertyCards = false;
 
-    if (!geminiDecision.contextUpdates?.responseType) {
+    if (!conversationalDecision.contextUpdates?.responseType) {
       const lower = message.toLowerCase();
       if (lower.match(/^(asc|salaam|hello|hi|hey|assalamu|nabad)\b/i)) {
         responseType = "GREETING";
       } else if (lower.includes("ku fiican") || lower.includes("advice") || lower.includes("talo")) {
         responseType = "ADVICE";
-      } else if (geminiDecision.contextUpdates && Object.keys(geminiDecision.contextUpdates).length > 0) {
+      } else if (conversationalDecision.contextUpdates && Object.keys(conversationalDecision.contextUpdates).length > 0) {
         responseType = "REQUIREMENT_UPDATE";
       } else {
         responseType = "GENERAL_CONVERSATION";

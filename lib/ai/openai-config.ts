@@ -9,14 +9,15 @@
 export const OPENAI_CONFIG = {
   /**
    * Primary Chat & Understanding Model
-   * Uses gpt-4o-mini by default (fast, cost-effective, excellent multilingual & Structured Outputs).
+   * Configured as gpt-6-luna (secondary fallback provider for AIDA).
    * Can be overridden at runtime via OPENAI_MODEL in .env
    */
-  CHAT_MODEL: process.env.OPENAI_MODEL || "gpt-4o-mini",
+  CHAT_MODEL: process.env.OPENAI_MODEL || "gpt-6-luna",
 
   /**
    * Timeouts in milliseconds
    */
+  CHAT_TIMEOUT_MS: process.env.OPENAI_TIMEOUT_MS ? Number(process.env.OPENAI_TIMEOUT_MS) : 4000,
   UNDERSTANDING_TIMEOUT_MS: process.env.OPENAI_TIMEOUT_MS ? Number(process.env.OPENAI_TIMEOUT_MS) : 8500,
   GENERATION_TIMEOUT_MS: 8500,
 

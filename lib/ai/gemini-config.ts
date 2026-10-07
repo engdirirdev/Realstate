@@ -24,7 +24,7 @@ export const GEMINI_CONFIG = {
   /**
    * Maximum allowed response time before falling back to deterministic engine (milliseconds)
    */
-  CHAT_TIMEOUT_MS: process.env.GEMINI_TIMEOUT_MS ? Number(process.env.GEMINI_TIMEOUT_MS) : 8500,
+  CHAT_TIMEOUT_MS: process.env.GEMINI_TIMEOUT_MS ? Number(process.env.GEMINI_TIMEOUT_MS) : 4000,
   EMBEDDING_TIMEOUT_MS: 3500,
 
   /**

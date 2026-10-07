@@ -445,9 +445,9 @@ export default function AIChatbot() {
               ))}
 
               {loading && (
-                <div className="flex items-center gap-2 text-xs text-[#07111F] bg-[#FBF7EE] border border-[#E8DCC2] px-3.5 py-2.5 rounded-2xl w-max shadow-2xs animate-pulse">
-                  <Loader2 className="h-4 w-4 animate-spin text-[#C89B3C]" /> AI
-                  Assistant is searching database...
+                <div className="flex items-center gap-2.5 text-xs text-[#07111F] bg-[#FBF7EE] border border-[#E8DCC2] px-3.5 py-2.5 rounded-2xl w-max shadow-2xs">
+                  <Loader2 className="h-4 w-4 animate-spin text-[#C89B3C]" />
+                  <span className="font-medium text-slate-700">AIDA is thinking...</span>
                 </div>
               )}
 

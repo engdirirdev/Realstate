@@ -602,6 +602,11 @@ CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
       };
     } catch (err: any) {
       if (timer) clearTimeout(timer);
+      console.warn(`[GeminiProvider] ${this.model} API error:`, {
+        errorType: err?.name || "Error",
+        status: err?.status,
+        message: err?.message,
+      });
       return this.safeGenericTechnicalFallback(input, startTime, err?.message);
     }
   }

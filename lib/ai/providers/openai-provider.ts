@@ -22,6 +22,74 @@ import {
   AIStructuredUnderstanding,
   AI_UNDERSTANDING_JSON_SCHEMA,
 } from "./ai-provider";
+import {
+  GeminiConversationalTurnInput,
+  GeminiConversationalDecision,
+  GeminiContextUpdates,
+  GeminiPropertySearchArgs,
+} from "./gemini-provider";
+
+export const OPENAI_PROPERTY_SEARCH_TOOL: OpenAI.Chat.Completions.ChatCompletionTool = {
+  type: "function",
+  function: {
+    name: "search_properties",
+    description:
+      "Search verified Kiro-Maal property listings in the database. Use this tool when verified property inventory is needed to answer the user's request. Do not invent property information.",
+    parameters: {
+      type: "object",
+      properties: {
+        city: {
+          type: "string",
+          description: "City to search in, e.g. Mogadishu, Hargeisa, Kismayo.",
+        },
+        district: {
+          type: "string",
+          description: "Specific neighborhood or district, e.g. Wadajir, Hodan, Waberi.",
+        },
+        purpose: {
+          type: "string",
+          enum: ["RENT", "SALE"],
+          description: "Listing purpose: 'RENT' or 'SALE'.",
+        },
+        propertyType: {
+          type: "string",
+          enum: ["APARTMENT", "HOUSE", "VILLA", "COMMERCIAL", "LAND"],
+          description: "Property type: APARTMENT, HOUSE, VILLA, COMMERCIAL, or LAND.",
+        },
+        minPrice: {
+          type: "number",
+          description: "Minimum price or budget in USD.",
+        },
+        maxPrice: {
+          type: "number",
+          description: "Maximum budget or price in USD.",
+        },
+        preferredBedrooms: {
+          type: "array",
+          items: {
+            type: "number",
+          },
+          description: "Preferred or acceptable bedroom counts, e.g. [3, 2].",
+        },
+        excludedLocations: {
+          type: "array",
+          items: {
+            type: "string",
+          },
+          description: "Districts or areas explicitly rejected or excluded by the user (e.g. ['Hodan']).",
+        },
+        proximity: {
+          type: "string",
+          description: "Workplace or landmark proximity preference (e.g. KM4).",
+        },
+        prioritizeBest: {
+          type: "boolean",
+          description: "True if user asked for the best matching property for their budget and preferences.",
+        },
+      },
+    },
+  },
+};
 
 export class OpenAIProvider implements AIProvider {
   public readonly id = "openai" as const;
@@ -34,6 +102,10 @@ export class OpenAIProvider implements AIProvider {
 
   public isConfigured(): boolean {
     return isOpenAIConfigured();
+  }
+
+  public setMockClient(mockClient: any): void {
+    this.client = mockClient;
   }
 
   private getClient(): OpenAI | null {
@@ -286,6 +358,181 @@ STRICT GROUNDING & ANTI-HALLUCINATION RULES:
         model: this.model,
         latencyMs,
         replyText: "",
+        success: false,
+        error: errorMsg,
+      };
+    }
+  }
+
+  /**
+   * OpenAI Conversational Action & Tool-Decision Authority (Secondary Fallback)
+   *
+   * When Gemini 3.8 Flash is unavailable, OpenAI GPT-6 Luna serves as the reliable fallback,
+   * receiving the exact same context (slots, recent history, active properties) and evaluating
+   * whether to invoke `search_properties` tool or respond directly with text.
+   */
+  public async decideConversationalAction(
+    input: GeminiConversationalTurnInput
+  ): Promise<GeminiConversationalDecision> {
+    const startTime = Date.now();
+    const client = this.getClient();
+
+    if (!client) {
+      return {
+        type: "TEXT_RESPONSE",
+        replyText: "",
+        latencyMs: 0,
+        model: this.model,
+        success: false,
+        error: "OPENAI_API_KEY_NOT_CONFIGURED",
+      };
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => {
+      controller.abort();
+    }, OPENAI_CONFIG.CHAT_TIMEOUT_MS);
+
+    try {
+      const systemPrompt = `You are OpenAI GPT-6 Luna, serving as AIDA — the conversational AI Real Estate Assistant for Kiro-Maal in Somalia.
+
+CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
+1. You are the conversational and natural language understanding authority when acting as AIDA.
+2. Converse warmly, professionally, and politely in Somali, English, or Arabic.
+3. You natively understand:
+   - Natural, colloquial, and imperfect Somali (e.g. "kirro", "dabaq", "qolal jiif", "reer").
+   - Code-switching and mixed languages (e.g. "3 bedroom apartment oo furnished ah").
+   - Negations: "Hodan ma rabo" means Hodan is EXCLUDED/REJECTED.
+   - Corrections: "Maya, Wadajir ayaan rabaa" updates the preferred location to Wadajir.
+   - Soft preferences: "3 qol haddii la helo waa fiican tahay laakiin khasab ma aha" means 3 bedrooms is preferred, but 2 is acceptable.
+   - Workplace proximity: "KM4 ayaan ka shaqeeyaa" is proximity context.
+   - Short answers: "$400", "3 qol", "Hodan".
+   - Questions about previously returned properties (e.g. "Kan labaad ma furnished baa?", "Parking ma leeyahay?").
+4. TOOLS:
+   - You have the tool: 'search_properties'.
+   - CALL 'search_properties' ONLY when the user explicitly requests to search, find, or view properties (e.g. "ii raadi kan ugu fiican", "find properties", "keen guryo", "waxaan rabaa guri...").
+   - DO NOT call any tool for greetings, general conversation, advice questions, expressing preferences, budget statements, or inquiries about already displayed properties. Answer those with natural conversational text!
+5. When responding with text, if the user mentioned new criteria, preferences, or constraints during this turn, or if answering an inquiry about a property, append a JSON block at the very end:
+\`\`\`context
+{"city":"...","district":"...","maxPrice":...,"minPrice":...,"bedrooms":...,"propertyType":"...","purpose":"...","excludedLocations":[...],"softPreferences":[...],"responseType":"GREETING|ADVICE|REQUIREMENT_UPDATE|PROPERTY_DETAIL|GENERAL_CONVERSATION"}
+\`\`\`
+6. STRICT TRUTH: Never invent properties, prices, or listings.`;
+
+      const historyMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = (input.conversationHistory || []).slice(-16).map((h) => ({
+        role: h.role === "assistant" ? ("assistant" as const) : ("user" as const),
+        content: h.content,
+      }));
+
+      let promptText = input.userMessage;
+      const ctx: string[] = [];
+      if (input.contextSlots && Object.keys(input.contextSlots).length > 0) {
+        if (input.contextSlots.city) ctx.push(`City: ${input.contextSlots.city}`);
+        if (input.contextSlots.district) ctx.push(`District: ${input.contextSlots.district}`);
+        if (input.contextSlots.maxPrice) ctx.push(`Budget: $${input.contextSlots.maxPrice}`);
+        if (input.contextSlots.purpose) ctx.push(`Purpose: ${input.contextSlots.purpose}`);
+        if (input.contextSlots.propertyType) ctx.push(`Type: ${input.contextSlots.propertyType}`);
+        if (input.contextSlots.bedrooms) ctx.push(`Bedrooms: ${input.contextSlots.bedrooms}`);
+        if (input.contextSlots.excludedLocations && input.contextSlots.excludedLocations.length > 0) {
+          ctx.push(`Excluded: ${input.contextSlots.excludedLocations.join(", ")}`);
+        }
+        if (input.contextSlots.softPreferences && input.contextSlots.softPreferences.length > 0) {
+          ctx.push(`Soft Preferences: ${input.contextSlots.softPreferences.join(", ")}`);
+        }
+        if (input.contextSlots.userReasoning && input.contextSlots.userReasoning.length > 0) {
+          ctx.push(`Reasoning/Workplace: ${input.contextSlots.userReasoning.join(", ")}`);
+        }
+      }
+      if (input.activeResultSet && input.activeResultSet.length > 0) {
+        const propSummaries = input.activeResultSet.slice(0, 5).map((p, idx) =>
+          `#${p.rank || idx + 1} ID:${p.id} ${p.title} (${p.city || ''}${p.location ? ', ' + p.location : ''}) $${p.price} | Beds:${p.bedrooms ?? 'N/A'} | Furnished:${p.furnished === true ? 'Yes' : p.furnished === false ? 'No' : 'Unknown'} | Parking:${p.parking === true ? 'Yes' : p.parking === false ? 'No' : 'Unknown'}`
+        ).join("; ");
+        ctx.push(`Active Properties: [${propSummaries}]`);
+      }
+
+      if (ctx.length > 0) {
+        promptText = `[KNOWN CONVERSATION CONTEXT: ${ctx.join(" | ")}]\nUser Message: ${input.userMessage}`;
+      }
+
+      const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+        { role: "system", content: systemPrompt },
+        ...historyMessages,
+        { role: "user", content: promptText },
+      ];
+
+      const response = await client.chat.completions.create(
+        {
+          model: this.model,
+          temperature: 0.2,
+          messages,
+          tools: [OPENAI_PROPERTY_SEARCH_TOOL],
+        },
+        { signal: controller.signal }
+      );
+
+      clearTimeout(timeout);
+      const latencyMs = Date.now() - startTime;
+      const choice = response.choices[0];
+      const toolCalls = choice?.message?.tool_calls;
+
+      if (
+        toolCalls &&
+        toolCalls.length > 0 &&
+        toolCalls[0].type === "function" &&
+        toolCalls[0].function?.name === "search_properties"
+      ) {
+        let parsedArgs: any = {};
+        try {
+          parsedArgs = JSON.parse(toolCalls[0].function.arguments || "{}");
+        } catch {
+          parsedArgs = {};
+        }
+        return {
+          type: "TOOL_CALL",
+          toolCall: {
+            name: "search_properties",
+            args: parsedArgs as GeminiPropertySearchArgs,
+          },
+          latencyMs,
+          model: this.model,
+          success: true,
+        };
+      }
+
+      let rawReply = choice?.message?.content?.trim() || "";
+      let contextUpdates: GeminiContextUpdates | undefined = undefined;
+
+      const contextMatch = rawReply.match(/```context\s*([\s\S]*?)\s*```/i) || rawReply.match(/\[CONTEXT_UPDATE:\s*([\s\S]*?)\]/i);
+      if (contextMatch) {
+        try {
+          contextUpdates = JSON.parse(contextMatch[1]);
+          rawReply = rawReply.replace(contextMatch[0], "").trim();
+        } catch {
+          // ignore parsing error
+        }
+      }
+
+      return {
+        type: "TEXT_RESPONSE",
+        replyText: rawReply,
+        contextUpdates,
+        latencyMs,
+        model: this.model,
+        success: rawReply.length > 0,
+      };
+    } catch (err: any) {
+      clearTimeout(timeout);
+      const latencyMs = Date.now() - startTime;
+      const isTimeout = err?.name === "AbortError" || controller.signal.aborted;
+      const errorMsg = isTimeout
+        ? `OpenAI tool decision timed out after ${OPENAI_CONFIG.CHAT_TIMEOUT_MS}ms`
+        : err?.message || "Unknown OpenAI error";
+
+      return {
+        type: "TEXT_RESPONSE",
+        replyText: "",
+        contextUpdates: undefined,
+        latencyMs,
+        model: this.model,
         success: false,
         error: errorMsg,
       };

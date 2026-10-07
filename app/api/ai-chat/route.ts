@@ -127,8 +127,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
-    // Authorization check: Only session owner (or public guest for guest session) can view history
-    if (chatSession.userId && userId && chatSession.userId !== userId) {
+    // Authorization check: Registered user sessions can only be accessed by the session owner
+    if (chatSession.userId && chatSession.userId !== userId) {
       return NextResponse.json({ error: "Access denied to this chat session." }, { status: 403 });
     }
 
@@ -193,81 +193,102 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Message exceeds 2,000 characters limit." }, { status: 400 });
     }
 
-    // 4. Session resolution and isolation check
+    // Helper for fast DB calls that never block chat response if DB is slow or unreachable
+    const withDbTimeout = async <T>(promise: Promise<T>, ms: number = 600, fallback: T): Promise<T> => {
+      let timer: NodeJS.Timeout | undefined;
+      const timeoutPromise = new Promise<T>((resolve) => {
+        timer = setTimeout(() => resolve(fallback), ms);
+      });
+      try {
+        return await Promise.race([promise, timeoutPromise]);
+      } catch {
+        return fallback;
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
+    };
+
+    // 4. Session resolution and isolation check with fast timeout
     let activeSessionId: string | null = null;
     if (requestedSessionId && typeof requestedSessionId === "string") {
-      const existingSession = await prisma.chatSession.findUnique({
-        where: { id: requestedSessionId },
-      });
+      const existingSession = await withDbTimeout(
+        prisma.chatSession.findUnique({
+          where: { id: requestedSessionId },
+        }),
+        600,
+        null
+      );
 
       if (existingSession) {
         // Enforce session ownership isolation:
-        // If session is owned by user A, user B (or another user) cannot write to or access it
-        if (existingSession.userId && userId && existingSession.userId !== userId) {
+        // Registered user sessions can only be accessed and modified by the session owner
+        if (existingSession.userId && existingSession.userId !== userId) {
           return NextResponse.json(
             { error: "Access denied to this chat session." },
             { status: 403 }
           );
         }
         activeSessionId = existingSession.id;
+      } else {
+        activeSessionId = requestedSessionId;
       }
     }
 
-    // Create a new persistent session if none exists
+    // Create a new persistent session if none exists (fast fallback if DB is slow)
     if (!activeSessionId) {
-      try {
-        const newSession = await prisma.chatSession.create({
+      const fallbackId = `session_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const newSession = await withDbTimeout(
+        prisma.chatSession.create({
           data: {
             userId: userId || null,
             title: message.slice(0, 45).trim() || "New Conversation",
           },
-        });
-        activeSessionId = newSession.id;
-      } catch (sessionErr: any) {
-        // Safe logging without crashing Next.js console serializer
-        console.warn("Could not persist ChatSession:", sessionErr?.message || "Unknown error");
-      }
+        }),
+        600,
+        null
+      );
+      activeSessionId = newSession?.id || fallbackId;
     }
 
-    // Persist USER message if session is active
+    // Persist USER message asynchronously in background (non-blocking)
     if (activeSessionId) {
-      await prisma.chatMessage.create({
+      prisma.chatMessage.create({
         data: {
           sessionId: activeSessionId,
           role: "user",
           content: message.trim(),
         },
-      }).catch((err) => console.error("Failed to persist user chat message:", err));
+      }).catch((err) => console.warn("Background user message save skipped:", err?.message));
     }
 
-    // 5. Fetch authentic historical session messages for sliding window multi-turn memory
-    const dbMessages = activeSessionId
-      ? await prisma.chatMessage.findMany({
+    // 5. Fast history resolution: use client-supplied history if available, else fetch DB messages with timeout
+    let historyToUse: { role: string; content: string; metadata?: string }[] = [];
+    if (Array.isArray(history) && history.length > 0) {
+      historyToUse = history.map((m: any) => ({
+        role: m.role,
+        content: m.content,
+        metadata: m.metadata || undefined,
+      }));
+    } else if (activeSessionId) {
+      const dbMessages = await withDbTimeout(
+        prisma.chatMessage.findMany({
           where: { sessionId: activeSessionId },
           orderBy: { createdAt: "asc" },
           take: 20,
-        })
-      : [];
-
-    // 6. Process conversational turn with full context continuity, entity memory, and multilingual support
-    const historyToUse = dbMessages.length > 1
-      ? dbMessages.map((m) => ({
-          role: m.role,
-          content: m.content,
-          metadata: m.metadata || undefined,
-        }))
-      : (Array.isArray(history) && history.length > 0)
-      ? history.map((m: any) => ({
-          role: m.role,
-          content: m.content,
-          metadata: m.metadata || undefined,
-        }))
-      : dbMessages.map((m) => ({
+        }),
+        600,
+        []
+      );
+      if (dbMessages && dbMessages.length > 0) {
+        historyToUse = dbMessages.map((m) => ({
           role: m.role,
           content: m.content,
           metadata: m.metadata || undefined,
         }));
+      }
+    }
 
+    // 6. Process conversational turn with full context continuity, entity memory, and multilingual support
     const turnResult = await processConversationalTurn({
       sessionId: activeSessionId ?? (typeof requestedSessionId === "string" && requestedSessionId ? requestedSessionId : `guest-${Date.now()}`),
       message: message.trim(),
@@ -279,28 +300,30 @@ export async function POST(request: NextRequest) {
 
     const finalReply = turnResult.reply;
 
-    // 7. Persist ASSISTANT message with full conversation state in metadata (authenticated sessions only)
-    if (activeSessionId) await prisma.chatMessage.create({
-      data: {
-        sessionId: activeSessionId,
-        role: "assistant",
-        content: finalReply,
-        metadata: JSON.stringify({
-          intent: turnResult.intent,
-          topic: turnResult.topic,
-          confidence: turnResult.confidence,
-          language: turnResult.language,
-          conversationLanguage: turnResult.conversationLanguage,
-          languageConfidence: turnResult.languageConfidence,
-          searchReadiness: turnResult.searchReadiness,
-          missingSlots: turnResult.missingSlots,
-          totalMatches: turnResult.totalMatches,
-          conversationState: turnResult.state,
-          propertyIds: turnResult.properties.map((p) => p.id),
-          resolution: turnResult.resolution,
-        }),
-      },
-    }).catch((err) => console.error("Failed to persist assistant chat message:", err));
+    // 7. Persist ASSISTANT message asynchronously in background (non-blocking for instant response)
+    if (activeSessionId) {
+      prisma.chatMessage.create({
+        data: {
+          sessionId: activeSessionId,
+          role: "assistant",
+          content: finalReply,
+          metadata: JSON.stringify({
+            intent: turnResult.intent,
+            topic: turnResult.topic,
+            confidence: turnResult.confidence,
+            language: turnResult.language,
+            conversationLanguage: turnResult.conversationLanguage,
+            languageConfidence: turnResult.languageConfidence,
+            searchReadiness: turnResult.searchReadiness,
+            missingSlots: turnResult.missingSlots,
+            totalMatches: turnResult.totalMatches,
+            conversationState: turnResult.state,
+            propertyIds: turnResult.properties.map((p) => p.id),
+            resolution: turnResult.resolution,
+          }),
+        },
+      }).catch((err) => console.warn("Background assistant message save skipped:", err?.message));
+    }
 
     return NextResponse.json({
       sessionId: activeSessionId,
@@ -325,7 +348,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error("AI chat error:", error?.message || String(error));
     return NextResponse.json(
-      { error: "Internal server error", reply: "Sorry, something went wrong while searching the database." },
+      { error: "Internal server error", reply: "Sorry, something went wrong while processing your request. Please try again." },
       { status: 500 }
     );
   }

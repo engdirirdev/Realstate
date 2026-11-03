@@ -12,6 +12,7 @@ import { SupportedLanguage } from "../language/detector";
 
 export interface HardConstraints {
   city?: string;
+  district?: string;
   propertyType?: string;
   bedrooms?: NumericConstraint;
   bathrooms?: NumericConstraint;
@@ -49,6 +50,11 @@ export function validateHardConstraints(constraints: HardConstraints): HardConst
   // 1. City validation
   if (constraints.city && VALID_CITIES.has(constraints.city)) {
     sanitized.city = constraints.city;
+  }
+
+  // 1b. District validation
+  if (constraints.district && typeof constraints.district === "string") {
+    sanitized.district = constraints.district.trim();
   }
 
   // 2. Property Type validation
@@ -129,6 +135,10 @@ export function classifyConstraints(
   // A. HARD CONSTRAINTS
   if (entities.city) {
     rawHard.city = entities.city;
+  }
+
+  if (entities.district) {
+    rawHard.district = entities.district;
   }
 
   if (entities.propertyType) {

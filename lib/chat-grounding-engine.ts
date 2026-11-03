@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { formatPrice, getPropertyTypeLabel } from "@/lib/utils";
 import { executeSemanticSearch } from "./ai/semantic-search/semantic-search-service";
+import { resolveLocation } from "./ai/nlu/location-resolver";
 
 export type ChatIntentType =
   | "GREETING"
@@ -8,6 +9,7 @@ export type ChatIntentType =
   | "PROPERTY_DETAILS"
   | "AVAILABILITY"
   | "BOOKING"
+  | "VALUATION"
   | "GENERAL_QUESTIONS"
   | "FOLLOW_UP";
 
@@ -17,6 +19,7 @@ export interface ParsedChatIntent {
   explanation: string;
   propertyIdentifier?: string; // Property ID or title reference
   city?: string;
+  district?: string;
   propertyType?: string;
   bedrooms?: number;
   bathrooms?: number;
@@ -92,24 +95,7 @@ const SOMALI_CITIES = [
   "baydhabo", "baidoa", "jowhar", "beledweyne", "burco", "burao"
 ];
 
-const CITY_NORMALIZATION: Record<string, string> = {
-  muqdisho: "Mogadishu",
-  mogadishu: "Mogadishu",
-  hargeysa: "Hargeisa",
-  hargeisa: "Hargeisa",
-  bosaaso: "Bosaso",
-  bosaso: "Bosaso",
-  garowe: "Garowe",
-  kismaayo: "Kismayo",
-  kismayo: "Kismayo",
-  gaalkacyo: "Galkayo",
-  galkayo: "Galkayo",
-  berbera: "Berbera",
-  baydhabo: "Baydhabo",
-  baidoa: "Baydhabo",
-  burco: "Burco",
-  burao: "Burco",
-};
+
 
 /**
  * STEP 1 — Precise Intent Classifier
@@ -124,11 +110,12 @@ export function classifyUserIntent(
   const greetingPhrases = [
     "hi", "hello", "hey", "good morning", "good afternoon", "good evening",
     "how are you", "what's up", "hey there", "hola", "asalaamu alaykum",
-    "assalamu alaykum", "subax wanaagsan", "galab wanaagsan", "iska warran"
+    "assalamu alaykum", "subax wanaagsan", "galab wanaagsan", "iska warran",
+    "asc", "s/c", "salaam", "nabad", "maxaa cusub"
   ];
   const isPureGreeting = greetingPhrases.some(
     (g) => text === g || text.startsWith(`${g} `) || text.endsWith(` ${g}`)
-  ) && text.split(" ").length <= 4 && !text.includes("house") && !text.includes("property") && !text.includes("villa") && !text.includes("apartment");
+  ) && text.split(" ").length <= 4 && !text.includes("house") && !text.includes("property") && !text.includes("villa") && !text.includes("apartment") && !text.includes("guri");
 
   if (isPureGreeting) {
     return {
@@ -138,11 +125,12 @@ export function classifyUserIntent(
     };
   }
 
-  // 2. BOOKING INTENT
+  // 2. BOOKING INTENT (Multilingual English + Somali)
   const bookingKeywords = [
     "book visit", "schedule visit", "book a visit", "schedule a tour",
     "i want to visit", "schedule inspection", "book property", "view in person",
-    "arrange visit", "visit tomorrow", "appointment"
+    "arrange visit", "visit tomorrow", "appointment",
+    "ballan", "ballan qabso", "ballan qabasho", "kormeer", "kormeera", "kormeerka", "booqo"
   ];
   if (bookingKeywords.some((k) => text.includes(k))) {
     const propIdMatch = text.match(/(?:property|listing|#)\s*([a-z0-9_-]+)/i);
@@ -154,10 +142,11 @@ export function classifyUserIntent(
     };
   }
 
-  // 3. AVAILABILITY CHECK INTENT
+  // 3. AVAILABILITY CHECK INTENT (Multilingual English + Somali)
   const availabilityKeywords = [
     "is this house available", "is it available", "is it sold", "is it rented",
-    "still available", "can i rent it", "can i buy it", "availability status"
+    "still available", "can i rent it", "can i buy it", "availability status",
+    "ma banaan yahay", "ma la kireeyay", "ma la iibiyay", "wali ma yaallaa", "diyaar ma yahay"
   ];
   if (availabilityKeywords.some((k) => text.includes(k))) {
     const propIdMatch = text.match(/(?:property|listing|#)\s*([a-z0-9_-]+)/i);
@@ -169,13 +158,28 @@ export function classifyUserIntent(
     };
   }
 
-  // 4. PROPERTY DETAILS INTENT
+  // 4. VALUATION & PRICE PREDICTION INTENT
+  const valuationKeywords = [
+    "price prediction", "predict price", "estimate price", "property valuation",
+    "how much is my house worth", "what is it worth", "estimate value",
+    "qiimee", "qiyaas qiimaha", "qiimeynta", "qiyaas qiime", "qiimaha guryaha"
+  ];
+  if (valuationKeywords.some((k) => text.includes(k))) {
+    return {
+      intent: "VALUATION",
+      confidence: 0.96,
+      explanation: "User requested property valuation or market price estimation.",
+    };
+  }
+
+  // 5. PROPERTY DETAILS INTENT
   const detailKeywords = [
     "tell me more about", "show details", "bedroom details", "how many bathrooms",
-    "is parking available", "show amenities", "floor plan details", "what is the size of"
+    "is parking available", "show amenities", "floor plan details", "what is the size of",
+    "faahfaahin", "wax badan iiga sheeg", "intee musqulood", "baarkin ma leeyahay"
   ];
   const propIdMatch = text.match(/(?:property|listing|#)\s*([a-z0-9_-]+)/i);
-  if (detailKeywords.some((k) => text.includes(k)) || (propIdMatch && (text.includes("tell") || text.includes("show")))) {
+  if (detailKeywords.some((k) => text.includes(k)) || (propIdMatch && (text.includes("tell") || text.includes("show") || text.includes("faahfaahin")))) {
     return {
       intent: "PROPERTY_DETAILS",
       confidence: 0.92,
@@ -184,13 +188,14 @@ export function classifyUserIntent(
     };
   }
 
-  // 5. GENERAL QUESTIONS (Never search database)
+  // 6. GENERAL QUESTIONS (Never search database)
   const generalKeywords = [
     "what is ai", "how does this website work", "what payment methods",
     "how to pay", "who are you", "who built you", "how to list", "fees",
     "what services", "contact support", "help", "terms of service", "refund",
     "difference between", "what is", "how do i", "explain", "can you explain",
-    "what is escrow", "how does escrow work", "tell me about yourself"
+    "what is escrow", "how does escrow work", "tell me about yourself",
+    "waa maxay escrow", "sidee u shaqeysaa", "sidee lacagta loo bixiyaa"
   ];
   const isGeneralQuestion = generalKeywords.some((k) => text.includes(k)) &&
     !SOMALI_CITIES.some((c) => text.includes(c));
@@ -203,10 +208,12 @@ export function classifyUserIntent(
     };
   }
 
-  // 6. PROPERTY SEARCH OR FOLLOW-UP REFINEMENT
-  // Check if current message explicitly introduces a city or a primary property type
-  const explicitCityMatch = SOMALI_CITIES.find((c) => text.includes(c));
-  const hasExplicitCity = !!explicitCityMatch;
+  // 7. PROPERTY SEARCH OR FOLLOW-UP REFINEMENT
+  // Unified Location Resolver handles city, Somali aliases, and specific districts (Hodan, Wadajir, Daarusalaam, KM4, Jigjiga Yar)
+  const resolvedLoc = resolveLocation(text);
+  const explicitCity = resolvedLoc?.canonicalCity;
+  const explicitDistrict = resolvedLoc?.district;
+  const hasExplicitLocation = !!explicitCity || !!explicitDistrict;
 
   const propertyTypeKeywords = [
     "villa", "apartment", "flat", "studio", "office", "land", "plot", "commercial", "warehouse", "building", "shop", "townhouse", "house", "home",
@@ -218,7 +225,7 @@ export function classifyUserIntent(
   // A message is ONLY a follow-up refinement if it modifies attributes without changing city or starting a brand new search
   const isFollowUpPhrase =
     history.length > 0 &&
-    !hasExplicitCity &&
+    !hasExplicitLocation &&
     (
       text.startsWith("only ") ||
       text.startsWith("below ") ||
@@ -229,6 +236,8 @@ export function classifyUserIntent(
       text.startsWith("with ") ||
       text.startsWith("must have") ||
       text.startsWith("make it") ||
+      text.startsWith("wax yar") ||
+      text.startsWith("kaliya") ||
       text.match(/^\d+\s*(?:bed|bedroom|bds|br|qol)/) ||
       text.match(/^(?:furnished|unfurnished|parking|baarkin|pool|garden|security|cheap|luxury)/)
     );
@@ -241,17 +250,14 @@ export function classifyUserIntent(
     contextForSearch = `${lastUserQuery} ${text}`.toLowerCase();
   }
 
-  // Extract City (Strictly check current message first; only check previous if follow-up)
-  let city: string | undefined;
-  if (explicitCityMatch) {
-    city = CITY_NORMALIZATION[explicitCityMatch] || explicitCityMatch.charAt(0).toUpperCase() + explicitCityMatch.slice(1);
-  } else if (isFollowUpPhrase) {
-    for (const c of SOMALI_CITIES) {
-      if (contextForSearch.includes(c)) {
-        city = CITY_NORMALIZATION[c] || c.charAt(0).toUpperCase() + c.slice(1);
-        break;
-      }
-    }
+  // Extract City and District
+  let city: string | undefined = explicitCity;
+  let district: string | undefined = explicitDistrict;
+
+  if (!city && isFollowUpPhrase) {
+    const contextLoc = resolveLocation(contextForSearch);
+    city = contextLoc?.canonicalCity;
+    district = contextLoc?.district;
   }
 
   // Extract Property Type (Strictly check current message first; only check previous if follow-up and not overridden)
@@ -373,6 +379,7 @@ export function classifyUserIntent(
       ? "User refined previous search criteria."
       : "User searched for properties with custom attributes.",
     city,
+    district,
     propertyType,
     bedrooms,
     bathrooms,
@@ -466,9 +473,26 @@ export async function searchDatabaseProperties(
     where.city = { contains: intent.city };
   }
 
+  // DISTRICT & NEIGHBORHOOD MATCHING (e.g. Hodan, Daarusalaam, KM4, Wadajir, Jigjiga Yar)
+  const andClauses: any[] = [];
+  if (intent.district) {
+    andClauses.push({
+      OR: [
+        { location: { contains: intent.district } },
+        { address: { contains: intent.district } },
+        { title: { contains: intent.district } },
+        { description: { contains: intent.district } },
+      ],
+    });
+  }
+
   // STRICT PROPERTY TYPE MATCHING
   if (intent.propertyType) {
-    where.type = intent.propertyType;
+    if (intent.propertyType === "HOUSE") {
+      where.type = { in: ["HOUSE", "VILLA", "TOWNHOUSE"] };
+    } else {
+      where.type = intent.propertyType;
+    }
   }
 
   if (intent.bedrooms !== undefined) {
@@ -499,9 +523,15 @@ export async function searchDatabaseProperties(
   if (intent.security) amenityConditions.push("Security");
 
   if (amenityConditions.length > 0) {
-    where.OR = amenityConditions.map((k) => ({
-      amenities: { contains: k },
-    }));
+    andClauses.push({
+      OR: amenityConditions.map((k) => ({
+        amenities: { contains: k },
+      })),
+    });
+  }
+
+  if (andClauses.length > 0) {
+    where.AND = andClauses;
   }
 
   let orderBy: any = [{ isFeatured: "desc" }, { createdAt: "desc" }];
@@ -613,17 +643,20 @@ export async function searchDatabaseProperties(
   }
 
   // STEP 4 & 5: MAP COMPLETE PROPERTY CARD DATA (Zero fake data)
-  const grounded: GroundedPropertyResult[] = await Promise.all(
-    rawProperties.map(async (p) => {
-      const comps = await prisma.property.findMany({
-        where: {
-          id: { not: p.id },
-          city: p.city,
-          status: "APPROVED",
-        },
-        include: { images: { orderBy: { order: "asc" }, take: 1 } },
-        take: 2,
-      });
+  const allCities = Array.from(new Set(rawProperties.map((p) => p.city)));
+  const propIds = rawProperties.map((p) => p.id);
+  const allComps = await prisma.property.findMany({
+    where: {
+      id: { notIn: propIds },
+      city: { in: allCities },
+      status: "APPROVED",
+    },
+    include: { images: { orderBy: { order: "asc" }, take: 1 } },
+    take: 10,
+  });
+
+  const grounded: GroundedPropertyResult[] = rawProperties.map((p) => {
+    const comps = allComps.filter((c) => c.city === p.city && c.id !== p.id).slice(0, 2);
 
       let parsedFeatures: string[] = [];
       if (p.amenities) {
@@ -724,8 +757,7 @@ export async function searchDatabaseProperties(
           imageUrl: c.images[0]?.url || null,
         })),
       };
-    })
-  );
+    });
 
   return {
     properties: grounded,

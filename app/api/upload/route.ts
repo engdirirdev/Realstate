@@ -1,18 +1,89 @@
 // ================================================================
 // API ROUTE  : /api/upload
-// DESCRIPTION: Upload media assets (images, floor plans) to local public/uploads
-// ROLE       : Authenticated users (Managers & Admins)
+// DESCRIPTION: Upload media assets (images, floor plans, videos)
+//              with strict MIME verification, extension whitelisting,
+//              file size enforcement, and upload rate limiting.
+//              Integrated with Enterprise Storage Provider (Local / S3).
+// ROLE       : Authenticated Managers and Administrators
 // ================================================================
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
 import path from "path";
-import { auth } from "@/auth";
+import { requireRole } from "@/lib/auth-guards";
+import { checkRateLimit, createRateLimitResponse } from "@/lib/rate-limiter";
+import { getStorageProvider } from "@/lib/storage-provider";
+
+/**
+ * Strict whitelist of allowed safe media extensions.
+ * Explicitly EXCLUDES .svg, .html, .xml to prevent Stored XSS via embedded scripts.
+ */
+const ALLOWED_EXTENSIONS = new Set([
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".webp",
+  ".avif",
+  ".mp4",
+  ".webm",
+  ".pdf",
+]);
+
+const ALLOWED_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/avif",
+  "video/mp4",
+  "video/webm",
+  "application/pdf",
+]);
+
+/**
+ * GET /api/upload?filename=...&contentType=...
+ * Generates presigned upload parameters for direct browser-to-S3 uploads,
+ * eliminating high memory usage on the Node.js server at 10,000+ users.
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const authResult = await requireRole(["ADMIN", "USER"]);
+    if (authResult.response) {
+      return authResult.response;
+    }
+
+    const { searchParams } = new URL(request.url);
+    const filename = searchParams.get("filename") || "upload.jpg";
+    const contentType = searchParams.get("contentType") || "image/jpeg";
+    const folder = searchParams.get("folder") || "properties";
+
+    const storage = getStorageProvider();
+    const presigned = await storage.getPresignedUploadUrl(filename, contentType, folder);
+
+    return NextResponse.json({
+      success: true,
+      data: presigned,
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error.message || "Failed to generate presigned upload parameters." },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session || !session.user) {
-      return NextResponse.json({ success: false, error: "Unauthorized. Please sign in." }, { status: 401 });
+    const authResult = await requireRole(["ADMIN", "USER"]);
+    if (authResult.response) {
+      return authResult.response;
+    }
+    const { user } = authResult;
+
+    // Rate Limiting: Max 20 file uploads per minute per authenticated manager
+    const rateCheck = checkRateLimit(`upload:${user.id}`, {
+      limit: 20,
+      windowSeconds: 60,
+    });
+    if (!rateCheck.allowed) {
+      return createRateLimitResponse(rateCheck);
     }
 
     const formData = await request.formData();
@@ -32,49 +103,71 @@ export async function POST(request: NextRequest) {
     }
 
     if (filesToProcess.length === 0) {
-      return NextResponse.json({ success: false, error: "No image files provided." }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "No image or media files provided." },
+        { status: 400 }
+      );
     }
 
-    const uploadDir = path.join(process.cwd(), "public", "uploads");
-    await mkdir(uploadDir, { recursive: true });
-
-    const uploadedUrls: string[] = [];
-
-    for (const file of filesToProcess) {
-      const mime = file.type || "";
-      const isVideo = mime.startsWith("video/");
-      const isImage = mime.startsWith("image/");
-      const isPdf = mime === "application/pdf";
-      const isAllowed = isImage || isVideo || isPdf;
-      if (!isAllowed) {
-        return NextResponse.json({ success: false, error: `Unsupported file format: ${mime || "unknown"}. Please upload an image, video, or PDF.` }, { status: 400 });
-      }
-
-      // 100MB limit for video, 25MB for images/PDFs
-      const maxLimit = isVideo ? 100 * 1024 * 1024 : 25 * 1024 * 1024;
-      if (file.size > maxLimit) {
-        return NextResponse.json({ success: false, error: `File "${file.name}" exceeds the ${isVideo ? "100MB" : "25MB"} limit.` }, { status: 400 });
-      }
-
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-
-      const ext = path.extname(file.name) || (mime === "image/png" ? ".png" : mime === "image/webp" ? ".webp" : ".jpg");
-      const cleanExt = ext.startsWith(".") ? ext : `.${ext}`;
-      const uniqueName = `prop_${Date.now()}_${Math.random().toString(36).substring(2, 9)}${cleanExt}`;
-      const filePath = path.join(uploadDir, uniqueName);
-
-      await writeFile(filePath, buffer);
-      uploadedUrls.push(`/uploads/${uniqueName}`);
+    if (filesToProcess.length > 10) {
+      return NextResponse.json(
+        { success: false, error: "Maximum 10 files can be uploaded per batch." },
+        { status: 400 }
+      );
     }
+
+    const storage = getStorageProvider();
+
+    const uploadedUrls = await Promise.all(
+      filesToProcess.map(async (file) => {
+        const mime = (file.type || "").toLowerCase().trim();
+        const rawExt = path.extname(file.name || "").toLowerCase().trim();
+
+        // 1. Extension Whitelist Check
+        if (!rawExt || !ALLOWED_EXTENSIONS.has(rawExt)) {
+          throw new Error(
+            `File "${file.name}" has an untrusted or unsupported file extension. Allowed formats: JPG, PNG, WEBP, AVIF, MP4, WEBM, PDF.`
+          );
+        }
+
+        // 2. MIME Whitelist Check
+        if (!ALLOWED_MIME_TYPES.has(mime)) {
+          throw new Error(
+            `File "${file.name}" has an invalid MIME type: ${mime || "unknown"}.`
+          );
+        }
+
+        // 3. File Size Caps (100MB video, 25MB images/PDFs)
+        const isVideo = mime.startsWith("video/");
+        const maxLimit = isVideo ? 100 * 1024 * 1024 : 25 * 1024 * 1024;
+        if (file.size > maxLimit) {
+          throw new Error(
+            `File "${file.name}" exceeds the ${isVideo ? "100MB" : "25MB"} size limit.`
+          );
+        }
+
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+
+        const result = await storage.upload(buffer, file.name, {
+          folder: "properties",
+          contentType: mime,
+        });
+
+        return result.url;
+      })
+    );
 
     return NextResponse.json({
       success: true,
       url: uploadedUrls[0],
       urls: uploadedUrls,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("[POST /api/upload]", error);
-    return NextResponse.json({ success: false, error: "Failed to upload image. Please try again." }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: error.message || "Failed to upload media. Please try again." },
+      { status: 400 }
+    );
   }
 }

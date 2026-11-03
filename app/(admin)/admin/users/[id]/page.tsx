@@ -9,19 +9,17 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import {
-  Users, ArrowLeft, Shield, ShieldCheck, Mail, Phone, Calendar,
-  Building2, Heart, CreditCard, MessageSquare, CheckCircle2,
-  XCircle, AlertTriangle, Eye, Loader2, RefreshCw, UserCheck, UserX,
-  Lock, TrendingUp, BarChart3, Bot, Brain, Trash2
+  Users, ArrowLeft, Mail,
+  Building2, Heart, AlertTriangle, Loader2, UserCheck, UserX,
+  Lock, Trash2, ShieldCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { formatPrice, getPropertyTypeLabel } from "@/lib/utils";
+import { formatPrice } from "@/lib/utils";
 
 type Props = { params: Promise<{ id: string }> };
 

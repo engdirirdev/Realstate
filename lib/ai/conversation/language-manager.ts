@@ -368,38 +368,7 @@ const TIGRINYA_MARKERS = [
   "ገዛ", "ክፍሊ", "ዋጋ", "መሸጣ", "ክራይ", "ቀዳማይ", "ካልኣይ", "ክንደይ", "ሰላም"
 ];
 
-// Tier 3 (Global & Regional) Vocabulary
-const FRENCH_MARKERS = [
-  /\b(je|veux|cherche|maison|appartement|chambre|chambres|prix|ville|combien|premier|deuxième|louer|acheter)\b/i,
-];
 
-const SPANISH_MARKERS = [
-  /\b(quiero|busco|casa|apartamento|habitaciones|precio|cuánto|primero|segundo|barato|alquilar|comprar)\b/i,
-];
-
-const GERMAN_MARKERS = [
-  /\b(ich|suche|brauche|haus|wohnung|zimmer|preis|wie|viel|erste|zweite|billiger|mieten|kaufen)\b/i,
-];
-
-const PORTUGUESE_MARKERS = [
-  /\b(quero|procuro|casa|apartamento|quartos|preço|quanto|primeiro|segundo|alugar|comprar|barato)\b/i,
-];
-
-const TURKISH_MARKERS = [
-  /\b(ev|daire|kiralık|satılık|oda|fiyat|nerede|istiyorum|kaç|ucuz)\b/i,
-];
-
-const HAUSA_MARKERS = [
-  /\b(gida|haya|sayarwa|daki|dakuna|kudi|neman|ina|son)\b/i,
-];
-
-const INDONESIAN_MALAY_MARKERS = [
-  /\b(saya|ingin|mencari|rumah|sewa|beli|kamar|harga|murah|apartemen)\b/i,
-];
-
-const ITALIAN_MARKERS = [
-  /\b(cerco|affitto|casa|appartamento|camere|prezzo|quanto|primo|secondo|economico|vendita)\b/i,
-];
 
 export interface LanguageDetectionDetails {
   language: ExtendedLanguage;

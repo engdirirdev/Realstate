@@ -9,7 +9,6 @@ import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import {
   RawPropertyRecord,
-  ModelArtifact,
   EvaluationMetrics,
 } from "./types";
 import {

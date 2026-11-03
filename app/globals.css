@@ -188,33 +188,62 @@
     display: none;
   }
 
-  /* ── Master Gold Border Beam Animation ───────────────────────── */
+  /* ── Master Gold Border Beam Animation (GPU Accelerated) ────── */
   @keyframes gold-spin-beam {
     from {
-      transform: rotate(0deg);
+      transform: rotate(0deg) translateZ(0);
     }
     to {
-      transform: rotate(360deg);
+      transform: rotate(360deg) translateZ(0);
     }
   }
 
   .animate-gold-beam {
     animation: gold-spin-beam 5s linear infinite;
+    will-change: transform;
+    transform: translateZ(0);
   }
 
   @keyframes gold-halo-pulse {
     0%, 100% {
       opacity: 0.45;
-      transform: scale(0.99);
+      transform: scale(0.99) translateZ(0);
     }
     50% {
       opacity: 0.85;
-      transform: scale(1.01);
+      transform: scale(1.01) translateZ(0);
     }
   }
 
   .animate-gold-halo {
     animation: gold-halo-pulse 3.5s ease-in-out infinite;
+    will-change: transform, opacity;
+    transform: translateZ(0);
+  }
+
+  /* GPU Compositing for Smooth Modal & Table Scrolling */
+  .gpu-accelerated {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
   }
 }
+
+/* ── Mobile Touch Performance ──────────────────────────────────── */
+/* Eliminates legacy 300ms double-tap delay and removes grey tap flash */
+button, a, input, select, textarea, [role="button"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Accessibility & Low-Power Reduced Motion ─────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 

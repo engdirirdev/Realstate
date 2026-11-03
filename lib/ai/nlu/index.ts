@@ -3,14 +3,12 @@
  */
 
 import { detectQueryLanguage } from "../language/detector";
-import { classifyIntent, IntentClassificationResult } from "./intent-classifier";
-import { extractEntities, ExtractedEntities } from "./entity-extractor";
+import { classifyIntent } from "./intent-classifier";
+import { extractEntities } from "./entity-extractor";
 import {
   classifyConstraints,
-  validateHardConstraints,
   mergeSearchStates,
   NormalizedQueryUnderstanding,
-  HardConstraints,
 } from "./constraint-classifier";
 
 export * from "./intent-classifier";

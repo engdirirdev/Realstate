@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, XCircle, AlertTriangle, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, AlertTriangle, Loader2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -12,17 +12,39 @@ interface AdminPropertyReviewModalProps {
   propertyId: string;
   propertyTitle: string;
   currentStatus: string;
+  availabilityStatus?: string | null;
 }
 
 export default function AdminPropertyReviewModal({
   propertyId,
   propertyTitle,
   currentStatus,
+  availabilityStatus,
 }: AdminPropertyReviewModalProps) {
   const router = useRouter();
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [loading, setLoading] = useState<string | null>(null);
+
+  const isSold = currentStatus === "SOLD" || availabilityStatus === "SOLD";
+  const isRented = currentStatus === "RENTED" || availabilityStatus === "RENTED";
+
+  // If already finalized as Sold or Rented, approval is permanently locked
+  if (isSold) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold bg-slate-900 text-slate-100 border border-slate-700 shadow-2xs">
+        <Lock className="w-3.5 h-3.5 text-[#D9B45B]" /> Sold
+      </span>
+    );
+  }
+
+  if (isRented) {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-extrabold bg-indigo-900 text-indigo-100 border border-indigo-700 shadow-2xs">
+        <Lock className="w-3.5 h-3.5 text-indigo-300" /> Rented
+      </span>
+    );
+  }
 
   const handleUpdateStatus = async (status: "APPROVED" | "REJECTED", reason?: string) => {
     setLoading(status);
@@ -33,7 +55,7 @@ export default function AdminPropertyReviewModal({
         body: JSON.stringify({ status, rejectionReason: reason }),
       });
       const data = await res.json();
-      if (data.success) {
+      if (res.ok && data.success) {
         toast({
           title: status === "APPROVED" ? "Property Approved! 🎉" : "Property Rejected ⚠️",
           description: status === "APPROVED"
@@ -43,7 +65,7 @@ export default function AdminPropertyReviewModal({
         setRejectModalOpen(false);
         router.refresh();
       } else {
-        toast({ title: "Error", description: data.error, variant: "destructive" });
+        toast({ title: "Error", description: data.error || "Failed to update property status.", variant: "destructive" });
       }
     } catch {
       toast({ title: "Error", description: "Failed to update property status.", variant: "destructive" });
@@ -55,25 +77,37 @@ export default function AdminPropertyReviewModal({
   return (
     <>
       <div className="flex items-center gap-2">
-        <Button
-          onClick={() => handleUpdateStatus("APPROVED")}
-          disabled={loading !== null || currentStatus === "APPROVED"}
-          size="sm"
-          className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] hover:brightness-105 rounded-xl text-xs gap-1 font-bold shadow-sm border-0"
-        >
-          {loading === "APPROVED" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-          Approve
-        </Button>
+        {currentStatus === "APPROVED" || currentStatus === "PUBLISHED" ? (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 text-white shadow-2xs select-none">
+            <CheckCircle2 className="w-3.5 h-3.5 text-white stroke-[2.5]" /> Approved
+          </span>
+        ) : (
+          <Button
+            onClick={() => handleUpdateStatus("APPROVED")}
+            disabled={loading !== null || isSold || isRented}
+            size="sm"
+            className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] hover:brightness-105 rounded-xl text-xs gap-1 font-bold shadow-sm border-0 cursor-pointer"
+          >
+            {loading === "APPROVED" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+            Approve
+          </Button>
+        )}
 
-        <Button
-          onClick={() => setRejectModalOpen(true)}
-          disabled={loading !== null || currentStatus === "REJECTED"}
-          variant="outline"
-          size="sm"
-          className="border-[#E8E1D4] text-[#DC2626] bg-[#FCFBF7] hover:bg-red-50 hover:border-red-200 rounded-xl text-xs gap-1 font-medium transition-colors"
-        >
-          <XCircle className="h-3.5 w-3.5" /> Reject
-        </Button>
+        {currentStatus === "REJECTED" ? (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-red-600 text-white shadow-2xs select-none">
+            <XCircle className="w-3.5 h-3.5 text-white stroke-[2.5]" /> Rejected
+          </span>
+        ) : (
+          <Button
+            onClick={() => setRejectModalOpen(true)}
+            disabled={loading !== null || isSold || isRented}
+            variant="outline"
+            size="sm"
+            className="border-[#E8E1D4] text-[#DC2626] bg-[#FCFBF7] hover:bg-red-50 hover:border-red-200 rounded-xl text-xs gap-1 font-medium transition-colors cursor-pointer"
+          >
+            <XCircle className="h-3.5 w-3.5" /> Reject
+          </Button>
+        )}
       </div>
 
       {/* Rejection Reason Modal */}
@@ -101,16 +135,22 @@ export default function AdminPropertyReviewModal({
             </div>
           </div>
 
-          <DialogFooter className="pt-2 gap-2">
-            <Button variant="outline" onClick={() => setRejectModalOpen(false)} className="rounded-xl border-[#E8E1D4] text-[#07111F] hover:bg-[#F7F3EA]">
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setRejectModalOpen(false)}
+              className="border-[#E8E1D4] text-[#6B7280] rounded-xl text-xs"
+            >
               Cancel
             </Button>
             <Button
+              type="button"
+              disabled={loading !== null || !rejectionReason.trim()}
               onClick={() => handleUpdateStatus("REJECTED", rejectionReason)}
-              disabled={loading === "REJECTED" || !rejectionReason.trim()}
-              className="bg-[#DC2626] hover:bg-[#B91C1C] text-white rounded-xl gap-2 font-semibold border-0"
+              className="bg-[#DC2626] hover:bg-[#B91C1C] text-white rounded-xl text-xs gap-1 font-bold"
             >
-              {loading === "REJECTED" ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+              {loading === "REJECTED" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
               Confirm Rejection
             </Button>
           </DialogFooter>

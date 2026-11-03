@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { getAuthenticatedUser, requirePermission } from "@/lib/auth-guards";
+import { PERMISSIONS } from "@/lib/rbac";
 import { getPaymentMethodsConfig, savePaymentMethodsConfig, type PaymentMethodConfig } from "@/lib/payment-settings";
 
 // GET /api/payment-methods - Get active payment methods (or all for admin)
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    const isAdmin = (session?.user as any)?.role === "ADMIN";
+    const user = await getAuthenticatedUser();
+    const isAdmin = user?.role === "ADMIN";
     const { searchParams } = new URL(request.url);
     const all = searchParams.get("all") === "true" && isAdmin;
 
@@ -21,9 +22,9 @@ export async function GET(request: NextRequest) {
 // PUT /api/payment-methods - Admin updates payment methods configuration
 export async function PUT(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session || (session.user as any)?.role !== "ADMIN") {
-      return NextResponse.json({ success: false, error: "Unauthorized. Administrator privileges required." }, { status: 403 });
+    const authResult = await requirePermission(PERMISSIONS.PAYMENT_MANAGE);
+    if (authResult.response) {
+      return authResult.response;
     }
 
     const body = await request.json();

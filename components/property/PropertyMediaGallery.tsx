@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import Image from "next/image";
 import {
   ChevronLeft,
   ChevronRight,
@@ -48,14 +49,29 @@ export default function PropertyMediaGallery({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const lightboxRef = useRef<HTMLDivElement>(null);
 
-  // Separate drone / aerial images if tagged in altText or metadata
-  const droneImages = images.filter(
-    (img) => img.altText && /drone|aerial|dron|cirka|sare/i.test(img.altText)
+  // Separate drone / aerial images if tagged in altText or metadata (memoized)
+  const droneImages = useMemo(
+    () => images.filter((img) => img.altText && /drone|aerial|dron|cirka|sare/i.test(img.altText)),
+    [images]
   );
   const hasDroneImages = droneImages.length > 0;
 
   const currentList = activeMediaTab === "DRONE" ? droneImages : images;
   const currentImage = currentList[selectedIndex] || images[0];
+
+  const handleNext = useCallback(() => {
+    setSelectedIndex((prev) => (prev + 1) % Math.max(1, currentList.length));
+    setZoomLevel(1);
+  }, [currentList.length]);
+
+  const handlePrev = useCallback(() => {
+    setSelectedIndex((prev) => (prev - 1 + currentList.length) % Math.max(1, currentList.length));
+    setZoomLevel(1);
+  }, [currentList.length]);
+
+  const handleZoomIn = useCallback(() => setZoomLevel((z) => Math.min(3, +(z + 0.35).toFixed(2))), []);
+  const handleZoomOut = useCallback(() => setZoomLevel((z) => Math.max(1, +(z - 0.35).toFixed(2))), []);
+  const handleResetZoom = useCallback(() => setZoomLevel(1), []);
 
   // Keyboard navigation for Lightbox
   useEffect(() => {
@@ -69,21 +85,7 @@ export default function PropertyMediaGallery({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [lightboxOpen, selectedIndex, currentList.length]);
-
-  const handleNext = () => {
-    setSelectedIndex((prev) => (prev + 1) % Math.max(1, currentList.length));
-    setZoomLevel(1);
-  };
-
-  const handlePrev = () => {
-    setSelectedIndex((prev) => (prev - 1 + currentList.length) % Math.max(1, currentList.length));
-    setZoomLevel(1);
-  };
-
-  const handleZoomIn = () => setZoomLevel((z) => Math.min(3, +(z + 0.35).toFixed(2)));
-  const handleZoomOut = () => setZoomLevel((z) => Math.max(1, +(z - 0.35).toFixed(2)));
-  const handleResetZoom = () => setZoomLevel(1);
+  }, [lightboxOpen, handleNext, handlePrev, handleZoomIn, handleZoomOut]);
 
   const toggleFullscreen = async () => {
     if (!document.fullscreenElement) {
@@ -243,10 +245,13 @@ export default function PropertyMediaGallery({
           {/* Main Hero Viewer */}
           <div className="relative rounded-3xl overflow-hidden bg-[#07111F] border border-[#E8E1D4] h-[340px] sm:h-[460px] group shadow-sm">
             {currentImage ? (
-              <img
+              <Image
                 src={currentImage.url}
                 alt={currentImage.altText || title}
-                className="w-full h-full object-cover cursor-pointer transition-transform duration-500 group-hover:scale-[1.01]"
+                fill
+                priority={selectedIndex === 0}
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 1200px"
+                className="object-cover cursor-pointer transition-transform duration-500 group-hover:scale-[1.01]"
                 onClick={() => setLightboxOpen(true)}
               />
             ) : (
@@ -323,7 +328,14 @@ export default function PropertyMediaGallery({
                         : "border-transparent opacity-70 hover:opacity-100"
                     }`}
                   >
-                    <img src={img.url} alt={img.altText || ""} className="w-full h-full object-cover" />
+                    <Image
+                      src={img.url}
+                      alt={img.altText || ""}
+                      fill
+                      sizes="96px"
+                      className="object-cover"
+                      loading="lazy"
+                    />
                   </button>
                 );
               })}
@@ -336,7 +348,7 @@ export default function PropertyMediaGallery({
       {lightboxOpen && (
         <div
           ref={lightboxRef}
-          className="fixed inset-0 z-50 bg-[#07111F]/98 backdrop-blur-md flex flex-col justify-between p-4 sm:p-6 select-none animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 bg-[#07111F]/98 backdrop-blur-md flex flex-col justify-between p-4 sm:p-6 select-none animate-in fade-in duration-200 gpu-accelerated will-change-[opacity]"
         >
           {/* Lightbox Header Bar */}
           <div className="flex items-center justify-between text-white border-b border-white/10 pb-3">
@@ -423,8 +435,8 @@ export default function PropertyMediaGallery({
               <img
                 src={currentImage?.url}
                 alt={currentImage?.altText || title}
-                style={{ transform: `scale(${zoomLevel})` }}
-                className="max-h-[75vh] max-w-full object-contain transition-transform duration-200"
+                style={{ transform: `scale(${zoomLevel}) translateZ(0)` }}
+                className="max-h-[75vh] max-w-full object-contain transition-transform duration-200 will-change-transform"
               />
             </div>
 
@@ -451,11 +463,11 @@ export default function PropertyMediaGallery({
                     setSelectedIndex(idx);
                     setZoomLevel(1);
                   }}
-                  className={`flex-shrink-0 w-16 h-12 rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${
+                  className={`relative flex-shrink-0 w-16 h-12 rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${
                     idx === selectedIndex ? "border-[#C89B3C] scale-105" : "border-transparent opacity-60 hover:opacity-100"
                   }`}
                 >
-                  <img src={img.url} alt="" className="w-full h-full object-cover" />
+                  <Image src={img.url} alt="" fill sizes="64px" className="object-cover" loading="lazy" />
                 </button>
               ))}
             </div>

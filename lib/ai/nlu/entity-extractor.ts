@@ -18,10 +18,11 @@ export interface NumericConstraint {
   rawMatchedText?: string;
 }
 
-import { resolveLocation, normalizeCanonicalCity } from "./location-resolver";
+import { resolveLocation } from "./location-resolver";
 
 export interface ExtractedEntities {
   city?: string;
+  district?: string;
   propertyType?: string;
   bedrooms?: NumericConstraint;
   bathrooms?: NumericConstraint;
@@ -41,31 +42,7 @@ export interface ExtractedEntities {
   rawEntities: Record<string, any>;
 }
 
-// 1. City Mappings (Standardized to actual database values)
-const CITY_DICTIONARY: Record<string, string[]> = {
-  Mogadishu: [
-    "mogadishu", "mogadisho", "muqdisho", "muqdisho ah", "muqdishu", "hamar", "xamar",
-    "banaadir", "banadir", "magaalada muqdisho", "مقديشو", "بندر"
-  ],
-  Hargeisa: [
-    "hargeisa", "hargeysa", "hargaysa", "magaalada hargeysa", "hergeisa", "هرجيسا"
-  ],
-  Bosaso: [
-    "bosaso", "boosaaso", "bosaaso", "magaalada boosaaso", "بوساسو"
-  ],
-  Kismayo: [
-    "kismayo", "kismaayo", "kismayu", "magaalada kismaayo", "كسمايو"
-  ],
-  Garowe: [
-    "garowe", "garoowe", "magaalada garoowe", "غاروي", "جروي"
-  ],
-  Baydhabo: [
-    "baydhabo", "baidoa", "baydhaba", "magaalada baydhabo", "بيداوا", "بيدوا"
-  ],
-  Berbera: [
-    "berbera", "barbera", "magaalada berbera", "بربرة"
-  ],
-};
+
 
 // 2. Property Type Mappings (Strictly preserving distinct types - specific types evaluated before generic HOUSE)
 const TYPE_DICTIONARY: Record<string, string[]> = {
@@ -170,7 +147,11 @@ export function extractEntities(query: string): ExtractedEntities {
   const locationMatch = resolveLocation(text);
   if (locationMatch) {
     result.city = locationMatch.canonicalCity;
+    result.district = locationMatch.district;
     result.rawEntities.city = locationMatch.matchedAlias;
+    if (locationMatch.district) {
+      result.rawEntities.district = locationMatch.district;
+    }
   }
 
   // -------------------------------------------------------------

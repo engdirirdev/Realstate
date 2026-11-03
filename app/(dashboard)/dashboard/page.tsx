@@ -8,18 +8,18 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Building2,
   MessageSquare,
   Calendar,
   CheckCircle2,
   ArrowUpRight,
-  ArrowDownRight,
   Eye,
   Edit,
-  ExternalLink,
-  MapPin,
   Clock,
+  Users,
+  PlusCircle,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import ManagerCharts from "@/components/manager/ManagerCharts";
@@ -221,17 +221,92 @@ export default async function DashboardPage() {
     },
   ];
 
+  // Current Date String matching Admin format "Nov 3, 2026" / "Tuesday"
+  const dateFormatted = new Date().toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const weekdayFormatted = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+  });
+
+  const managerName = session.user?.name ? session.user.name.split(" ")[0] : "Manager";
+
   return (
-    <div className="space-y-8 pb-10">
-      {/* ─── Header ─── */}
-      <div>
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#C89B3C]/15 border border-[#C89B3C]/30 text-[#A97918] text-[11px] font-bold uppercase tracking-wider mb-2">
-          <span>✦ Manager Command Center</span>
+    <div className="space-y-6 pb-10 font-sans">
+      {/* ─────────────────────────────────────────────────────────────
+          1. HERO / WELCOME BANNER (Matching Smart Admin View Style)
+          ───────────────────────────────────────────────────────────── */}
+      <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-[#F5EFEB] via-[#F4EDE6] to-transparent border border-[#E6DED4] min-h-[145px] flex items-center p-6 sm:p-8">
+        {/* Right Half: Twilight Luxury Villa Panoramic Image */}
+        <div className="absolute right-0 top-0 bottom-0 w-full sm:w-[65%] md:w-[58%] overflow-hidden z-0 pointer-events-none">
+          <Image
+            src="/images/luxury_villa_twilight.jpg"
+            alt="Luxury Villa Manager Command Banner"
+            fill
+            priority
+            className="object-cover object-right"
+          />
+          {/* Gradient fade to seamlessly blend with the left text area */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#F5EFEB] via-[#F5EFEB]/70 to-transparent" />
         </div>
-        <h1 className="text-2xl sm:text-3xl font-black font-serif text-[#07111F] tracking-tight">Manager Dashboard</h1>
-        <p className="text-xs sm:text-sm text-[#6B7280] font-medium mt-1">
-          Real-time oversight of your assigned luxury properties, clients, and upcoming appointments.
-        </p>
+
+        {/* Left Content */}
+        <div className="relative z-10 max-w-lg">
+          <p className="text-xs sm:text-sm font-semibold text-slate-700">
+            Welcome back,
+          </p>
+          <h1 className="text-3xl sm:text-4xl font-black text-[#0B1523] tracking-tight leading-tight flex items-center gap-2">
+            <span>{managerName}!</span>
+            <span>👋</span>
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-600 mt-1 font-medium">
+            Here&apos;s what&apos;s happening with your assigned properties &amp; clients.
+          </p>
+        </div>
+
+        {/* Floating Top Right Date Card */}
+        <div className="absolute top-5 right-5 z-10 hidden sm:flex items-center gap-3 bg-[#0B1523]/95 backdrop-blur-md text-white px-4 py-2.5 rounded-2xl border border-white/10 shadow-lg">
+          <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-[#D9A336]">
+            <Calendar className="w-4 h-4" />
+          </div>
+          <div suppressHydrationWarning className="text-left">
+            <p suppressHydrationWarning className="font-extrabold text-xs text-white leading-tight">
+              {dateFormatted}
+            </p>
+            <p suppressHydrationWarning className="text-[10px] text-slate-400 font-medium leading-none mt-0.5">
+              {weekdayFormatted}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Action Navigation Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
+        <div className="inline-flex items-center gap-2 text-xs font-bold text-[#A97918]">
+          <span className="w-2 h-2 rounded-full bg-[#C89B3C] animate-pulse" />
+          <span>MANAGER COMMAND CENTER · REAL-TIME OVERSIGHT</span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Link
+            href="/dashboard/customers"
+            prefetch={true}
+            className="px-4 py-2.5 rounded-2xl bg-white border border-[#E8E1D4] text-[#07111F] hover:bg-[#F7F3EA] text-xs font-bold flex items-center gap-2 shadow-xs transition-all cursor-pointer"
+          >
+            <Users className="h-4 w-4 text-[#C89B3C]" />
+            Manage Customers
+          </Link>
+          <Link
+            href="/dashboard/properties/add"
+            prefetch={true}
+            className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] hover:brightness-105 text-xs font-black flex items-center gap-2 shadow-md shadow-[#C89B3C]/20 transition-all cursor-pointer"
+          >
+            <PlusCircle className="h-4 w-4" />
+            Add Property
+          </Link>
+        </div>
       </div>
 
       {/* ─── 4 Kiro-Maal Stat Cards ─── */}
@@ -294,6 +369,7 @@ export default async function DashboardPage() {
 
           <Link
             href="/dashboard/bookings?tab=rentals"
+            prefetch={true}
             className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs hover:brightness-105 self-start sm:self-auto cursor-pointer"
           >
             Review &amp; Manage Bookings <ArrowUpRight className="h-4 w-4" />
@@ -361,6 +437,7 @@ export default async function DashboardPage() {
             </div>
             <Link
               href="/dashboard/properties"
+              prefetch={true}
               className="text-xs font-bold text-[#C89B3C] hover:text-[#A97918] transition-colors"
             >
               View All →
@@ -419,6 +496,7 @@ export default async function DashboardPage() {
                         <div className="flex items-center justify-end gap-1.5">
                           <Link
                             href={`/properties/${p.id}`}
+                            prefetch={true}
                             className="p-1.5 text-[#6B7280] hover:text-[#C89B3C] hover:bg-[#F7F3EA] rounded-lg transition-colors"
                             title="View Property"
                           >
@@ -426,6 +504,7 @@ export default async function DashboardPage() {
                           </Link>
                           <Link
                             href={`/dashboard/properties`}
+                            prefetch={true}
                             className="p-1.5 text-[#6B7280] hover:text-[#C89B3C] hover:bg-[#F7F3EA] rounded-lg transition-colors"
                             title="Manage Listing"
                           >
@@ -450,6 +529,7 @@ export default async function DashboardPage() {
             </div>
             <Link
               href="/dashboard/bookings"
+              prefetch={true}
               className="text-xs font-bold text-[#C89B3C] hover:text-[#A97918] transition-colors"
             >
               View All →
@@ -480,6 +560,7 @@ export default async function DashboardPage() {
                   </div>
                   <Link
                     href="/dashboard/bookings"
+                    prefetch={true}
                     className="px-3 py-1 bg-gradient-to-r from-[#C89B3C] to-[#D9B45B] hover:brightness-105 text-[#07111F] rounded-lg text-xs font-bold transition-all shadow-xs whitespace-nowrap cursor-pointer"
                   >
                     View

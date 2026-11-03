@@ -1,6 +1,5 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { Sparkles, FileText } from "lucide-react";
 import CentralBookingsRentalsView from "@/components/bookings/CentralBookingsRentalsView";
 import type { Metadata } from "next";
 

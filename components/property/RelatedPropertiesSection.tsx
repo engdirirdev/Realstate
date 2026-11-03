@@ -12,7 +12,7 @@ import {
   Compass,
   ArrowRight,
 } from "lucide-react";
-import { formatPrice, getPropertyTypeLabel } from "@/lib/utils";
+import { getPropertyTypeLabel } from "@/lib/utils";
 import PropertyAvailabilityBadge from "./PropertyAvailabilityBadge";
 
 export interface RelatedPropertyItem {

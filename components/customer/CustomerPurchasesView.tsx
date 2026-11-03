@@ -4,17 +4,12 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import {
   ShoppingBag,
-  Building2,
   MapPin,
-  Calendar,
   CreditCard,
   Receipt,
   Loader2,
-  Inbox,
   ShieldCheck,
   CheckCircle2,
-  Clock,
-  ArrowRight,
   User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -179,12 +174,17 @@ export default function CustomerPurchasesView() {
               purchase.property?.images?.[0]?.url ||
               "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800";
             const isCompleted = purchase.status === "COMPLETED";
-            const paymentStatus =
-              purchase.transaction?.status === "PAID" || isCompleted
-                ? "PAID"
-                : purchase.status === "PAYMENT_PENDING"
-                ? "PENDING"
-                : "PENDING_APPROVAL";
+            const paymentRecord = purchase.transaction?.payments?.[0];
+            const isPaid =
+              paymentRecord?.status === "PAID" ||
+              purchase.transaction?.status === "PAID" ||
+              purchase.transaction?.status === "COMPLETED" ||
+              isCompleted;
+            const paymentStatus = isPaid
+              ? "PAID"
+              : purchase.status === "PAYMENT_PENDING"
+              ? "PENDING"
+              : "PENDING_APPROVAL";
 
             return (
               <div
@@ -292,17 +292,18 @@ export default function CustomerPurchasesView() {
 
                 {/* Actions */}
                 <div className="p-4 bg-[#FCFBF7] border-t border-[#E8E1D4] flex items-center justify-between gap-2">
-                  <Link href={`/customer/properties/${purchase.property?.id}`} className="flex-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full rounded-xl text-xs border-[#E8E1D4] hover:bg-[#F7F3EA]"
-                    >
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 rounded-xl text-xs border-[#E8E1D4] hover:bg-[#F7F3EA]"
+                  >
+                    <Link href={`/customer/properties/${purchase.property?.id}`}>
                       View Property
-                    </Button>
-                  </Link>
+                    </Link>
+                  </Button>
 
-                  {(purchase.status === "PAYMENT_PENDING" || (purchase.status === "APPROVED" && purchase.transaction)) && (
+                  {(purchase.status === "PAYMENT_PENDING" || (purchase.status === "APPROVED" && purchase.transaction)) && !isPaid && (
                     <Button
                       size="sm"
                       onClick={() => setPayTarget(purchase.transaction)}
@@ -313,19 +314,19 @@ export default function CustomerPurchasesView() {
                   )}
 
                   {purchase.transaction?.receipt && (
-                    <Link
-                      href={`/receipt/${purchase.transaction.receipt.id}`}
-                      target="_blank"
-                      className="flex-1"
+                    <Button
+                      asChild
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 rounded-xl text-xs border-[#C89B3C]/40 text-[#A97918] hover:bg-[#F7F3EA] gap-1"
                     >
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full rounded-xl text-xs border-[#C89B3C]/40 text-[#A97918] hover:bg-[#F7F3EA] gap-1"
+                      <Link
+                        href={`/receipt/${purchase.transaction.receipt.id}`}
+                        target="_blank"
                       >
                         <Receipt className="h-3.5 w-3.5 text-[#C89B3C]" /> Official Receipt
-                      </Button>
-                    </Link>
+                      </Link>
+                    </Button>
                   )}
                 </div>
               </div>

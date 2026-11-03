@@ -15,6 +15,7 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { formatPrice, getPropertyTypeLabel } from "@/lib/utils";
+import { cachedDbQuery, memoizedGetPropertyMetadata } from "@/lib/cache";
 import Link from "next/link";
 import {
   MapPin,
@@ -25,23 +26,21 @@ import {
   Phone,
   Mail,
   ArrowLeft,
-  Star,
   Sparkles,
-  Car,
-  Sofa,
-  Calendar,
 } from "lucide-react";
 import PropertyActions from "@/components/PropertyActions";
-import PropertyReviews from "@/components/PropertyReviews";
 import PropertyCostSummary from "@/components/PropertyCostSummary";
 import PropertyShareAndReport from "@/components/PropertyShareAndReport";
 import OpenAIChatButton from "@/components/OpenAIChatButton";
 import {
   calculatePropertyScore,
-  getSimilarProperties,
   getAreaMarketInsights,
 } from "@/lib/recommendation-engine";
 import { estimatePropertyPrice } from "@/lib/ai/valuation/valuation-service";
+import dynamic from "next/dynamic";
+import type { Metadata } from "next";
+import JsonLd from "@/components/seo/JsonLd";
+import { generatePropertySchema, generateBreadcrumbSchema } from "@/lib/seo-schema";
 
 // Enterprise Upgrade Components
 import PropertyMediaGallery from "@/components/property/PropertyMediaGallery";
@@ -49,61 +48,96 @@ import AIPropertyInsights from "@/components/property/AIPropertyInsights";
 import PropertyMapSection from "@/components/property/PropertyMapSection";
 import PropertyStatsPanel from "@/components/property/PropertyStatsPanel";
 import PropertyShareSection from "@/components/property/PropertyShareSection";
-import PropertyCompareModal, { ComparableItem } from "@/components/property/PropertyCompareModal";
 import PropertyDocumentsSection from "@/components/property/PropertyDocumentsSection";
-import PropertyScheduleTourModal from "@/components/property/PropertyScheduleTourModal";
 import PropertyAvailabilityBadge from "@/components/property/PropertyAvailabilityBadge";
 import RelatedPropertiesSection, { RelatedPropertyItem } from "@/components/property/RelatedPropertiesSection";
 import PropertyDynamicSpecs from "@/components/property/PropertyDynamicSpecs";
+import type { ComparableItem } from "@/components/property/PropertyCompareModal";
 
-import type { Metadata } from "next";
+// Code-split dynamic client components
+const PropertyCompareModal = dynamic(() => import("@/components/property/PropertyCompareModal"));
+const PropertyScheduleTourModal = dynamic(() => import("@/components/property/PropertyScheduleTourModal"));
+const PropertyReviews = dynamic(() => import("@/components/PropertyReviews"));
 
 type Props = { params: Promise<{ id: string }> };
 
+export const revalidate = 60; // ISR cache 60s
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const property = await prisma.property.findUnique({
-    where: { id },
-    select: { title: true, description: true, city: true, price: true },
-  });
+  const property = await memoizedGetPropertyMetadata(id);
   if (!property) return { title: "Property Not Found – Kiro-Maal" };
+
+  const ogImage =
+    property.images[0]?.url ||
+    "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&h=630&fit=crop";
+  const title = `${property.title} in ${property.city} – $${property.price.toLocaleString()} | Kiro-Maal Luxury Real Estate`;
+  const description =
+    property.description?.slice(0, 160) ||
+    `Verified ${property.type.toLowerCase()} in ${property.city}. Live AI valuation insights, verified documents, and 360 tours.`;
+
   return {
-    title: `${property.title} in ${property.city} – $${property.price.toLocaleString()} | Kiro-Maal Enterprise Real Estate`,
-    description: property.description.slice(0, 160),
+    title,
+    description,
+    alternates: {
+      canonical: `/properties/${id}`,
+    },
+    openGraph: {
+      title,
+      description,
+      url: `/properties/${id}`,
+      images: [{ url: ogImage, width: 1200, height: 630, alt: property.title }],
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogImage],
+    },
   };
 }
 
 export default async function PropertyDetailPage({ params }: Props) {
   const { id } = await params;
 
-  // 1. Increment viewCount atomically in database for live telemetry stats
-  await prisma.property
+  // 1. Parallelize primary property query and atomic viewCount increment
+  const property = await cachedDbQuery(
+    ["property", "detail-view", id],
+    async () => {
+      return prisma.property.findUnique({
+        where: { id },
+        include: {
+          images: { orderBy: { order: "asc" } },
+          reviews: {
+            include: { user: { select: { name: true, image: true } } },
+            orderBy: { createdAt: "desc" },
+          },
+          documents: { orderBy: { createdAt: "desc" } },
+          pricePredictions: { orderBy: { createdAt: "desc" }, take: 10 },
+          _count: {
+            select: {
+              favorites: true,
+              bookings: true,
+              reviews: true,
+            },
+          },
+        },
+      });
+    },
+    {
+      tags: ["properties", `property-${id}`],
+      revalidate: 60,
+    }
+  );
+
+  // Increment view count in background
+  prisma.property
     .update({
       where: { id },
       data: { viewCount: { increment: 1 } },
     })
     .catch(() => null);
-
-  // 2. Fetch primary property with relations and database counts
-  const property = await prisma.property.findUnique({
-    where: { id },
-    include: {
-      images: { orderBy: { order: "asc" } },
-      reviews: {
-        include: { user: { select: { name: true, image: true } } },
-        orderBy: { createdAt: "desc" },
-      },
-      documents: { orderBy: { createdAt: "desc" } },
-      pricePredictions: { orderBy: { createdAt: "desc" }, take: 10 },
-      _count: {
-        select: {
-          favorites: true,
-          bookings: true,
-          reviews: true,
-        },
-      },
-    },
-  });
 
   if (!property) notFound();
 
@@ -198,13 +232,13 @@ export default async function PropertyDetailPage({ params }: Props) {
     matchScore: score,
   });
 
-  const similarProperties: RelatedPropertyItem[] = similarRaw.map((p) => mapToRelatedItem(p));
-  const nearbyProperties: RelatedPropertyItem[] = nearbyRaw.map((p) => mapToRelatedItem(p));
+  const similarProperties: RelatedPropertyItem[] = similarRaw.map((p: any) => mapToRelatedItem(p));
+  const nearbyProperties: RelatedPropertyItem[] = nearbyRaw.map((p: any) => mapToRelatedItem(p));
 
   // AI Recommended Comps: prioritized by price proximity and bedroom similarity
   const aiRecommendedProperties: RelatedPropertyItem[] = [...nearbyRaw, ...similarRaw]
-    .filter((v, i, a) => a.findIndex((t) => t.id === v.id) === i)
-    .map((p) => {
+    .filter((v: any, i, a: any[]) => a.findIndex((t: any) => t.id === v.id) === i)
+    .map((p: any) => {
       // Calculate realistic match score (70-98%) based on feature distance
       const priceRatio = Math.min(property.price, p.price) / Math.max(property.price, p.price);
       const bedDiff = Math.abs(property.bedrooms - p.bedrooms);
@@ -232,19 +266,34 @@ export default async function PropertyDetailPage({ params }: Props) {
     images: property.images.map((img) => ({ url: img.url })),
   };
 
-  const details = [
-    { label: "Property Type", value: getPropertyTypeLabel(property.type), icon: Building2 },
-    { label: "Bedrooms", value: `${property.bedrooms}`, icon: BedDouble },
-    { label: "Bathrooms", value: `${property.bathrooms}`, icon: Bath },
-    { label: "Area", value: `${property.area} m²`, icon: SquareStack },
-    { label: "City", value: property.city, icon: MapPin },
-    { label: "Year Built", value: property.yearBuilt ? `${property.yearBuilt}` : "N/A", icon: Star },
-    { label: "Parking", value: property.parking ? `${property.parking} Spaces` : "Included / Street", icon: Car },
-    { label: "Furnished", value: property.isFurnished ? "Fully Furnished" : "Unfurnished", icon: Sofa },
-  ];
+
+
+  const propertySchema = generatePropertySchema({
+    id: property.id,
+    title: property.title,
+    description: property.description,
+    price: property.price,
+    type: property.type,
+    city: property.city,
+    address: property.location,
+    bedrooms: property.bedrooms,
+    bathrooms: property.bathrooms,
+    areaSqFt: property.area,
+    images: property.images.map((img) => ({ url: img.url })),
+    createdAt: property.createdAt,
+    updatedAt: property.updatedAt,
+  });
+
+  const breadcrumbSchema = generateBreadcrumbSchema([
+    { name: "Home", url: "/" },
+    { name: "Properties", url: "/properties" },
+    { name: property.title, url: `/properties/${property.id}` },
+  ]);
 
   return (
     <div className="section-container py-8 sm:py-10 bg-[#F7F3EA] min-h-screen">
+      <JsonLd data={propertySchema} />
+      <JsonLd data={breadcrumbSchema} />
       {/* ── Breadcrumb & Global Action Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <Link

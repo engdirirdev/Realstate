@@ -173,6 +173,8 @@ model User {
   @@index([email])
   @@index([role])
   @@index([isActive])
+  @@index([createdAt])
+  @@index([role, isActive])
   @@map("users")
 }
 
@@ -272,6 +274,12 @@ model Property {
   @@index([listingType])
   @@index([isFeatured])
   @@index([managerId])
+  @@index([createdAt])
+  @@index([approvalStatus, isActive, createdAt])
+  @@index([managerId, createdAt])
+  @@index([city, listingType])
+  @@index([city, type])
+  @@index([status, availabilityStatus, isActive])
   @@map("properties")
 }
 
@@ -341,6 +349,7 @@ model Inquiry {
   @@index([customerId])
   @@index([managerId])
   @@index([status])
+  @@index([createdAt])
   @@map("inquiries")
 }
 
@@ -370,6 +379,9 @@ model Booking {
   @@index([customerId])
   @@index([managerId])
   @@index([status])
+  @@index([createdAt])
+  @@index([managerId, status])
+  @@index([customerId, status])
   @@map("bookings")
 }
 
@@ -406,6 +418,7 @@ model Payment {
   @@index([status])
   @@index([transactionRef])
   @@index([transactionId])
+  @@index([createdAt])
   @@map("payments")
 }
 
@@ -439,6 +452,10 @@ model PurchaseRequest {
   @@index([propertyId])
   @@index([managerId])
   @@index([status])
+  @@index([createdAt])
+  @@index([managerId, status])
+  @@index([customerId, status])
+  @@index([propertyId, status])
   @@map("purchase_requests")
 }
 
@@ -480,6 +497,14 @@ model RentalRequest {
   @@index([bookingStatus])
   @@index([rentalStatus])
   @@index([agreementNo])
+  @@index([createdAt])
+  @@index([managerId, status])
+  @@index([customerId, status])
+  @@index([propertyId, rentalStatus])
+  @@index([managerId, bookingStatus])
+  @@index([managerId, rentalStatus])
+  @@index([customerId, bookingStatus])
+  @@index([customerId, rentalStatus])
   @@map("rental_requests")
 }
 
@@ -512,6 +537,9 @@ model Transaction {
   @@index([propertyId])
   @@index([status])
   @@index([type])
+  @@index([createdAt])
+  @@index([customerId, status])
+  @@index([managerId, status])
   @@map("transactions")
 }
 
@@ -714,6 +742,7 @@ model ChatMessage {
 
   @@index([sessionId])
   @@index([createdAt])
+  @@index([sessionId, createdAt])
   @@map("chat_messages")
 }
 
@@ -732,6 +761,7 @@ model ContactMessage {
 
   @@index([isRead])
   @@index([createdAt])
+  @@index([isRead, createdAt])
   @@map("contact_messages")
 }
 
@@ -754,6 +784,8 @@ model Notification {
   @@index([userId])
   @@index([isRead])
   @@index([createdAt])
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
   @@map("notifications")
 }
 
@@ -792,6 +824,7 @@ model Review {
 
   @@index([propertyId])
   @@index([userId])
+  @@index([propertyId, createdAt])
   @@map("reviews")
 }
 
@@ -809,6 +842,8 @@ model AuditLog {
 
   @@index([userId])
   @@index([createdAt])
+  @@index([action])
+  @@index([action, createdAt])
   @@map("audit_logs")
 }
 
@@ -847,6 +882,7 @@ model Location {
   createdAt DateTime @default(now())
 
   @@unique([city, region])
+  @@index([city])
   @@map("locations")
 }
 

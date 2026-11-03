@@ -14,18 +14,12 @@ import Image from "next/image";
 import {
   Scale,
   Building2,
-  ArrowLeft,
   Check,
   X,
   MapPin,
   Sparkles,
-  Bed,
-  Bath,
-  Maximize,
-  DollarSign,
-  Plus,
 } from "lucide-react";
-import { formatPrice, getPropertyTypeLabel } from "@/lib/utils";
+import { formatPrice } from "@/lib/utils";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -64,16 +58,7 @@ export default async function CustomerComparePage({
     });
   }
 
-  // Also fetch customer's favorites so they can easily swap or add
-  const customerFavorites = await prisma.favorite.findMany({
-    where: { userId: session.user.id },
-    include: {
-      property: {
-        select: { id: true, title: true, price: true, city: true, type: true },
-      },
-    },
-    take: 6,
-  });
+
 
   const allAmenities = Array.from(
     new Set(

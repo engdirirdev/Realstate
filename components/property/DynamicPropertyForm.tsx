@@ -4,13 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Building2,
-  Home,
   MapPin,
-  SquareStack,
-  BedDouble,
-  Bath,
-  Car,
-  Sofa,
   Sparkles,
   Send,
   Save,
@@ -26,16 +20,7 @@ import {
   Video,
   FileText,
   ShieldCheck,
-  Zap,
-  Droplets,
-  Truck,
-  Store,
-  Briefcase,
-  Trees,
-  Warehouse,
   Layers,
-  HelpCircle,
-  Upload,
   Camera,
   Globe,
 } from "lucide-react";
@@ -199,7 +184,7 @@ export default function DynamicPropertyForm({
       }
     }
     loadData();
-  }, [initialData]);
+  }, [initialData?.id]);
 
   const handleCategorySelect = (cat: CategoryOption) => {
     setSelectedCategoryId(cat.id);
@@ -338,7 +323,7 @@ export default function DynamicPropertyForm({
         } catch {}
       }
     }
-  }, [initialData]);
+  }, [initialData?.id, initialData?.updatedAt]);
 
   // Reset or initialize type-specific fields when Property Type changes
   const handleTypeChange = (newType: PropertyTypeCode) => {
@@ -638,7 +623,7 @@ export default function DynamicPropertyForm({
 
   // Validation before step transition
   const validateStep = (stepNumber: number): boolean => {
-    const { isValid, errors } = validatePropertyTypeForm(selectedType, {
+    const { errors } = validatePropertyTypeForm(selectedType, {
       title: common.title,
       price: common.price,
       city: common.city,
@@ -852,7 +837,6 @@ export default function DynamicPropertyForm({
       <div className="bg-[#FCFBF7] rounded-3xl border border-[#E8E1D4] p-4 sm:p-5 shadow-xs">
         <div className="grid grid-cols-5 gap-2">
           {steps.map((st) => {
-            const Icon = st.icon;
             const isCompleted = currentStep > st.number;
             const isCurrent = currentStep === st.number;
             return (

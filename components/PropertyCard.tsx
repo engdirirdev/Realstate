@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import Image from "next/image";
+import { useState, useCallback, memo } from "react";
 import { Heart, MapPin, BedDouble, Bath, SquareStack, Sparkles } from "lucide-react";
-import { formatPrice } from "@/lib/utils";
+
 import { useSession } from "next-auth/react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -34,14 +35,16 @@ interface PropertyCardProps {
   onFavoriteToggle?: (id: string, favorited: boolean) => void;
   href?: string;
   isFavorited?: boolean;
+  priority?: boolean;
 }
 
-export default function PropertyCard({
+function PropertyCard({
   property,
   className,
   onFavoriteToggle,
   href,
   isFavorited,
+  priority = false,
 }: PropertyCardProps) {
   const { data: session } = useSession();
   const { toast } = useToast();
@@ -55,8 +58,9 @@ export default function PropertyCard({
   const imageUrl =
     property.images?.[0]?.url ||
     "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800";
+  const [imgSrc, setImgSrc] = useState(imageUrl);
 
-  const handleFavoriteClick = async (e: React.MouseEvent) => {
+  const handleFavoriteClick = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -76,7 +80,7 @@ export default function PropertyCard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ propertyId: property.id }),
       });
-      const data = await res.json();
+      await res.json();
       if (res.ok) {
         const nextState = !isFav;
         setIsFav(nextState);
@@ -95,7 +99,7 @@ export default function PropertyCard({
     } finally {
       setSavingFav(false);
     }
-  };
+  }, [session, isFav, property.id, property.title, onFavoriteToggle, toast]);
 
   return (
     <div
@@ -104,12 +108,15 @@ export default function PropertyCard({
         className
       )}
     >
-      <Link href={href || `/properties/${property.id}`} prefetch={false} className="block relative aspect-[16/10] overflow-hidden bg-[#F7F3EA]">
-        <img
-          src={imageUrl}
+      <Link href={href || `/properties/${property.id}`} prefetch={true} className="block relative aspect-[16/10] overflow-hidden bg-[#F7F3EA]">
+        <Image
+          src={imgSrc}
           alt={property.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          loading="lazy"
+          fill
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1536px) 33vw, 25vw"
+          className="object-cover group-hover:scale-105 transition-transform duration-500"
+          priority={priority}
+          onError={() => setImgSrc("https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800")}
         />
 
         {/* Top Badges */}
@@ -165,7 +172,7 @@ export default function PropertyCard({
       {/* Card Content */}
       <div className="p-4 flex-1 flex flex-col justify-between">
         <div>
-          <Link href={`/properties/${property.id}`} prefetch={false}>
+          <Link href={`/properties/${property.id}`} prefetch={true}>
             <h3 className="font-bold text-[#07111F] text-base group-hover:text-[#C89B3C] font-serif transition-colors line-clamp-1">
               {property.title}
             </h3>
@@ -215,7 +222,7 @@ export default function PropertyCard({
           <div className="mt-3.5 flex items-center gap-2">
             <Link
               href={href || `/properties/${property.id}`}
-              prefetch={false}
+              prefetch={true}
               className="flex-1 py-2 px-3 text-center rounded-xl text-xs font-semibold bg-[#FCFBF7] text-[#07111F] hover:bg-[#F7F3EA] border border-[#E8E1D4] hover:border-[#C89B3C] transition-all shadow-2xs"
             >
               View Details
@@ -225,7 +232,7 @@ export default function PropertyCard({
               isRent ? (
                 <Link
                   href={href || `/properties/${property.id}`}
-                  prefetch={false}
+                  prefetch={true}
                   className="flex-1 py-2 px-3 text-center rounded-xl text-xs font-bold bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] hover:opacity-95 text-[#07111F] transition-all shadow-xs"
                 >
                   Book Now
@@ -233,7 +240,7 @@ export default function PropertyCard({
               ) : (
                 <Link
                   href={href || `/properties/${property.id}`}
-                  prefetch={false}
+                  prefetch={true}
                   className="flex-1 py-2 px-3 text-center rounded-xl text-xs font-bold bg-[#07111F] hover:bg-[#112238] text-[#D9B45B] border border-[#C89B3C]/50 transition-all shadow-xs"
                 >
                   Buy Property
@@ -250,3 +257,5 @@ export default function PropertyCard({
     </div>
   );
 }
+
+export default memo(PropertyCard);

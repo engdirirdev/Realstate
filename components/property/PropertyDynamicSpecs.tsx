@@ -2,8 +2,6 @@
 
 import {
   Building2,
-  Home,
-  MapPin,
   SquareStack,
   BedDouble,
   Bath,
@@ -13,12 +11,8 @@ import {
   Compass,
   FileText,
   ShieldCheck,
-  CheckCircle2,
-  Maximize2,
-  Sparkles,
   Zap,
   Droplets,
-  Anchor,
   Truck,
   Store,
   Briefcase,

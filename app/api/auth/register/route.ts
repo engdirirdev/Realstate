@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { checkRateLimit, getClientIdentifier, createRateLimitResponse } from "@/lib/rate-limiter";
 
 export async function POST(request: NextRequest) {
   try {
+    const clientId = getClientIdentifier(request);
+    const rateCheck = checkRateLimit(`register:${clientId}`, { limit: 5, windowSeconds: 60 });
+    if (!rateCheck.allowed) {
+      return createRateLimitResponse(rateCheck);
+    }
+
     const body = await request.json();
     const { name, email, password, phone } = body;
 
@@ -15,8 +22,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Password must be at least 8 characters." }, { status: 400 });
     }
 
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanName = name.trim();
+
     // Check if email already exists
-    const existing = await prisma.user.findUnique({ where: { email } });
+    const existing = await prisma.user.findUnique({ where: { email: cleanEmail } });
     if (existing) {
       return NextResponse.json({ success: false, error: "An account with this email already exists." }, { status: 409 });
     }
@@ -25,10 +35,10 @@ export async function POST(request: NextRequest) {
 
     const user = await prisma.user.create({
       data: {
-        name,
-        email,
+        name: cleanName,
+        email: cleanEmail,
         password: hashedPassword,
-        phone: phone || null,
+        phone: phone?.trim() || null,
         role: "CUSTOMER",
       },
     });

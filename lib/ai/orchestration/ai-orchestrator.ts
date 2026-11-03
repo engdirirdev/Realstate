@@ -22,7 +22,6 @@ import {
 } from "./consensus-resolver";
 import {
   ConversationState,
-  ContextAwareIntent,
   ExtendedLanguage,
 } from "../conversation/types";
 import { isOpenAIConfigured } from "../openai-config";

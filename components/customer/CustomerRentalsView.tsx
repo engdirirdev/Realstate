@@ -302,30 +302,31 @@ export default function CustomerRentalsView() {
 
                 {/* Footer Actions */}
                 <div className="p-4 bg-[#FCFBF7] border-t border-[#E8E1D4] flex items-center justify-between gap-2">
-                  <Link href={`/customer/properties/${rental.property?.id}`} className="flex-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full rounded-xl text-xs border-[#E8E1D4] hover:bg-[#F7F3EA]"
-                    >
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 rounded-xl text-xs border-[#E8E1D4] hover:bg-[#F7F3EA]"
+                  >
+                    <Link href={`/customer/properties/${rental.property?.id}`}>
                       View Property
-                    </Button>
-                  </Link>
+                    </Link>
+                  </Button>
 
                   {rental.transaction?.receipt && (
-                    <Link
-                      href={`/receipt/${rental.transaction.receipt.id}`}
-                      target="_blank"
-                      className="flex-1"
+                    <Button
+                      asChild
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 rounded-xl text-xs border-[#C89B3C]/40 text-[#A97918] hover:bg-[#F7F3EA] gap-1"
                     >
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full rounded-xl text-xs border-[#C89B3C]/40 text-[#A97918] hover:bg-[#F7F3EA] gap-1"
+                      <Link
+                        href={`/receipt/${rental.transaction.receipt.id}`}
+                        target="_blank"
                       >
                         <Receipt className="h-3.5 w-3.5 text-[#C89B3C]" /> View Receipt
-                      </Button>
-                    </Link>
+                      </Link>
+                    </Button>
                   )}
                 </div>
               </div>

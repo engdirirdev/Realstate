@@ -9,19 +9,14 @@ import {
   XCircle,
   Eye,
   Search,
-  Filter,
-  DollarSign,
-  TrendingUp,
   Clock,
   User,
   ShieldCheck,
-  AlertCircle,
   ExternalLink,
   Receipt,
   FileText,
   BadgeDollarSign,
   Loader2,
-  Calendar,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
@@ -62,7 +57,7 @@ export default function AdminSalesManager({
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [requests, setRequests] = useState(initialRequests);
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   // Dialog states
   const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
@@ -100,7 +95,7 @@ export default function AdminSalesManager({
   // Action handler
   const handleReviewAction = async (
     requestId: string,
-    action: "approve" | "reject",
+    action: "approve" | "reject" | "confirm",
     notes?: string
   ) => {
     setBusyId(requestId);
@@ -115,12 +110,16 @@ export default function AdminSalesManager({
       if (data.success) {
         toast({
           title:
-            action === "approve"
-              ? "Purchase Request Approved"
+            action === "confirm"
+              ? "Purchase Request Confirmed"
+              : action === "approve"
+              ? "Purchase Request Approved & Finalized 🎉"
               : "Purchase Request Rejected",
           description:
-            action === "approve"
+            action === "confirm"
               ? "The customer has been notified and can now proceed with payment. Competing buyer requests are now on hold."
+              : action === "approve"
+              ? "The sale has been finalized and property marked as Sold."
               : "The request has been rejected and the property remains available for sale.",
         });
 
@@ -130,8 +129,15 @@ export default function AdminSalesManager({
             r.id === requestId
               ? {
                   ...r,
-                  status: action === "approve" ? "APPROVED" : "REJECTED",
+                  status:
+                    data.request?.status ||
+                    (action === "confirm"
+                      ? "PAYMENT_PENDING"
+                      : action === "approve"
+                      ? "COMPLETED"
+                      : "REJECTED"),
                   reviewNotes: notes || r.reviewNotes,
+                  transaction: data.request?.transaction || r.transaction,
                 }
               : r
           )
@@ -341,13 +347,13 @@ export default function AdminSalesManager({
                       const isPendingReview =
                         r.status === "PENDING" || r.status === "UNDER_REVIEW";
                       const isCompleted = r.status === "COMPLETED";
-                      const paymentStatus =
-                        r.transaction?.payments?.[0]?.status ||
-                        (r.status === "COMPLETED"
-                          ? "PAID"
-                          : r.status === "PAYMENT_PENDING"
-                          ? "PENDING"
-                          : null);
+                      const paymentRecord = r.transaction?.payments?.[0];
+                      const isPaid =
+                        paymentRecord?.status === "PAID" ||
+                        r.transaction?.status === "PAID" ||
+                        r.transaction?.status === "COMPLETED" ||
+                        isCompleted;
+                      const paymentStatus = isPaid ? "PAID" : "NOT_PAID";
 
                       return (
                         <tr
@@ -358,7 +364,7 @@ export default function AdminSalesManager({
                             <span className="font-mono font-bold text-[#07111F] block">
                               {r.requestNo}
                             </span>
-                            <span className="text-[11px] text-[#6B7280]">
+                            <span suppressHydrationWarning className="text-[11px] text-[#6B7280]">
                               {new Date(r.createdAt).toLocaleDateString()}
                             </span>
                           </td>
@@ -462,16 +468,17 @@ export default function AdminSalesManager({
                                 <>
                                   <Button
                                     size="sm"
+                                    variant="navy"
                                     disabled={busyId === r.id}
-                                    onClick={() => handleReviewAction(r.id, "approve")}
-                                    className="h-7 px-2.5 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+                                    onClick={() => handleReviewAction(r.id, "confirm")}
+                                    className="h-7 px-3 text-[11px] bg-[#07111F] hover:bg-[#0E2238] text-white border border-[#C89B3C]/60 gap-1.5 font-bold shadow-xs rounded-lg cursor-pointer transition-all"
                                   >
                                     {busyId === r.id ? (
-                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#D9B45B]" />
                                     ) : (
-                                      <CheckCircle2 className="w-3 h-3" />
+                                      <CheckCircle2 className="w-3.5 h-3.5 text-[#D9B45B]" />
                                     )}
-                                    Approve
+                                    <span>Confirm</span>
                                   </Button>
                                   <Button
                                     size="sm"
@@ -486,6 +493,45 @@ export default function AdminSalesManager({
                                     <XCircle className="w-3 h-3" /> Reject
                                   </Button>
                                 </>
+                              )}
+
+                              {/* Awaiting Customer Payment state */}
+                              {r.status === "PAYMENT_PENDING" && !isPaid && (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-300 uppercase tracking-wider">
+                                    <Clock className="w-3 h-3 text-amber-600" /> Awaiting Payment
+                                  </span>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={busyId === r.id}
+                                    onClick={() => {
+                                      setRejectingRequest(r);
+                                      setRejectReason("");
+                                    }}
+                                    className="h-7 px-2 text-[11px] border-red-200 text-red-600 hover:bg-red-50"
+                                    title="Reject request"
+                                  >
+                                    <XCircle className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              )}
+
+                              {/* Customer has Paid -> Admin must be able to Approve! */}
+                              {r.status === "PAYMENT_PENDING" && isPaid && (
+                                <Button
+                                  size="sm"
+                                  disabled={busyId === r.id}
+                                  onClick={() => handleReviewAction(r.id, "approve")}
+                                  className="h-7 px-2.5 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white gap-1 font-semibold shadow-xs"
+                                >
+                                  {busyId === r.id ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <CheckCircle2 className="w-3 h-3" />
+                                  )}
+                                  Approve
+                                </Button>
                               )}
                             </div>
                           </td>
@@ -543,7 +589,7 @@ export default function AdminSalesManager({
                           >
                             {p.title}
                           </Link>
-                          <span className="text-[11px] text-[#6B7280]">
+                          <span suppressHydrationWarning className="text-[11px] text-[#6B7280]">
                             Listed on {new Date(p.createdAt).toLocaleDateString()}
                           </span>
                         </td>
@@ -590,24 +636,26 @@ export default function AdminSalesManager({
 
                         <td className="p-3.5 text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            <Link href={`/properties/${p.id}`} target="_blank">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 px-2.5 text-[11px] border-[#E8E1D4] text-[#07111F] hover:bg-white gap-1"
-                              >
+                            <Button
+                              asChild
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2.5 text-[11px] border-[#E8E1D4] text-[#07111F] hover:bg-white gap-1"
+                            >
+                              <Link href={`/properties/${p.id}`} target="_blank">
                                 <ExternalLink className="w-3 h-3" /> View Listing
-                              </Button>
-                            </Link>
-                            <Link href={`/admin/properties`}>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 px-2.5 text-[11px] border-[#E8E1D4] text-[#6B7280] hover:bg-white"
-                              >
+                              </Link>
+                            </Button>
+                            <Button
+                              asChild
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2.5 text-[11px] border-[#E8E1D4] text-[#6B7280] hover:bg-white"
+                            >
+                              <Link href={`/admin/properties`}>
                                 Manage
-                              </Button>
-                            </Link>
+                              </Link>
+                            </Button>
                           </div>
                         </td>
                       </tr>
@@ -785,14 +833,29 @@ export default function AdminSalesManager({
                     Reject
                   </Button>
                   <Button
+                    variant="navy"
                     onClick={() =>
-                      handleReviewAction(selectedRequest.id, "approve")
+                      handleReviewAction(selectedRequest.id, "confirm")
                     }
-                    className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white"
+                    className="rounded-xl bg-[#07111F] text-white hover:bg-[#0E2238] border border-[#C89B3C]/60 font-bold px-4 py-2 gap-2 shadow-xs cursor-pointer"
                   >
-                    Approve Request
+                    <CheckCircle2 className="w-4 h-4 text-[#D9B45B]" />
+                    Confirm Request
                   </Button>
                 </>
+              )}
+            {selectedRequest &&
+              selectedRequest.status === "PAYMENT_PENDING" &&
+              (selectedRequest.transaction?.payments?.[0]?.status === "PAID" ||
+                selectedRequest.transaction?.status === "PAID") && (
+                <Button
+                  onClick={() =>
+                    handleReviewAction(selectedRequest.id, "approve")
+                  }
+                  className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white"
+                >
+                  Approve &amp; Finalize Sale
+                </Button>
               )}
           </DialogFooter>
         </DialogContent>
@@ -889,14 +952,15 @@ export default function AdminSalesManager({
               </div>
 
               <div className="flex justify-end pt-2">
-                <Link href={`/admin/users?role=CUSTOMER&q=${customerModal.email}`}>
-                  <Button
+                <Button
+                    asChild
                     size="sm"
                     className="h-8 text-xs bg-[#07111F] text-[#D9B45B] hover:bg-[#07111F]/90 rounded-xl"
                   >
-                    View in User Directory
+                    <Link href={`/admin/users?role=CUSTOMER&q=${customerModal.email}`}>
+                      View in User Directory
+                    </Link>
                   </Button>
-                </Link>
               </div>
             </div>
           )}

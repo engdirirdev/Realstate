@@ -1,33 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
+import { requireAuth, forbiddenResponse } from "@/lib/auth-guards";
+import { canAccessBooking } from "@/lib/rbac";
 
 // GET: Fetch bookings for Customer, Manager, or Admin
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session || !session.user?.id) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    const authResult = await requireAuth();
+    if (authResult.response) {
+      return authResult.response;
     }
+    const { user } = authResult;
 
-    const userId = session.user.id;
-    const role = session.user.role;
-
-    const where = role === "USER"
-      ? { managerId: userId }
-      : role === "ADMIN"
-      ? {}
-      : { customerId: userId };
+    const where =
+      user.role === "USER"
+        ? { managerId: user.id }
+        : user.role === "ADMIN"
+        ? {}
+        : { customerId: user.id };
 
     const bookings = await prisma.booking.findMany({
       where,
       include: {
         property: {
-          select: { id: true, title: true, city: true, price: true, type: true, images: { take: 1, orderBy: { order: "asc" } } },
+          select: {
+            id: true,
+            title: true,
+            city: true,
+            price: true,
+            type: true,
+            images: { take: 1, orderBy: { order: "asc" } },
+          },
         },
         customer: { select: { id: true, name: true, email: true, phone: true } },
         manager: { select: { id: true, name: true, email: true } },
-        payments: { select: { id: true, amount: true, status: true, transactionRef: true } },
+        payments: {
+          select: { id: true, amount: true, status: true, transactionRef: true },
+        },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -35,34 +44,46 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, bookings });
   } catch (error) {
     console.error("[GET /api/bookings]", error);
-    return NextResponse.json({ success: false, error: "Failed to fetch bookings" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Failed to fetch bookings" },
+      { status: 500 }
+    );
   }
 }
 
 // POST: Customer creates property booking/reservation
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session || !session.user?.id) {
-      return NextResponse.json({ success: false, error: "Please log in to book a property." }, { status: 401 });
+    const authResult = await requireAuth();
+    if (authResult.response) {
+      return authResult.response;
     }
+    const { user } = authResult;
 
     const body = await request.json();
     const { propertyId, startDate, endDate, notes } = body;
 
     if (!propertyId) {
-      return NextResponse.json({ success: false, error: "Property ID is required." }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "Property ID is required." },
+        { status: 400 }
+      );
     }
 
-    const property = await prisma.property.findUnique({ where: { id: propertyId } });
+    const property = await prisma.property.findUnique({
+      where: { id: propertyId },
+    });
     if (!property) {
-      return NextResponse.json({ success: false, error: "Property not found." }, { status: 404 });
+      return NextResponse.json(
+        { success: false, error: "Property not found." },
+        { status: 404 }
+      );
     }
 
     const booking = await prisma.booking.create({
       data: {
         propertyId,
-        customerId: session.user.id,
+        customerId: user.id,
         managerId: property.managerId,
         startDate: startDate ? new Date(startDate) : null,
         endDate: endDate ? new Date(endDate) : null,
@@ -79,7 +100,7 @@ export async function POST(request: NextRequest) {
           userId: property.managerId,
           type: "BOOKING",
           title: "New Booking Request 📅",
-          message: `${session.user.name || "A customer"} requested a booking for "${property.title}".`,
+          message: `${user.name || "A customer"} requested a booking for "${property.title}".`,
           linkUrl: `/dashboard/bookings`,
         },
       }).catch(() => {});
@@ -88,23 +109,58 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, booking });
   } catch (error) {
     console.error("[POST /api/bookings]", error);
-    return NextResponse.json({ success: false, error: "Failed to create booking." }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Failed to create booking." },
+      { status: 500 }
+    );
   }
 }
 
-// PATCH: Update booking status (CONFIRMED, CANCELLED, COMPLETED)
+// PATCH: Update booking status with strict IDOR authorization guards
 export async function PATCH(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session || !session.user?.id) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    const authResult = await requireAuth();
+    if (authResult.response) {
+      return authResult.response;
     }
+    const { user } = authResult;
 
     const body = await request.json();
     const { bookingId, status } = body;
 
     if (!bookingId || !status) {
-      return NextResponse.json({ success: false, error: "Booking ID and status are required." }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: "Booking ID and status are required." },
+        { status: 400 }
+      );
+    }
+
+    // 1. Fetch booking to verify existence and ownership
+    const existing = await prisma.booking.findUnique({
+      where: { id: bookingId },
+    });
+
+    if (!existing) {
+      return NextResponse.json(
+        { success: false, error: "Booking not found." },
+        { status: 404 }
+      );
+    }
+
+    // 2. IDOR Prevention: Check if user has permission to access this booking
+    if (!canAccessBooking(user, existing)) {
+      return forbiddenResponse(
+        "Forbidden. You do not have permission to manage this booking."
+      );
+    }
+
+    // 3. Status Transition Authorization: Customers can only cancel their own bookings
+    if (user.role === "CUSTOMER") {
+      if (status !== "CANCELLED") {
+        return forbiddenResponse(
+          "Forbidden. Customers can only cancel their own bookings."
+        );
+      }
     }
 
     const updated = await prisma.booking.update({
@@ -113,20 +169,25 @@ export async function PATCH(request: NextRequest) {
       include: { property: { select: { title: true } } },
     });
 
-    // Notify Customer
-    await prisma.notification.create({
-      data: {
-        userId: updated.customerId,
-        type: "BOOKING",
-        title: `Booking Status: ${status} 📅`,
-        message: `Your booking for "${updated.property.title}" is now ${status}.`,
-        linkUrl: `/customer/bookings`,
-      },
-    }).catch(() => {});
+    // Notify Customer when manager/admin updates status
+    if (user.id !== updated.customerId) {
+      await prisma.notification.create({
+        data: {
+          userId: updated.customerId,
+          type: "BOOKING",
+          title: `Booking Status: ${status} 📅`,
+          message: `Your booking for "${updated.property.title}" is now ${status}.`,
+          linkUrl: `/customer/bookings`,
+        },
+      }).catch(() => {});
+    }
 
     return NextResponse.json({ success: true, booking: updated });
   } catch (error) {
     console.error("[PATCH /api/bookings]", error);
-    return NextResponse.json({ success: false, error: "Failed to update booking." }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Failed to update booking." },
+      { status: 500 }
+    );
   }
 }

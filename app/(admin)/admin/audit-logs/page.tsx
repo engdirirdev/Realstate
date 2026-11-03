@@ -8,7 +8,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ShieldAlert, Clock, User, Globe, Loader2, Sparkles } from "lucide-react";
+import { ShieldAlert, Globe, Loader2, Sparkles } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface AuditItem {

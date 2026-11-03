@@ -19,13 +19,13 @@ import {
   ShieldCheck,
   Tag,
   EyeOff,
+  Lock,
   Building2,
   MapPin,
   Compass,
   ExternalLink,
   User,
   Calendar,
-  Sparkles,
   Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,7 @@ import {
 } from "@/components/ui/dialog";
 import PropertyDynamicSpecs from "@/components/property/PropertyDynamicSpecs";
 import PropertyAvailabilityBadge from "@/components/property/PropertyAvailabilityBadge";
-import { formatPrice, getPropertyTypeLabel } from "@/lib/utils";
+import { getPropertyTypeLabel } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 
 interface ReviewPageProps {
@@ -55,6 +55,9 @@ export default function PropertyReviewPage({ params }: ReviewPageProps) {
   const [property, setProperty] = useState<any>(null);
   const [fetching, setFetching] = useState(true);
   const [loading, setLoading] = useState<string | null>(null);
+
+  const isSold = property?.status === "SOLD" || property?.availabilityStatus === "SOLD";
+  const isRented = property?.status === "RENTED" || property?.availabilityStatus === "RENTED";
 
   // Reject Dialog
   const [rejectOpen, setRejectOpen] = useState(false);
@@ -136,9 +139,9 @@ export default function PropertyReviewPage({ params }: ReviewPageProps) {
     return (
       <div className="p-6 text-center space-y-4">
         <p className="text-sm font-bold text-red-600">Property could not be located.</p>
-        <Link href="/admin/properties">
-          <Button variant="outline" className="rounded-xl text-xs">Back to Properties</Button>
-        </Link>
+        <Button asChild variant="outline" className="rounded-xl text-xs">
+          <Link href="/admin/properties">Back to Properties</Link>
+        </Button>
       </div>
     );
   }
@@ -317,11 +320,37 @@ export default function PropertyReviewPage({ params }: ReviewPageProps) {
           </p>
         </div>
 
+        {/* State Notice Banners for SOLD or RENTED */}
+        {isSold && (
+          <div className="p-4 bg-slate-900 border border-slate-700 rounded-2xl flex items-center gap-3 text-slate-100 shadow-sm">
+            <Lock className="w-5 h-5 text-[#D9B45B] shrink-0" />
+            <div>
+              <p className="text-xs font-bold text-white uppercase tracking-wider">Property Finalized as Sold</p>
+              <p className="text-[11px] text-slate-300">
+                This transaction has been completed and ownership transferred. The listing cannot be approved back to available.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {isRented && (
+          <div className="p-4 bg-indigo-950 border border-indigo-800 rounded-2xl flex items-center gap-3 text-indigo-100 shadow-sm">
+            <Lock className="w-5 h-5 text-indigo-300 shrink-0" />
+            <div>
+              <p className="text-xs font-bold text-white uppercase tracking-wider">Property Actively Rented</p>
+              <p className="text-[11px] text-indigo-200">
+                This property is currently under an active tenancy agreement. It cannot be approved back to available until the lease finishes.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <Button
             onClick={() => updateStatus("APPROVED")}
-            disabled={loading !== null}
-            className="gap-2 bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] hover:opacity-95 text-[#07111F] font-bold rounded-xl shadow-sm h-11 border-0 cursor-pointer"
+            disabled={loading !== null || isSold || isRented}
+            title={isSold ? "Sold properties cannot be approved" : isRented ? "Rented properties cannot be approved" : undefined}
+            className="gap-2 bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] hover:opacity-95 text-[#07111F] font-bold rounded-xl shadow-sm h-11 border-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             size="lg"
           >
             {loading === "APPROVED" ? (
@@ -334,10 +363,11 @@ export default function PropertyReviewPage({ params }: ReviewPageProps) {
 
           <Button
             onClick={() => setRejectOpen(true)}
-            disabled={loading !== null}
+            disabled={loading !== null || isSold || isRented}
+            title={isSold ? "Sold properties cannot be rejected" : isRented ? "Rented properties cannot be rejected" : undefined}
             variant="destructive"
             size="lg"
-            className="gap-2 bg-[#991B1B] text-white hover:bg-[#7F1D1D] rounded-xl h-11 border-0 font-bold cursor-pointer"
+            className="gap-2 bg-[#991B1B] text-white hover:bg-[#7F1D1D] rounded-xl h-11 border-0 font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading === "REJECTED" ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -349,25 +379,25 @@ export default function PropertyReviewPage({ params }: ReviewPageProps) {
 
           <Button
             onClick={() => updateStatus("SOLD")}
-            disabled={loading !== null}
+            disabled={loading !== null || isSold}
             variant="outline"
             size="lg"
-            className="gap-2 bg-[#07111F] text-[#D9B45B] border border-[#C89B3C]/30 hover:bg-[#0B1728] rounded-xl h-11 font-bold cursor-pointer"
+            className="gap-2 bg-[#07111F] text-[#D9B45B] border border-[#C89B3C]/30 hover:bg-[#0B1728] rounded-xl h-11 font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading === "SOLD" ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Tag className="h-4 w-4 text-[#C89B3C]" />
             )}
-            Mark as Sold
+            {isSold ? "Listing is Sold" : "Mark as Sold"}
           </Button>
 
           <Button
             onClick={() => updateStatus("UNAVAILABLE")}
-            disabled={loading !== null}
+            disabled={loading !== null || isSold}
             variant="outline"
             size="lg"
-            className="gap-2 bg-[#FCFBF7] text-[#6B7280] border border-[#E8E1D4] hover:bg-[#F7F3EA] rounded-xl h-11 font-medium cursor-pointer"
+            className="gap-2 bg-[#FCFBF7] text-[#6B7280] border border-[#E8E1D4] hover:bg-[#F7F3EA] rounded-xl h-11 font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading === "UNAVAILABLE" ? (
               <Loader2 className="h-4 w-4 animate-spin" />

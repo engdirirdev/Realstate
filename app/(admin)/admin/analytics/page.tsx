@@ -13,7 +13,6 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { BarChart3, TrendingUp, Building2, Users, Bot, Brain, Download, Sparkles, CheckCircle2 } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 
 export const metadata: Metadata = { title: "Analytics – Admin | Kiro-Maal Real Estate" };
 

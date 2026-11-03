@@ -30,16 +30,26 @@ export function validateGrounding(
 
   // If there are no verified properties and the response asserts specific property features, reject
   if (verifiedProperties.length === 0 && !targetProperty) {
-    // If it's a general statement or refusal, it's valid
-    if (
-      text.includes("ma jiraan") ||
-      text.includes("wax natiijo ah kama helin") ||
-      text.includes("no properties found") ||
-      text.includes("waxaan ahay kiro-maal") ||
-      text.includes("kiro-maal real estate")
-    ) {
-      return { isValid: true };
+    // Check if the response hallucinates finding properties or specific listings when zero exist in database
+    const claimsFindingProperties =
+      /\b(i found \d+|here are \d+|waxaan kuu helay \d+|halkan ka eeg|wuxuu ku yaal|waxaa ku yaalla|qiimahiisu waa|price is \$|\$\d{2,})\b/i.test(text) &&
+      !text.includes("ma helin") &&
+      !text.includes("kuma helin") &&
+      !text.includes("wax natiijo ah") &&
+      !text.includes("no listings") &&
+      !text.includes("no properties") &&
+      !text.includes("could not locate") &&
+      !text.includes("ma jiraan");
+
+    if (claimsFindingProperties) {
+      return {
+        isValid: false,
+        reason: "Hallucinated property inventory or prices when zero verified properties were found in database.",
+        hallucinatedFeature: "non_existent_property",
+      };
     }
+
+    return { isValid: true };
   }
 
   const activeProp = targetProperty || verifiedProperties[0];

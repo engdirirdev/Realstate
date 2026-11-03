@@ -3,16 +3,12 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import {
-  FileText,
   Loader2,
   XCircle,
   Building2,
-  Calendar,
   CreditCard,
   Inbox,
-  AlertCircle,
   Clock,
-  ArrowRight,
   Receipt,
   User,
   CheckCircle2,
@@ -20,7 +16,6 @@ import {
   Info,
   MapPin,
   KeyRound,
-  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,7 +28,6 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { formatPrice } from "@/lib/utils";
-import StatusBadge from "@/components/transactions/StatusBadge";
 
 type RequestType = "ALL" | "RENTAL" | "PURCHASE";
 
@@ -118,14 +112,82 @@ export default function CustomerRequestsView() {
     }
   };
 
-  const getBookingStatus = (item: any): string => {
+  const getItemStatus = (item: any): { label: string; text: string; fullBadgeText: string; isCompleted: boolean; isPending: boolean } => {
+    if (!item) return { label: "", text: "", fullBadgeText: "", isCompleted: false, isPending: false };
+
     if (item._kind === "RENTAL") {
-      if (item.bookingStatus) return item.bookingStatus;
-      if (item.status === "ACTIVE") return "APPROVED";
-      return item.status;
+      let st = item.status || "PENDING";
+      if (item.bookingStatus === "CONFIRMED" || item.bookingStatus === "APPROVED") st = "CONFIRMED";
+      else if (item.bookingStatus) st = item.bookingStatus;
+      else if (item.status === "ACTIVE" && item.rentalStatus === "ACTIVE") st = "CONFIRMED";
+
+      const isCompleted = st === "CONFIRMED" || st === "APPROVED";
+      const isPending = st === "PENDING" || st === "UNDER_REVIEW";
+
+      return {
+        label: "Booking",
+        text: st,
+        fullBadgeText: `Booking: ${st}`,
+        isCompleted,
+        isPending,
+      };
     }
-    return item.status;
+
+    // Purchase (Customer Buying)
+    const isCompleted = item.status === "COMPLETED";
+    const paymentRecord = item.transaction?.payments?.[0];
+    const isPaid = paymentRecord?.status === "PAID" || item.transaction?.status === "PAID" || isCompleted;
+    const isPending = ["PENDING", "UNDER_REVIEW"].includes(item.status);
+
+    if (isCompleted) {
+      return {
+        label: "Order",
+        text: "Completed",
+        fullBadgeText: "Order: Completed",
+        isCompleted: true,
+        isPending: false,
+      };
+    }
+
+    if (item.status === "PAYMENT_PENDING") {
+      if (isPaid) {
+        return {
+          label: "Order",
+          text: "Paid",
+          fullBadgeText: "Order: Paid",
+          isCompleted: true,
+          isPending: false,
+        };
+      }
+      return {
+        label: "Order",
+        text: "Confirmed",
+        fullBadgeText: "Order: Confirmed",
+        isCompleted: false,
+        isPending: true,
+      };
+    }
+
+    if (isPending) {
+      return {
+        label: "Order",
+        text: "Pending",
+        fullBadgeText: "Order: Pending",
+        isCompleted: false,
+        isPending: true,
+      };
+    }
+
+    return {
+      label: "Order",
+      text: item.status,
+      fullBadgeText: `Order: ${item.status}`,
+      isCompleted: false,
+      isPending: false,
+    };
   };
+
+
 
   const allItems = [
     ...rentalRequests.map((r) => ({ ...r, _kind: "RENTAL" })),
@@ -231,13 +293,26 @@ export default function CustomerRequestsView() {
                     </span>
 
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      {/* Booking Status Badge */}
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-800 border border-slate-300">
-                        Booking: {getBookingStatus(item)}
-                      </span>
+                      {/* Status Badge (Booking for Rental, Order for Purchase) */}
+                      {(() => {
+                        const statusInfo = getItemStatus(item);
+                        return (
+                          <span
+                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                              statusInfo.isCompleted
+                                ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                                : statusInfo.isPending
+                                ? "bg-amber-50 text-amber-900 border-amber-300"
+                                : "bg-slate-100 text-slate-800 border-slate-300"
+                            }`}
+                          >
+                            {statusInfo.fullBadgeText}
+                          </span>
+                        );
+                      })()}
 
                       {/* Payment Status Badge */}
-                      {isRental && paymentRecord && (
+                      {paymentRecord && (
                         <span
                           className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${
                             isPaidPayment
@@ -282,12 +357,48 @@ export default function CustomerRequestsView() {
                     </div>
                   </div>
 
-                  {/* Required User Message for Pending Booking */}
+                  {/* Contextual Status Message Banner */}
                   {isRental && item.status === "PENDING" && (
                     <div className="mb-3 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-950 flex items-start gap-2 text-xs">
                       <Info className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
                       <p className="font-medium text-[11px] leading-relaxed">
                         Your payment has been submitted and your booking is waiting for Manager approval.
+                      </p>
+                    </div>
+                  )}
+
+                  {!isRental && ["PENDING", "UNDER_REVIEW"].includes(item.status) && (
+                    <div className="mb-3 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-950 flex items-start gap-2 text-xs">
+                      <Info className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
+                      <p className="font-medium text-[11px] leading-relaxed">
+                        Your purchase request is pending review and confirmation by Administrator.
+                      </p>
+                    </div>
+                  )}
+
+                  {!isRental && item.status === "PAYMENT_PENDING" && !isPaidPayment && (
+                    <div className="mb-3 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-950 flex items-start gap-2 text-xs">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-700 shrink-0 mt-0.5" />
+                      <p className="font-medium text-[11px] leading-relaxed">
+                        Your purchase order is confirmed! Please complete payment below to finalize your acquisition.
+                      </p>
+                    </div>
+                  )}
+
+                  {!isRental && item.status === "PAYMENT_PENDING" && isPaidPayment && (
+                    <div className="mb-3 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-950 flex items-start gap-2 text-xs">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-700 shrink-0 mt-0.5" />
+                      <p className="font-medium text-[11px] leading-relaxed">
+                        Your payment has been received and verified! Waiting for final Admin approval.
+                      </p>
+                    </div>
+                  )}
+
+                  {!isRental && item.status === "COMPLETED" && (
+                    <div className="mb-3 p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-950 flex items-start gap-2 text-xs">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-700 shrink-0 mt-0.5" />
+                      <p className="font-medium text-[11px] leading-relaxed">
+                        Your purchase order has been approved and completed! Property acquisition is finalized.
                       </p>
                     </div>
                   )}
@@ -347,7 +458,9 @@ export default function CustomerRequestsView() {
 
                     {item.reviewNotes && (
                       <div className="pt-2 border-t border-[#E8E1D4] text-[11px]">
-                        <span className="text-[#6B7280] block font-semibold">Staff Review Note:</span>
+                        <span className="text-[#6B7280] block font-semibold">
+                          {isRental ? "Manager Review Note:" : "Admin Review Note:"}
+                        </span>
                         <span className="text-[#07111F] italic">&ldquo;{item.reviewNotes}&rdquo;</span>
                       </div>
                     )}
@@ -366,7 +479,7 @@ export default function CustomerRequestsView() {
                     <Eye className="h-3.5 w-3.5 text-[#C89B3C]" /> {isRental ? "View Booking" : "View Request"}
                   </Button>
 
-                  {item.status === "PAYMENT_PENDING" && item.transaction && (
+                  {item.status === "PAYMENT_PENDING" && !isPaidPayment && item.transaction && (
                     <Button
                       size="sm"
                       onClick={() => setPayTarget(item.transaction)}
@@ -377,15 +490,16 @@ export default function CustomerRequestsView() {
                   )}
 
                   {item.transaction?.receipt && (
-                    <Link href={`/receipt/${item.transaction.receipt.id}`} target="_blank">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="rounded-xl text-xs border-[#E8E1D4] gap-1 cursor-pointer font-medium"
-                      >
+                    <Button
+                      asChild
+                      size="sm"
+                      variant="outline"
+                      className="rounded-xl text-xs border-[#E8E1D4] gap-1 cursor-pointer font-medium"
+                    >
+                      <Link href={`/receipt/${item.transaction.receipt.id}`} target="_blank">
                         <Receipt className="h-3 w-3 text-[#C89B3C]" /> Receipt
-                      </Button>
-                    </Link>
+                      </Link>
+                    </Button>
                   )}
 
                   {cancellable && (
@@ -420,10 +534,12 @@ export default function CustomerRequestsView() {
             </div>
             <DialogTitle className="font-serif text-lg text-[#07111F] flex items-center gap-2 mt-1">
               <KeyRound className="h-5 w-5 text-[#C89B3C]" />
-              Booking &amp; Payment Record
+              {viewBookingTarget?._kind === "RENTAL" ? "Booking & Payment Record" : "Purchase Order Record"}
             </DialogTitle>
             <DialogDescription className="text-xs text-[#6B7280]">
-              Complete rental agreement, payment status, and verification details.
+              {viewBookingTarget?._kind === "RENTAL"
+                ? "Complete rental agreement, payment status, and verification details."
+                : "Complete purchase order, payment status, and verification details."}
             </DialogDescription>
           </DialogHeader>
 
@@ -450,8 +566,18 @@ export default function CustomerRequestsView() {
               {/* Status Grid */}
               <div className="grid grid-cols-2 gap-2 bg-[#FAF6EC] p-3 rounded-xl border border-[#E8DEC8]">
                 <div>
-                  <span className="text-[#6B7280] block text-[10px] uppercase font-bold">Booking Status</span>
-                  <span className="font-bold text-xs text-[#07111F]">{getBookingStatus(viewBookingTarget)}</span>
+                  <span className="text-[#6B7280] block text-[10px] uppercase font-bold">
+                    {viewBookingTarget?._kind === "RENTAL" ? "Booking Status" : "Order Status"}
+                  </span>
+                  <span className="font-bold text-xs text-[#07111F] uppercase">
+                    {viewBookingTarget?._kind === "RENTAL"
+                      ? getItemStatus(viewBookingTarget).text
+                      : getItemStatus(viewBookingTarget).text === "Completed"
+                      ? "ORDER COMPLETED"
+                      : getItemStatus(viewBookingTarget).text === "Pending"
+                      ? "ORDER PENDING"
+                      : viewBookingTarget?.status}
+                  </span>
                 </div>
                 <div>
                   <span className="text-[#6B7280] block text-[10px] uppercase font-bold">Payment Status</span>
@@ -553,7 +679,9 @@ export default function CustomerRequestsView() {
               {/* Staff Notes */}
               {viewBookingTarget.reviewNotes && (
                 <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-[11px]">
-                  <span className="font-bold text-amber-900 block mb-0.5">Manager Review Note:</span>
+                  <span className="font-bold text-amber-900 block mb-0.5">
+                    {viewBookingTarget._kind === "RENTAL" ? "Manager Review Note:" : "Admin Review Note:"}
+                  </span>
                   <p className="text-amber-800 italic">&ldquo;{viewBookingTarget.reviewNotes}&rdquo;</p>
                 </div>
               )}

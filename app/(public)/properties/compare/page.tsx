@@ -6,9 +6,24 @@
 // ================================================================
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { Building2, ArrowLeft, Check, X, Star, MapPin, Scale, Sparkles } from "lucide-react";
+import { Building2, ArrowLeft, Check, X, Star, MapPin, Scale } from "lucide-react";
 import { formatPrice, getPropertyTypeLabel } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Compare Properties Side-by-Side — Kiro-Maal Real Estate",
+  description:
+    "Compare real estate specifications, prices, square footage, amenities, and locations side-by-side across Somalia.",
+  alternates: {
+    canonical: "/properties/compare",
+  },
+  openGraph: {
+    title: "Compare Properties Side-by-Side — Kiro-Maal",
+    description: "Side-by-side comparison of luxury properties in Somalia.",
+    url: "/properties/compare",
+  },
+};
 
 type Props = {
   searchParams: Promise<{ ids?: string }>;

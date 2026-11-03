@@ -10,10 +10,9 @@
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Sparkles, Building2, Loader2, AlertCircle, ExternalLink } from "lucide-react";
+import { ArrowLeft, Sparkles, Loader2, AlertCircle, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DynamicPropertyForm from "@/components/property/DynamicPropertyForm";
-import { toast } from "@/hooks/use-toast";
 
 interface EditPropertyPageProps {
   params: Promise<{ id: string }>;
@@ -63,11 +62,11 @@ export default function AdminEditPropertyPage({ params }: EditPropertyPageProps)
         </div>
         <h2 className="text-xl font-serif font-bold text-[#07111F]">Property Not Found</h2>
         <p className="text-xs text-[#6B7280]">{error || "Could not retrieve listing details."}</p>
-        <Link href="/admin/properties">
-          <Button variant="outline" className="rounded-xl border-[#E8E1D4] text-xs font-bold text-[#07111F] mt-2">
+        <Button asChild variant="outline" className="rounded-xl border-[#E8E1D4] text-xs font-bold text-[#07111F] mt-2">
+          <Link href="/admin/properties">
             Back to Admin Properties
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </div>
     );
   }

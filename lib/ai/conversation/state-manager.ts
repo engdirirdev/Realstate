@@ -12,8 +12,6 @@ import {
   ResultItem,
   SlotUpdateDelta,
   ExtendedLanguage,
-  ResponseType,
-  InterviewStage,
   SearchReadinessDecision,
   ContextAwareIntent,
   ReferenceResolution,
@@ -80,7 +78,7 @@ export function detectSlotRemovals(text: string): string[] {
   return removals;
 }
 
-const DISTRICT_PATTERNS: Record<string, string> = {
+export const DISTRICT_PATTERNS: Record<string, string> = {
   "hodan": "Hodan",
   "wadajir": "Wadajir",
   "karaan": "Karaan",
@@ -105,6 +103,33 @@ const DISTRICT_PATTERNS: Record<string, string> = {
   "bakaraha": "Bakaaraha",
   "suuqa bakaaraha": "Bakaaraha",
 };
+
+/**
+ * Checks if a user message is a pure conversational greeting without real estate search intent
+ */
+export function isPureConversationalGreeting(text: string): boolean {
+  if (!text || typeof text !== "string") return false;
+  const clean = text.trim().toLowerCase().replace(/[!.,?]+$/, "");
+  const greetings = [
+    "hi", "hello", "hey", "hola", "asc", "salaam", "salam",
+    "asalaamu alaykum", "assalamu alaykum", "assalam calaykum",
+    "subax wanaagsan", "galab wanaagsan", "habeen wanaagsan",
+    "good morning", "good afternoon", "good evening", "good day",
+    "marxaba", "ahlan", "iska warran", "iska waran", "see tahay", "sidee tahay",
+    "how are you", "what's up", "whats up", "nabad", "nabad miyaa"
+  ];
+
+  const isGreetingWord = greetings.some((g) => clean === g || clean.startsWith(`${g} `) || clean.endsWith(` ${g}`));
+  const realEstateKeywords = [
+    "house", "houses", "home", "homes", "guri", "guryo", "apartment", "apartments",
+    "dabaq", "villa", "dhul", "boos", "property", "properties", "rent", "kiro",
+    "sale", "iib", "mogadishu", "muqdisho", "hargeisa", "hargeysa", "bosaso", "kismayo",
+    "price", "budget", "dollar", "$", "bed", "bedroom", "qol"
+  ];
+  const hasRealEstateKeyword = realEstateKeywords.some((k) => clean.includes(k));
+
+  return isGreetingWord && !hasRealEstateKeyword;
+}
 
 /**
  * Detects if the current turn signifies an explicit topic change
@@ -764,7 +789,6 @@ export function detectContextAwareIntent(
 } {
   const safeState = state || initializeConversationState("temp-context");
   const safeEntities = entities || extractEntities(userMessage);
-  const priorAsstMsg = lastAssistantMessage || safeState.lastAssistantMessage || "";
   const lower = userMessage.toLowerCase().trim();
   const slang = analyzeConversationalSlang(userMessage);
 

@@ -8,9 +8,7 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
-  Building2,
   MapPin,
-  Calendar,
   History,
   ShieldCheck,
   Percent,
@@ -185,7 +183,7 @@ export default function DashboardPricePrediction({
                   name="city"
                   value={form.city}
                   onChange={handleChange}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs sm:text-sm font-medium focus:outline-hidden focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] transition-all"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] transition-all"
                 >
                   {CITIES.map((c) => (
                     <option key={c} value={c}>
@@ -203,7 +201,7 @@ export default function DashboardPricePrediction({
                   name="type"
                   value={form.type}
                   onChange={handleChange}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs sm:text-sm font-medium focus:outline-hidden focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] transition-all"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] transition-all"
                 >
                   {TYPES.map((t) => (
                     <option key={t} value={t}>
@@ -226,7 +224,7 @@ export default function DashboardPricePrediction({
                   max="20"
                   value={form.bedrooms}
                   onChange={handleChange}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs sm:text-sm font-medium focus:outline-hidden focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] transition-all"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] transition-all"
                 />
               </div>
 
@@ -241,7 +239,7 @@ export default function DashboardPricePrediction({
                   max="15"
                   value={form.bathrooms}
                   onChange={handleChange}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs sm:text-sm font-medium focus:outline-hidden focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] transition-all"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] transition-all"
                 />
               </div>
 
@@ -256,7 +254,7 @@ export default function DashboardPricePrediction({
                   max="10000"
                   value={form.area}
                   onChange={handleChange}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs sm:text-sm font-medium focus:outline-hidden focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] transition-all"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] transition-all"
                 />
               </div>
             </div>

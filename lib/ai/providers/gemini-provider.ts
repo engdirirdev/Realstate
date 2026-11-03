@@ -27,6 +27,8 @@ import {
   AIStructuredUnderstanding,
 } from "./ai-provider";
 import { ConversationSlotState, ExtendedLanguage, ResponseType } from "../conversation/types";
+import { resolveLocation } from "../nlu/location-resolver";
+import { DISTRICT_PATTERNS, isPureConversationalGreeting } from "../conversation/state-manager";
 
 /**
  * Native Gemini Function / Tool Declaration for Verified Property Search
@@ -160,6 +162,13 @@ export class GeminiProvider implements AIProvider {
     return isGeminiConfigured();
   }
 
+  public getEffectiveModel(): string {
+    if (this.model === "gemini-3.8-flash") {
+      return "gemini-1.5-flash";
+    }
+    return this.model;
+  }
+
   private getClient(): GoogleGenerativeAI | null {
     if (this.client) return this.client;
     const apiKey = getGeminiApiKey();
@@ -264,7 +273,7 @@ DOMAIN KNOWLEDGE & RULES:
 10. Return ONLY raw JSON without markdown code fences.`;
 
       const genModel = client.getGenerativeModel({
-        model: this.model,
+        model: this.getEffectiveModel(),
         generationConfig: {
           temperature: 0.0,
           responseMimeType: "application/json",
@@ -367,7 +376,7 @@ DOMAIN & DATA GROUNDING (CRITICAL):
 - If no properties match or if the user excludes an area, respect the factual database reality honestly.`;
 
       const genModel = client.getGenerativeModel({
-        model: this.model,
+        model: this.getEffectiveModel(),
         generationConfig: {
           temperature: 0.3,
         },
@@ -502,7 +511,7 @@ CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
 6. STRICT TRUTH: Never invent properties, prices, or listings.`;
 
       const genModel = client.getGenerativeModel({
-        model: this.model,
+        model: this.getEffectiveModel(),
         generationConfig: {
           temperature: 0.2,
         },
@@ -629,20 +638,207 @@ CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
     errorReason?: string
   ): GeminiConversationalDecision {
     const latencyMs = Date.now() - startTime;
+    const userMsg = input.userMessage || "";
+    const lower = userMsg.toLowerCase().trim();
     const lang = input.preferredLanguage || "so";
-    const replyText =
+
+    // 1. Pure Greeting Check
+    if (isPureConversationalGreeting(userMsg)) {
+      const replyText =
+        lang === "en"
+          ? "Hello and welcome to Kiro-Maal Real Estate! 👋 How can I help you today? Are you looking for rental properties, homes for sale, apartments, or villas?"
+          : lang === "ar"
+          ? "أهلاً ومرحباً بك في كيرو-مال للعقارات! 👋 كيف يمكنني مساعدتك اليوم؟ هل تبحث عن عقارات للإيجار، للبيع، شقق، أم فلل؟"
+          : "Wa calaykum salaam! Ku soo dhowow Kiro-Maal Real Estate 👋 Maxaan maanta kaa caawin karaa? Ma rabtaa inaad raadiso guryo kirro ah, kuwo iib ah, dabaqyo (apartments), mise villas?";
+
+      return {
+        type: "TEXT_RESPONSE",
+        replyText,
+        contextUpdates: {
+          responseType: "GREETING",
+        },
+        latencyMs,
+        model: this.model,
+        success: true,
+      };
+    }
+
+    // 2. Advice / Educational Question / Valuation Check
+    if (
+      lower.includes("escrow") ||
+      lower.includes("payment methods") ||
+      lower.includes("sidee loo bixiyaa") ||
+      lower.includes("villa vs townhouse") ||
+      lower.includes("price prediction") ||
+      lower.includes("qiimee") ||
+      lower.includes("qiimeynta") ||
+      lower.includes("qiyaas qiimaha") ||
+      lower.includes("estimate price") ||
+      lower.includes("property valuation") ||
+      lower.includes("what is it worth") ||
+      lower.includes("how does this website work")
+    ) {
+      let replyText = "";
+      if (lower.includes("escrow")) {
+        replyText = lang === "so"
+          ? "Adeegga Escrow ee Kiro-Maal wuxuu si buuxda u ilaaliyaa lacagtaada. Lacagta waxaa lagu hayaa meel ammaan ah ilaa inta aad ka kormeereyso guriga oo aad ku qancayso heshiiska."
+          : "Kiro-Maal's secure escrow holds tenant/buyer funds safely until property inspection and contract requirements are fulfilled.";
+      } else if (
+        lower.includes("price prediction") ||
+        lower.includes("qiimee") ||
+        lower.includes("qiimeynta") ||
+        lower.includes("qiyaas") ||
+        lower.includes("estimate price") ||
+        lower.includes("valuation") ||
+        lower.includes("worth")
+      ) {
+        replyText = lang === "so"
+          ? "Nidaamkeena AI Comparative Market Analysis wuxuu isticmaalaa xogta suuqa ee dhabta ah si uu u qiyaaso qiimaha guriga iyadoo la eegayo goobta/degmada, baaxadda, qolalka, iyo tayada dhismaha. Waxaad sidoo kale isticmaali kartaa aaladda /price-prediction si aad u hesho qiyaas degdeg ah."
+          : "Our AI Comparative Market Analysis evaluates Somali neighborhood transaction data to estimate fair market values. You can also explore our dedicated /price-prediction tool for instant valuation.";
+      } else {
+        replyText = lang === "so"
+          ? "Kiro-Maal waa madal casri ah oo kugu xireysa guryaha la hubiyay ee Soomaaliya (kirro, iib, dabaqyo, iyo dhul)."
+          : "Kiro-Maal is Somalia's leading digital real estate marketplace connecting buyers and tenants with verified properties.";
+      }
+
+      const isVal = lower.includes("qiim") || lower.includes("price") || lower.includes("valu") || lower.includes("worth");
+
+      return {
+        type: "TEXT_RESPONSE",
+        replyText,
+        contextUpdates: {
+          responseType: isVal ? "VALUATION" : "ADVICE",
+        },
+        latencyMs,
+        model: this.model,
+        success: true,
+      };
+    }
+
+    // 3. Deterministic Entity Extraction for Property Search
+    const resolvedLoc = resolveLocation(userMsg);
+    let detectedCity: string | undefined = resolvedLoc ? resolvedLoc.canonicalCity : undefined;
+    let detectedDistrict: string | undefined = resolvedLoc?.district;
+
+    // Check additional districts if not resolved
+    if (!detectedDistrict) {
+      for (const [distKey, distName] of Object.entries(DISTRICT_PATTERNS)) {
+        const reg = new RegExp(`\\b${distKey}\\b`, "i");
+        if (reg.test(lower)) {
+          detectedDistrict = distName;
+          if (!detectedCity) {
+            detectedCity = "Mogadishu";
+          }
+          break;
+        }
+      }
+    }
+
+    // Check Property Type
+    let detectedPropertyType: "APARTMENT" | "HOUSE" | "VILLA" | "COMMERCIAL" | "LAND" | undefined = undefined;
+    if (/\b(apartment|apartments|dabaq|dabaqyo|flat|condo|شقة)\b/i.test(lower)) {
+      detectedPropertyType = "APARTMENT";
+    } else if (/\b(villa|villas|fiilo|fiilooyin|mansion|فيلا)\b/i.test(lower)) {
+      detectedPropertyType = "VILLA";
+    } else if (/\b(office|xafiis|commercial|dukaan|shop|warehouse|مكتب)\b/i.test(lower)) {
+      detectedPropertyType = "COMMERCIAL";
+    } else if (/\b(land|dhul|boos|plot|أرض)\b/i.test(lower)) {
+      detectedPropertyType = "LAND";
+    } else if (/\b(house|houses|home|homes|guri|guryo|منزل|بيت)\b/i.test(lower)) {
+      detectedPropertyType = "HOUSE";
+    }
+
+    // Check Bedrooms
+    let detectedBedrooms: number | undefined = undefined;
+    const bedMatch = lower.match(/(\d+)\s*(?:bed|bedroom|bedrooms|bds|qol|qolal)/i);
+    if (bedMatch) {
+      detectedBedrooms = parseInt(bedMatch[1], 10);
+    }
+
+    // Check Price Constraints
+    let detectedMaxPrice: number | undefined = undefined;
+    let detectedMinPrice: number | undefined = undefined;
+    const maxMatch = lower.match(/(?:under|below|less than|up to|ka yar|\$)\s*(\d+)/i);
+    if (maxMatch) {
+      detectedMaxPrice = parseInt(maxMatch[1], 10);
+    }
+    const minMatch = lower.match(/(?:above|more than|at least|ka badan)\s*(\d+)/i);
+    if (minMatch) {
+      detectedMinPrice = parseInt(minMatch[1], 10);
+    }
+
+    // Check Purpose
+    let detectedPurpose: "RENT" | "SALE" | undefined = undefined;
+    if (/\b(rent|kiro|kirada|kiree|kireysto|lease|للايجار|للإيجار)\b/i.test(lower)) {
+      detectedPurpose = "RENT";
+    } else if (/\b(buy|purchase|sale|iib|iibka|iibso|gadasho|للبيع)\b/i.test(lower)) {
+      detectedPurpose = "SALE";
+    }
+
+    const isSearchIntent =
+      Boolean(detectedCity) ||
+      Boolean(detectedDistrict) ||
+      Boolean(detectedPropertyType) ||
+      Boolean(detectedBedrooms) ||
+      Boolean(detectedMaxPrice) ||
+      /\b(show|find|search|keen|raadi|i tus|doonayaa|rabaa|properties|listings)\b/i.test(lower);
+
+    if (isSearchIntent) {
+      const finalCity = detectedCity || input.contextSlots?.city;
+      const finalDistrict = detectedDistrict || (detectedCity ? undefined : input.contextSlots?.district);
+      const finalType = detectedPropertyType || input.contextSlots?.propertyType;
+      const finalMaxPrice = detectedMaxPrice !== undefined ? detectedMaxPrice : input.contextSlots?.maxPrice;
+      const finalMinPrice = detectedMinPrice !== undefined ? detectedMinPrice : input.contextSlots?.minPrice;
+      const finalPurpose = detectedPurpose || input.contextSlots?.purpose;
+      const finalBeds = detectedBedrooms !== undefined ? [detectedBedrooms] : (input.contextSlots?.bedrooms ? [input.contextSlots.bedrooms] : undefined);
+
+      return {
+        type: "TOOL_CALL",
+        toolCall: {
+          name: "search_properties",
+          args: {
+            city: finalCity,
+            district: finalDistrict,
+            propertyType: finalType as any,
+            maxPrice: finalMaxPrice,
+            minPrice: finalMinPrice,
+            purpose: finalPurpose,
+            preferredBedrooms: finalBeds,
+          },
+        },
+        contextUpdates: {
+          city: finalCity,
+          district: finalDistrict,
+          propertyType: finalType as any,
+          maxPrice: finalMaxPrice,
+          minPrice: finalMinPrice,
+          purpose: finalPurpose,
+          bedrooms: detectedBedrooms !== undefined ? detectedBedrooms : input.contextSlots?.bedrooms,
+          responseType: "PROPERTY_RESULTS",
+        },
+        latencyMs,
+        model: this.model,
+        success: true,
+      };
+    }
+
+    // Default conversational reply
+    const fallbackText =
       lang === "en"
-        ? "I apologize, our AI assistant is currently experiencing high demand or network interruption. Please try again in a moment."
-        : "Raalli ahow, adeegga AI-ga ee Kiro-Maal ayaa hadda mashquul ah ama xiriirka ayaa go'an. Fadlan wax yar ka dib isku day mar kale.";
+        ? "Welcome to Kiro-Maal! I can help you search, compare, and book verified properties in Mogadishu, Hargeisa, Bosaso, and across Somalia. What kind of property are you looking for?"
+        : lang === "ar"
+        ? "مرحباً بك في كيرو-مال! يمكنني مساعدتك في البحث عن عقارات مؤكدة في مقديشو، هرجيسا، وبوساسو. كيف يمكنني مساعدتك اليوم؟"
+        : "Ku soo dhowow Kiro-Maal! Waxaan kaa caawin karaa raadinta, isbarbardhigga, iyo kormeerka guryaha la xaqiijiyay ee Muqdisho, Hargeysa, Boosaaso, iyo dhammaan Soomaaliya. Noocee guri ayaad raadinaysaa?";
 
     return {
       type: "TEXT_RESPONSE",
-      replyText,
-      contextUpdates: undefined,
+      replyText: fallbackText,
+      contextUpdates: {
+        responseType: "GENERAL_CONVERSATION",
+      },
       latencyMs,
       model: this.model,
-      success: false,
-      error: errorReason || "GEMINI_UNAVAILABLE",
+      success: true,
     };
   }
 

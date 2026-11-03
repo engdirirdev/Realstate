@@ -8,7 +8,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Sparkles, Building2 } from "lucide-react";
+import { ArrowLeft, Sparkles } from "lucide-react";
 import DynamicPropertyForm from "@/components/property/DynamicPropertyForm";
 
 export default function ManagerAddPropertyPage() {

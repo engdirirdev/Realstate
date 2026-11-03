@@ -2,14 +2,13 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
   Menu, X, ChevronDown, User, LogOut, Heart,
   LayoutDashboard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -29,12 +28,21 @@ const publicNavLinks = [
 export default function Navbar() {
   const { data: session, status } = useSession();
   const pathname = usePathname();
-  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const isScrolled = window.scrollY > 20;
+          setScrolled((prev) => (prev !== isScrolled ? isScrolled : prev));
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -53,6 +61,7 @@ export default function Navbar() {
 
   return (
     <nav
+      aria-label="Main navigation"
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
         "bg-white/95 backdrop-blur-md border-b border-[#DCE6F2]",
@@ -72,8 +81,8 @@ export default function Navbar() {
                 <Link
                   key={href}
                   href={href}
-                  onMouseEnter={() => router.prefetch(href)}
-                  onPointerDown={() => router.prefetch(href)}
+                  prefetch={true}
+                  aria-current={isActive ? "page" : undefined}
                   className={cn(
                     "px-3.5 py-1.5 rounded-xl text-sm font-semibold transition-all duration-150",
                     isActive
@@ -96,12 +105,16 @@ export default function Navbar() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-[#F7F3EA] border border-transparent hover:border-[#E8E1D4] transition-all group cursor-pointer">
-                      <Avatar className="h-8 w-8 ring-2 ring-[#C89B3C]/50">
-                        <AvatarImage src={session.user?.image || ""} />
-                        <AvatarFallback className="text-xs bg-[#F7F3EA] text-[#C89B3C] font-bold">
-                          {initials}
-                        </AvatarFallback>
-                      </Avatar>
+                      <div
+                        suppressHydrationWarning
+                        className="h-8 w-8 rounded-full ring-2 ring-[#C89B3C]/50 overflow-hidden flex items-center justify-center text-xs bg-[#F7F3EA] text-[#C89B3C] font-bold shrink-0"
+                      >
+                        {session.user?.image ? (
+                          <img src={session.user.image} alt={session.user.name || "User"} className="h-full w-full object-cover" />
+                        ) : (
+                          <span suppressHydrationWarning>{initials}</span>
+                        )}
+                      </div>
                       <div className="flex flex-col items-start text-left">
                         <span className="text-xs font-bold text-[#07111F] leading-none">
                           {session.user?.name?.split(" ")[0]}
@@ -123,44 +136,24 @@ export default function Navbar() {
                     <DropdownMenuSeparator className="bg-[#E8E1D4]" />
                     {isAdmin ? (
                       <DropdownMenuItem asChild>
-                        <Link
-                          href="/admin"
-                          onMouseEnter={() => router.prefetch("/admin")}
-                          onPointerDown={() => router.prefetch("/admin")}
-                          className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer"
-                        >
+                        <Link href="/admin" prefetch={true} className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
                           <LayoutDashboard className="h-4 w-4 text-[#C89B3C]" /> Admin Dashboard
                         </Link>
                       </DropdownMenuItem>
                     ) : isCustomer ? (
                       <>
                         <DropdownMenuItem asChild>
-                          <Link
-                            href="/customer"
-                            onMouseEnter={() => router.prefetch("/customer")}
-                            onPointerDown={() => router.prefetch("/customer")}
-                            className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer"
-                          >
+                          <Link href="/customer" prefetch={true} className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
                             <LayoutDashboard className="h-4 w-4 text-[#C89B3C]" /> Customer Portal
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link
-                            href="/customer/favorites"
-                            onMouseEnter={() => router.prefetch("/customer/favorites")}
-                            onPointerDown={() => router.prefetch("/customer/favorites")}
-                            className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer"
-                          >
+                          <Link href="/customer/favorites" prefetch={true} className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
                             <Heart className="h-4 w-4 text-[#C89B3C]" /> Saved Favorites
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link
-                            href="/customer/profile"
-                            onMouseEnter={() => router.prefetch("/customer/profile")}
-                            onPointerDown={() => router.prefetch("/customer/profile")}
-                            className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer"
-                          >
+                          <Link href="/customer/profile" prefetch={true} className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
                             <User className="h-4 w-4 text-[#6B7280]" /> Profile Settings
                           </Link>
                         </DropdownMenuItem>
@@ -168,22 +161,12 @@ export default function Navbar() {
                     ) : (
                       <>
                         <DropdownMenuItem asChild>
-                          <Link
-                            href="/dashboard"
-                            onMouseEnter={() => router.prefetch("/dashboard")}
-                            onPointerDown={() => router.prefetch("/dashboard")}
-                            className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer"
-                          >
+                          <Link href="/dashboard" prefetch={true} className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
                             <LayoutDashboard className="h-4 w-4 text-[#C89B3C]" /> Manager Dashboard
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link
-                            href="/dashboard/profile"
-                            onMouseEnter={() => router.prefetch("/dashboard/profile")}
-                            onPointerDown={() => router.prefetch("/dashboard/profile")}
-                            className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer"
-                          >
+                          <Link href="/dashboard/profile" prefetch={true} className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
                             <User className="h-4 w-4 text-[#6B7280]" /> Profile Settings
                           </Link>
                         </DropdownMenuItem>
@@ -191,12 +174,7 @@ export default function Navbar() {
                     )}
                     <DropdownMenuSeparator className="bg-[#E8E1D4]" />
                     <DropdownMenuItem asChild>
-                      <Link
-                        href="/login?switch=true"
-                        onMouseEnter={() => router.prefetch("/login")}
-                        onPointerDown={() => router.prefetch("/login")}
-                        className="flex items-center gap-2 text-[#6B7280] hover:text-[#C89B3C] hover:bg-[#F7F3EA] rounded-xl cursor-pointer"
-                      >
+                      <Link href="/login?switch=true" prefetch={true} className="flex items-center gap-2 text-[#6B7280] hover:text-[#C89B3C] hover:bg-[#F7F3EA] rounded-xl cursor-pointer">
                         <User className="h-4 w-4 text-[#C89B3C]" /> Switch Account
                       </Link>
                     </DropdownMenuItem>
@@ -210,15 +188,11 @@ export default function Navbar() {
                 </DropdownMenu>
               </div>
             ) : (
-              <Link
-                href="/login"
-                onMouseEnter={() => router.prefetch("/login")}
-                onPointerDown={() => router.prefetch("/login")}
-              >
-                <Button size="sm" className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] hover:brightness-105 text-[#07111F] font-bold rounded-xl text-sm px-6 py-2 shadow-md shadow-[#C89B3C]/20 border border-[#A97918]/30 transition-all cursor-pointer">
+              <Button asChild size="sm" className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] hover:brightness-105 text-[#07111F] font-bold rounded-xl text-sm px-6 py-2 shadow-md shadow-[#C89B3C]/20 border border-[#A97918]/30 transition-all cursor-pointer">
+                <Link href="/login" prefetch={true}>
                   Login
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             )}
           </div>
 
@@ -226,7 +200,9 @@ export default function Navbar() {
           <button
             className="md:hidden p-2 rounded-lg text-[#6B7280] hover:bg-[#F7F3EA] transition-colors cursor-pointer"
             onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label="Toggle menu"
+            aria-label="Toggle navigation menu"
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-navigation-menu"
           >
             {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
@@ -234,7 +210,7 @@ export default function Navbar() {
 
         {/* ── Mobile Menu: 5 Main Tabs + Login ── */}
         {mobileOpen && (
-          <div className="md:hidden py-4 border-t border-[#E8E1D4] animate-fade-in bg-[#FCFBF7]">
+          <div id="mobile-navigation-menu" className="md:hidden py-4 border-t border-[#E8E1D4] animate-fade-in bg-[#FCFBF7]">
             <div className="flex flex-col gap-1">
               {publicNavLinks.map(({ href, label }) => {
                 const isActive = pathname === href || (href !== "/" && pathname.startsWith(href));
@@ -242,6 +218,7 @@ export default function Navbar() {
                   <Link
                     key={href}
                     href={href}
+                    prefetch={true}
                     onClick={() => setMobileOpen(false)}
                     className={cn(
                       "px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors",
@@ -258,6 +235,7 @@ export default function Navbar() {
                 {session ? (
                   <Link
                     href={isAdmin ? "/admin" : isCustomer ? "/customer" : "/dashboard"}
+                    prefetch={true}
                     className="bg-gradient-to-r from-[#C89B3C] to-[#D9B45B] text-[#07111F] text-center text-sm py-2 rounded-xl font-bold shadow-sm"
                     onClick={() => setMobileOpen(false)}
                   >
@@ -266,6 +244,7 @@ export default function Navbar() {
                 ) : (
                   <Link
                     href="/login"
+                    prefetch={true}
                     onClick={() => setMobileOpen(false)}
                     className="bg-gradient-to-r from-[#C89B3C] to-[#D9B45B] text-[#07111F] text-center text-sm py-2.5 rounded-xl font-bold shadow-sm"
                   >

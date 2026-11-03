@@ -58,6 +58,11 @@ export default function StatusBadge({
       icon = <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-700" />;
       colorClass = "bg-emerald-500/15 text-emerald-950 border-emerald-500/40";
       break;
+    case "NOT_PAID":
+      label = "Not Paid";
+      icon = <AlertCircle className="h-3 w-3 shrink-0 text-rose-700" />;
+      colorClass = "bg-rose-500/15 text-rose-950 border-rose-500/40";
+      break;
     case "COMPLETED":
       label = "Completed";
       icon = <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-700" />;

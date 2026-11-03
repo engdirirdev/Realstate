@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Receipt,
   TrendingUp,
@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   Sparkles,
   ArrowUpRight,
-  HelpCircle,
   Percent,
   CalendarCheck,
 } from "lucide-react";
@@ -33,35 +32,60 @@ export default function PropertyCostSummary({
   const [showInvestment, setShowInvestment] = useState(true);
   const [rentalYieldPercent, setRentalYieldPercent] = useState(8.0); // 8% average yield
 
-  // Purchase Breakdown Calculations (100% transparent, 0% interest / Riba-free)
-  const registrationFee = Math.round((propertyPrice * 1.5) / 100); // 1.5% municipal title deed registration
-  const documentationFee = Math.max(350, Math.round((propertyPrice * 0.5) / 100)); // Legal notarization & deed conveyance
-  const agencyFee = includeAgencyFee ? Math.round((propertyPrice * 2.0) / 100) : 0; // 2% standard brokerage commission
-  const serviceCharges = includeServiceCharges
-    ? Math.round(Math.min(1200, Math.max(300, (propertyPrice * 0.3) / 100)))
-    : 0; // Handover, verification, and utility readiness
+  // Purchase Breakdown Calculations (100% transparent, 0% interest / Riba-free) (memoized)
+  const {
+    registrationFee,
+    documentationFee,
+    agencyFee,
+    serviceCharges,
+    totalAcquisitionCost,
+    estimatedAnnualIncome,
+    estimatedMonthlyIncome,
+    netRoi,
+    appreciationRate,
+    estimated5YearAppreciation,
+  } = useMemo(() => {
+    const regFee = Math.round((propertyPrice * 1.5) / 100); // 1.5% municipal title deed registration
+    const docFee = Math.max(350, Math.round((propertyPrice * 0.5) / 100)); // Legal notarization & deed conveyance
+    const agFee = includeAgencyFee ? Math.round((propertyPrice * 2.0) / 100) : 0; // 2% standard brokerage commission
+    const srvCharges = includeServiceCharges
+      ? Math.round(Math.min(1200, Math.max(300, (propertyPrice * 0.3) / 100)))
+      : 0; // Handover, verification, and utility readiness
 
-  const totalAcquisitionCost =
-    propertyPrice + registrationFee + documentationFee + agencyFee + serviceCharges;
+    const totalCost = propertyPrice + regFee + docFee + agFee + srvCharges;
 
-  // Investment & Rental Yield Calculations (Asset equity & rental income model)
-  const estimatedAnnualIncome = Math.round((propertyPrice * rentalYieldPercent) / 100);
-  const estimatedMonthlyIncome = Math.round(estimatedAnnualIncome / 12);
-  const netRoi = ((estimatedAnnualIncome / totalAcquisitionCost) * 100).toFixed(1);
+    // Investment & Rental Yield Calculations (Asset equity & rental income model)
+    const annualIncome = Math.round((propertyPrice * rentalYieldPercent) / 100);
+    const monthlyIncome = Math.round(annualIncome / 12);
+    const roi = ((annualIncome / totalCost) * 100).toFixed(1);
 
-  // Appreciation index estimate based on regional growth
-  const appreciationRate =
-    city.toLowerCase().includes("moga")
-      ? 7.5
-      : city.toLowerCase().includes("harge")
-      ? 6.8
-      : city.toLowerCase().includes("bosa")
-      ? 6.2
-      : 6.0;
+    // Appreciation index estimate based on regional growth
+    const appRate =
+      city.toLowerCase().includes("moga")
+        ? 7.5
+        : city.toLowerCase().includes("harge")
+        ? 6.8
+        : city.toLowerCase().includes("bosa")
+        ? 6.2
+        : 6.0;
 
-  const estimated5YearAppreciation = Math.round(
-    propertyPrice * (Math.pow(1 + appreciationRate / 100, 5) - 1)
-  );
+    const fiveYearAppreciation = Math.round(
+      propertyPrice * (Math.pow(1 + appRate / 100, 5) - 1)
+    );
+
+    return {
+      registrationFee: regFee,
+      documentationFee: docFee,
+      agencyFee: agFee,
+      serviceCharges: srvCharges,
+      totalAcquisitionCost: totalCost,
+      estimatedAnnualIncome: annualIncome,
+      estimatedMonthlyIncome: monthlyIncome,
+      netRoi: roi,
+      appreciationRate: appRate,
+      estimated5YearAppreciation: fiveYearAppreciation,
+    };
+  }, [propertyPrice, includeAgencyFee, includeServiceCharges, rentalYieldPercent, city]);
 
   return (
     <div className="bg-[#FCFBF7] rounded-3xl border border-[#E8E1D4] p-6 sm:p-7 shadow-sm space-y-6">

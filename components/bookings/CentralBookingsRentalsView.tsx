@@ -2,14 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   FileText,
   KeyRound,
   CheckCircle2,
   XCircle,
   Clock,
-  Building2,
-  User,
   Loader2,
   RefreshCw,
   Search,
@@ -18,15 +17,11 @@ import {
   Eye,
   PlusCircle,
   Receipt,
-  Calendar,
   AlertCircle,
   ChevronLeft,
   ChevronRight,
-  Phone,
-  Mail,
-  ShieldCheck,
   CalendarDays,
-  FileCheck2,
+  UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +37,8 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { formatPrice, cn } from "@/lib/utils";
+import { AddCustomerModal, CustomerCreatedData } from "@/components/customers/AddCustomerModal";
+import StatusBadge from "@/components/transactions/StatusBadge";
 
 function getInitials(name?: string | null): string {
   if (!name) return "CL";
@@ -53,54 +50,36 @@ function getInitials(name?: string | null): string {
 interface CentralBookingsRentalsViewProps {
   isAdmin?: boolean;
   initialTab?: "bookings" | "rentals";
+  initialDirectOpen?: boolean;
+  initialCustomerId?: string;
 }
 
 export default function CentralBookingsRentalsView({
   isAdmin = false,
   initialTab = "bookings",
+  initialDirectOpen = false,
+  initialCustomerId,
 }: CentralBookingsRentalsViewProps) {
   // Segmented control: "bookings" | "rentals" (Section 4)
   const [activeTab, setActiveTab] = useState<"bookings" | "rentals">(initialTab);
 
-  // Sync initialTab when route or parent prop changes
-  useEffect(() => {
-    if (initialTab && initialTab !== activeTab) {
-      setActiveTab(initialTab);
-    }
-  }, [initialTab]);
-
   // ─── TAB 1: RENTAL BOOKINGS STATE ───
   const [bookings, setBookings] = useState<any[]>([]);
   const [bookingsLoading, setBookingsLoading] = useState(true);
-  const [bookingsRefreshing, setBookingsRefreshing] = useState(false);
   const [bookingsError, setBookingsError] = useState<string | null>(null);
   const [bookingStatusFilter, setBookingStatusFilter] = useState("ALL");
   const [bookingSearch, setBookingSearch] = useState("");
-  const [debouncedBookingSearch, setDebouncedBookingSearch] = useState("");
   const [bookingPage, setBookingPage] = useState(1);
   const [bookingTotal, setBookingTotal] = useState(0);
 
   // ─── TAB 2: ACTIVE RENTALS STATE ───
   const [rentals, setRentals] = useState<any[]>([]);
   const [rentalsLoading, setRentalsLoading] = useState(true);
-  const [rentalsRefreshing, setRentalsRefreshing] = useState(false);
   const [rentalsError, setRentalsError] = useState<string | null>(null);
   const [rentalStatusFilter, setRentalStatusFilter] = useState("ALL");
   const [rentalSearch, setRentalSearch] = useState("");
-  const [debouncedRentalSearch, setDebouncedRentalSearch] = useState("");
   const [rentalPage, setRentalPage] = useState(1);
   const [rentalTotal, setRentalTotal] = useState(0);
-
-  // Debounce search inputs to prevent network spam on every keystroke
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedBookingSearch(bookingSearch), 250);
-    return () => clearTimeout(t);
-  }, [bookingSearch]);
-
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedRentalSearch(rentalSearch), 250);
-    return () => clearTimeout(t);
-  }, [rentalSearch]);
 
   // ─── ONLY 4 SUMMARY CARDS (Section 3) ───
   const [metrics, setMetrics] = useState({
@@ -129,30 +108,15 @@ export default function CentralBookingsRentalsView({
   const [directRentAmount, setDirectRentAmount] = useState("");
   const [directDeposit, setDirectDeposit] = useState("0");
   const [directNotes, setDirectNotes] = useState("");
+  const [isAddCustomerOpen, setIsAddCustomerOpen] = useState(false);
 
   // ─── 1. Fetch 4 Summary Metrics (Section 3) ───
   const fetchMetrics = useCallback(async () => {
     try {
-      const [pendingRes, approvedRes, activeRes] = await Promise.all([
-        fetch("/api/requests?kind=rental&mode=bookings&status=PENDING&pageSize=1").then((r) => r.json()),
-        fetch("/api/requests?kind=rental&mode=bookings&status=APPROVED&pageSize=1").then((r) => r.json()),
-        fetch("/api/requests?kind=rental&mode=rentals&status=ACTIVE&pageSize=100").then((r) => r.json()),
-      ]);
-
-      const now = Date.now();
-      const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-      const expiringSoonCount = (activeRes.items || []).filter((r: any) => {
-        if (!r.endDate) return false;
-        const end = new Date(r.endDate).getTime();
-        return end > now && end - now <= thirtyDaysMs;
-      }).length;
-
-      setMetrics({
-        pendingBookings: pendingRes.total || 0,
-        approvedBookings: approvedRes.total || 0,
-        activeRentals: activeRes.total || 0,
-        expiringSoon: expiringSoonCount,
-      });
+      const res = await fetch("/api/requests?kind=rental&metrics=true").then((r) => r.json());
+      if (res.success && res.metrics) {
+        setMetrics(res.metrics);
+      }
     } catch {
       // Non-critical metric fetch failure
     }
@@ -160,8 +124,7 @@ export default function CentralBookingsRentalsView({
 
   // ─── 2. Fetch Rental Bookings ───
   const fetchBookings = useCallback(async () => {
-    setBookingsLoading((prev) => (bookings.length === 0 ? true : prev));
-    setBookingsRefreshing(true);
+    setBookingsLoading(true);
     setBookingsError(null);
     try {
       const sp = new URLSearchParams({
@@ -171,7 +134,7 @@ export default function CentralBookingsRentalsView({
         pageSize: "15",
       });
       if (bookingStatusFilter !== "ALL") sp.set("status", bookingStatusFilter);
-      if (debouncedBookingSearch.trim()) sp.set("q", debouncedBookingSearch.trim());
+      if (bookingSearch.trim()) sp.set("q", bookingSearch.trim());
 
       const res = await fetch(`/api/requests?${sp.toString()}`);
       const data = await res.json();
@@ -185,14 +148,12 @@ export default function CentralBookingsRentalsView({
       setBookingsError("Network error while loading rental bookings.");
     } finally {
       setBookingsLoading(false);
-      setBookingsRefreshing(false);
     }
-  }, [bookingPage, bookingStatusFilter, debouncedBookingSearch, bookings.length]);
+  }, [bookingPage, bookingStatusFilter, bookingSearch]);
 
   // ─── 3. Fetch Rentals (Agreements) ───
   const fetchRentals = useCallback(async () => {
-    setRentalsLoading((prev) => (rentals.length === 0 ? true : prev));
-    setRentalsRefreshing(true);
+    setRentalsLoading(true);
     setRentalsError(null);
     try {
       const sp = new URLSearchParams({
@@ -202,7 +163,7 @@ export default function CentralBookingsRentalsView({
         pageSize: "15",
       });
       if (rentalStatusFilter !== "ALL") sp.set("status", rentalStatusFilter);
-      if (debouncedRentalSearch.trim()) sp.set("q", debouncedRentalSearch.trim());
+      if (rentalSearch.trim()) sp.set("q", rentalSearch.trim());
 
       const res = await fetch(`/api/requests?${sp.toString()}`);
       const data = await res.json();
@@ -216,53 +177,20 @@ export default function CentralBookingsRentalsView({
       setRentalsError("Network error while loading active rentals.");
     } finally {
       setRentalsLoading(false);
-      setRentalsRefreshing(false);
     }
-  }, [rentalPage, rentalStatusFilter, debouncedRentalSearch, rentals.length]);
+  }, [rentalPage, rentalStatusFilter, rentalSearch]);
 
-  // Initial mount: load metrics, bookings, and rentals all in parallel so tabs switch in 0ms
   useEffect(() => {
     fetchMetrics();
-    fetchBookings();
-    fetchRentals();
-  }, []);
+  }, [fetchMetrics]);
 
-  // Filter/search changes inside Bookings
-  const [bookingsMounted, setBookingsMounted] = useState(false);
   useEffect(() => {
-    if (!bookingsMounted) {
-      setBookingsMounted(true);
-      return;
+    if (activeTab === "bookings") {
+      fetchBookings();
+    } else {
+      fetchRentals();
     }
-    fetchBookings();
-  }, [bookingPage, bookingStatusFilter, debouncedBookingSearch]);
-
-  // Filter/search changes inside Rentals
-  const [rentalsMounted, setRentalsMounted] = useState(false);
-  useEffect(() => {
-    if (!rentalsMounted) {
-      setRentalsMounted(true);
-      return;
-    }
-    fetchRentals();
-  }, [rentalPage, rentalStatusFilter, debouncedRentalSearch]);
-
-  // Instant tab switch handler with URL synchronization (0ms delay)
-  const handleTabChange = (newTab: "bookings" | "rentals") => {
-    setActiveTab(newTab);
-    if (typeof window !== "undefined") {
-      const targetPath = isAdmin
-        ? newTab === "rentals"
-          ? "/admin/rentals"
-          : "/admin/bookings"
-        : newTab === "rentals"
-        ? "/dashboard/rentals"
-        : "/dashboard/bookings";
-      if (window.location.pathname !== targetPath) {
-        window.history.replaceState(null, "", targetPath);
-      }
-    }
-  };
+  }, [activeTab, fetchBookings, fetchRentals]);
 
   // ─── Manager Booking Approval Action (Section 13) ───
   const handleApproveBooking = async (bookingId: string) => {
@@ -287,8 +215,20 @@ export default function CentralBookingsRentalsView({
       if (data.success) {
         toast({
           title: "Booking Approved",
-          description: "Tenancy agreement activated and property marked as RENTED.",
+          description: "Booking status confirmed and tenancy agreement activated.",
         });
+        setBookings((prev) =>
+          prev.map((item) =>
+            item.id === bookingId
+              ? {
+                  ...item,
+                  bookingStatus: "CONFIRMED",
+                  status: "ACTIVE",
+                  rentalStatus: "ACTIVE",
+                }
+              : item
+          )
+        );
         fetchBookings();
         fetchRentals();
         fetchMetrics();
@@ -360,8 +300,12 @@ export default function CentralBookingsRentalsView({
   };
 
   // ─── Manager Direct Rental Creation (Section 22, 25, 29) ───
-  const openDirectModal = async () => {
+  const openDirectModal = async (preselectedCustomerId?: string | unknown) => {
     setCreateModalOpen(true);
+    const custId = typeof preselectedCustomerId === "string" ? preselectedCustomerId : undefined;
+    if (custId) {
+      setDirectCustomerId(custId);
+    }
     try {
       const [propsRes, custRes] = await Promise.all([
         fetch("/api/properties?mode=my-properties").then((r) => r.json()),
@@ -381,10 +325,28 @@ export default function CentralBookingsRentalsView({
       }
       if (custRes.success) {
         setCustomers(custRes.customers || []);
+        if (custId) {
+          setDirectCustomerId(custId);
+        }
       }
     } catch {
       // Non-critical dropdown load error
     }
+  };
+
+  useEffect(() => {
+    if (initialDirectOpen || initialCustomerId) {
+      openDirectModal(initialCustomerId);
+    }
+  }, [initialDirectOpen, initialCustomerId]);
+
+  const handleCustomerCreatedInModal = (newCustomer: CustomerCreatedData) => {
+    setCustomers((prev) => [newCustomer, ...prev]);
+    setDirectCustomerId(newCustomer.id);
+    toast({
+      title: "Customer Added & Selected",
+      description: `${newCustomer.name} has been added and selected for this lease agreement.`,
+    });
   };
 
   const handlePropertySelect = (propId: string) => {
@@ -456,43 +418,8 @@ export default function CentralBookingsRentalsView({
     }
   };
 
-  // Helper for status pill styling (Section 15 & 16)
-  const getStatusBadge = (status: string) => {
-    const s = status.toUpperCase();
-    if (s === "PENDING" || s === "PENDING VERIFICATION") {
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200 whitespace-nowrap">
-          {status}
-        </span>
-      );
-    }
-    if (s === "APPROVED" || s === "ACTIVE" || s === "PAID" || s === "PAID / VERIFIED") {
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 whitespace-nowrap">
-          {status}
-        </span>
-      );
-    }
-    if (s === "EXPIRED") {
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 whitespace-nowrap">
-          {status}
-        </span>
-      );
-    }
-    if (s === "COMPLETED") {
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-800 border border-blue-200 whitespace-nowrap">
-          {status}
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 whitespace-nowrap">
-        {status}
-      </span>
-    );
-  };
+  // Reuses unified StatusBadge component across system
+  const getStatusBadge = (status: string) => <StatusBadge status={status} />;
 
   return (
     <div className="w-full min-w-0 space-y-6">
@@ -504,7 +431,7 @@ export default function CentralBookingsRentalsView({
           Rental Management
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold text-[#071426] tracking-tight">
-          Rental Bookings &amp; Rentals
+          Bookings &amp; Rents
         </h1>
         <p className="text-sm text-[#64748B] mt-1 max-w-3xl">
           Manage customer rental requests, approvals, and active tenancy agreements.
@@ -581,7 +508,7 @@ export default function CentralBookingsRentalsView({
         <div className="inline-flex p-1 bg-white border border-[#E5E7EB] rounded-xl shadow-xs self-start">
           <button
             type="button"
-            onClick={() => handleTabChange("bookings")}
+            onClick={() => setActiveTab("bookings")}
             className={cn(
               "px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center gap-2",
               activeTab === "bookings"
@@ -590,7 +517,7 @@ export default function CentralBookingsRentalsView({
             )}
           >
             <FileText className="w-4 h-4 text-[#D4A72C]" />
-            <span>Rental Bookings</span>
+            <span>Bookings</span>
             <span
               className={cn(
                 "px-2 py-0.5 rounded-full text-[11px] font-mono",
@@ -605,7 +532,7 @@ export default function CentralBookingsRentalsView({
 
           <button
             type="button"
-            onClick={() => handleTabChange("rentals")}
+            onClick={() => setActiveTab("rentals")}
             className={cn(
               "px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center gap-2",
               activeTab === "rentals"
@@ -614,7 +541,7 @@ export default function CentralBookingsRentalsView({
             )}
           >
             <KeyRound className="w-4 h-4 text-[#D4A72C]" />
-            <span>Active Rentals</span>
+            <span>Rents</span>
             <span
               className={cn(
                 "px-2 py-0.5 rounded-full text-[11px] font-mono",
@@ -633,7 +560,7 @@ export default function CentralBookingsRentalsView({
           {!isAdmin && (
             <Button
               size="sm"
-              onClick={openDirectModal}
+              onClick={() => openDirectModal()}
               className="bg-[#071426] hover:bg-[#0B1E38] text-white font-semibold text-xs h-9 px-3.5 rounded-lg shadow-xs cursor-pointer gap-1.5 border border-[#D4A72C]/40"
             >
               <PlusCircle className="w-4 h-4 text-[#D4A72C]" /> Create Rental Directly
@@ -692,16 +619,13 @@ export default function CentralBookingsRentalsView({
                 value={bookingSearch}
                 onChange={(e) => setBookingSearch(e.target.value)}
                 placeholder="Search by booking ID, property, customer..."
-                className="w-full pl-9 pr-3 h-9 text-xs bg-white border border-[#E5E7EB] rounded-lg text-[#0F172A] placeholder-[#94A3B8] focus:outline-hidden focus:ring-1 focus:ring-[#071426] focus:border-[#071426]"
+                className="w-full pl-9 pr-3 h-9 text-xs bg-white border border-[#E5E7EB] rounded-lg text-[#0F172A] placeholder-[#94A3B8] focus:outline-none focus:ring-1 focus:ring-[#071426] focus:border-[#071426]"
               />
             </div>
           </div>
 
           {/* TABLE CONTAINER (Section 8, 9, 10, 11) */}
-          <div className="w-full max-w-full bg-white rounded-xl border border-[#E5E7EB] shadow-xs overflow-hidden relative">
-            {bookingsRefreshing && (
-              <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-[#D4A72C] to-transparent animate-pulse z-10" />
-            )}
+          <div className="w-full max-w-full bg-white rounded-xl border border-[#E5E7EB] shadow-xs overflow-hidden">
             {bookingsLoading ? (
               // Loading Skeleton (Section 31)
               <div className="p-8 space-y-4">
@@ -772,8 +696,13 @@ export default function CentralBookingsRentalsView({
                     </thead>
                     <tbody className="divide-y divide-[#F1F5F9]">
                       {bookings.map((b) => {
-                        const displayStatus =
-                          b.bookingStatus || (b.status === "ACTIVE" ? "APPROVED" : b.status);
+                        const isApprovedOrConfirmed =
+                          b.bookingStatus === "CONFIRMED" ||
+                          b.bookingStatus === "APPROVED" ||
+                          (b.status === "ACTIVE" && b.rentalStatus === "ACTIVE");
+                        const displayStatus = isApprovedOrConfirmed
+                          ? "CONFIRMED"
+                          : b.bookingStatus || b.status;
                         const payment = b.transaction?.payments?.[0];
                         const isPending = displayStatus === "PENDING";
 
@@ -787,14 +716,17 @@ export default function CentralBookingsRentalsView({
                             {/* Property Column (Section 12) */}
                             <td className="py-3.5 px-4">
                               <div className="flex items-center gap-2.5">
-                                <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 border border-[#E5E7EB] shrink-0">
-                                  <img
+                                <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-slate-100 border border-[#E5E7EB] shrink-0">
+                                  <Image
                                     src={
                                       b.property?.images?.[0]?.url ||
-                                      "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=200"
+                                      "/images/luxury_villa_twilight.jpg"
                                     }
                                     alt=""
-                                    className="w-full h-full object-cover"
+                                    fill
+                                    sizes="40px"
+                                    className="object-cover"
+                                    loading="lazy"
                                   />
                                 </div>
                                 <div className="min-w-0 max-w-[200px]">
@@ -879,9 +811,14 @@ export default function CentralBookingsRentalsView({
                                       size="sm"
                                       onClick={() => handleApproveBooking(b.id)}
                                       disabled={busyId === b.id}
-                                      className="h-7 px-2 text-xs bg-emerald-700 hover:bg-emerald-800 text-white rounded-md gap-1 font-semibold shadow-2xs cursor-pointer"
+                                      className="h-7 px-2.5 text-xs bg-emerald-700 hover:bg-emerald-800 text-white rounded-md gap-1 font-bold shadow-xs cursor-pointer border-0"
                                     >
-                                      <Check className="h-3 w-3" /> Approve
+                                      {busyId === b.id ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                      ) : (
+                                        <Check className="h-3 w-3" />
+                                      )}
+                                      Approve
                                     </Button>
                                     <Button
                                       size="sm"
@@ -893,6 +830,12 @@ export default function CentralBookingsRentalsView({
                                       <XCircle className="h-3 w-3" /> Reject
                                     </Button>
                                   </>
+                                )}
+
+                                {!isAdmin && isApprovedOrConfirmed && (
+                                  <span className="inline-flex items-center justify-center h-7 px-2.5 text-xs font-bold rounded-md bg-emerald-600 text-white border border-emerald-700/20 shadow-xs gap-1 select-none whitespace-nowrap">
+                                    <Check className="h-3.5 w-3.5 text-white stroke-[2.5]" /> Approved
+                                  </span>
                                 )}
                               </div>
                             </td>
@@ -906,8 +849,13 @@ export default function CentralBookingsRentalsView({
                 {/* ─── MOBILE: RESPONSIVE CARDS VIEW (Section 22) ─── */}
                 <div className="block md:hidden divide-y divide-[#E5E7EB]">
                   {bookings.map((b) => {
-                    const displayStatus =
-                      b.bookingStatus || (b.status === "ACTIVE" ? "APPROVED" : b.status);
+                    const isApprovedOrConfirmed =
+                      b.bookingStatus === "CONFIRMED" ||
+                      b.bookingStatus === "APPROVED" ||
+                      (b.status === "ACTIVE" && b.rentalStatus === "ACTIVE");
+                    const displayStatus = isApprovedOrConfirmed
+                      ? "CONFIRMED"
+                      : b.bookingStatus || b.status;
                     const payment = b.transaction?.payments?.[0];
                     const isPending = displayStatus === "PENDING";
 
@@ -924,14 +872,17 @@ export default function CentralBookingsRentalsView({
 
                         {/* Property Details */}
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-lg overflow-hidden bg-slate-100 border border-[#E5E7EB] shrink-0">
-                            <img
+                          <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-slate-100 border border-[#E5E7EB] shrink-0">
+                            <Image
                               src={
                                 b.property?.images?.[0]?.url ||
-                                "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=200"
+                                "/images/luxury_villa_twilight.jpg"
                               }
                               alt=""
-                              className="w-full h-full object-cover"
+                              fill
+                              sizes="48px"
+                              className="object-cover"
+                              loading="lazy"
                             />
                           </div>
                           <div className="min-w-0 flex-1">
@@ -996,7 +947,12 @@ export default function CentralBookingsRentalsView({
                                 disabled={busyId === b.id}
                                 className="flex-1 h-8 text-xs bg-emerald-700 hover:bg-emerald-800 text-white font-semibold"
                               >
-                                <Check className="h-3.5 w-3.5 mr-1" /> Approve
+                                {busyId === b.id ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                                ) : (
+                                  <Check className="h-3.5 w-3.5 mr-1" />
+                                )}
+                                Approve
                               </Button>
                               <Button
                                 size="sm"
@@ -1008,6 +964,11 @@ export default function CentralBookingsRentalsView({
                                 <XCircle className="h-3.5 w-3.5 mr-1" /> Reject
                               </Button>
                             </>
+                          )}
+                          {!isAdmin && isApprovedOrConfirmed && (
+                            <span className="flex-1 inline-flex items-center justify-center h-8 text-xs font-bold rounded-md bg-emerald-600 text-white border border-emerald-700/20 shadow-xs gap-1.5 select-none whitespace-nowrap">
+                              <Check className="h-3.5 w-3.5 text-white stroke-[2.5]" /> Approved
+                            </span>
                           )}
                         </div>
                       </div>
@@ -1089,16 +1050,13 @@ export default function CentralBookingsRentalsView({
                 value={rentalSearch}
                 onChange={(e) => setRentalSearch(e.target.value)}
                 placeholder="Search by agreement number, property, customer..."
-                className="w-full pl-9 pr-3 h-9 text-xs bg-white border border-[#E5E7EB] rounded-lg text-[#0F172A] placeholder-[#94A3B8] focus:outline-hidden focus:ring-1 focus:ring-[#071426] focus:border-[#071426]"
+                className="w-full pl-9 pr-3 h-9 text-xs bg-white border border-[#E5E7EB] rounded-lg text-[#0F172A] placeholder-[#94A3B8] focus:outline-none focus:ring-1 focus:ring-[#071426] focus:border-[#071426]"
               />
             </div>
           </div>
 
           {/* TABLE CONTAINER (Section 8, 9, 10, 11) */}
-          <div className="w-full max-w-full bg-white rounded-xl border border-[#E5E7EB] shadow-xs overflow-hidden relative">
-            {rentalsRefreshing && (
-              <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-[#D4A72C] to-transparent animate-pulse z-10" />
-            )}
+          <div className="w-full max-w-full bg-white rounded-xl border border-[#E5E7EB] shadow-xs overflow-hidden">
             {rentalsLoading ? (
               // Loading Skeleton
               <div className="p-8 space-y-4">
@@ -1189,14 +1147,17 @@ export default function CentralBookingsRentalsView({
                             {/* Property */}
                             <td className="py-3.5 px-4">
                               <div className="flex items-center gap-2.5">
-                                <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 border border-[#E5E7EB] shrink-0">
-                                  <img
+                                <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-slate-100 border border-[#E5E7EB] shrink-0">
+                                  <Image
                                     src={
                                       r.property?.images?.[0]?.url ||
-                                      "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=200"
+                                      "/images/luxury_villa_twilight.jpg"
                                     }
                                     alt=""
-                                    className="w-full h-full object-cover"
+                                    fill
+                                    sizes="40px"
+                                    className="object-cover"
+                                    loading="lazy"
                                   />
                                 </div>
                                 <div className="min-w-0 max-w-[200px]">
@@ -1267,15 +1228,16 @@ export default function CentralBookingsRentalsView({
                                 </Button>
 
                                 {r.transaction?.receipt && (
-                                  <Link href={`/receipt/${r.transaction.receipt.id}`} target="_blank">
-                                    <Button
+                                  <Button
+                                      asChild
                                       size="sm"
                                       variant="outline"
                                       className="h-7 px-2 text-xs border-[#D4A72C]/40 text-[#071426] hover:bg-[#F8FAFC] rounded-md gap-1 font-medium cursor-pointer"
                                     >
-                                      <Receipt className="h-3 w-3 text-[#D4A72C]" /> Receipt
+                                      <Link href={`/receipt/${r.transaction.receipt.id}`} target="_blank">
+                                        <Receipt className="h-3 w-3 text-[#D4A72C]" /> Receipt
+                                      </Link>
                                     </Button>
-                                  </Link>
                                 )}
                               </div>
                             </td>
@@ -1310,14 +1272,17 @@ export default function CentralBookingsRentalsView({
 
                         {/* Property Details */}
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-lg overflow-hidden bg-slate-100 border border-[#E5E7EB] shrink-0">
-                            <img
+                          <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-slate-100 border border-[#E5E7EB] shrink-0">
+                            <Image
                               src={
                                 r.property?.images?.[0]?.url ||
-                                "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=200"
+                                "/images/luxury_villa_twilight.jpg"
                               }
                               alt=""
-                              className="w-full h-full object-cover"
+                              fill
+                              sizes="48px"
+                              className="object-cover"
+                              loading="lazy"
                             />
                           </div>
                           <div className="min-w-0 flex-1">
@@ -1368,16 +1333,17 @@ export default function CentralBookingsRentalsView({
                           >
                             <Eye className="h-3.5 w-3.5 text-[#D4A72C] mr-1" /> View Agreement
                           </Button>
-                          {r.transaction?.receipt && (
-                            <Link href={`/receipt/${r.transaction.receipt.id}`} target="_blank" className="flex-1">
-                              <Button
+                          {r.transaction?.receipt?.id && (
+                            <Button
+                                asChild
                                 size="sm"
                                 variant="outline"
-                                className="w-full h-8 text-xs border-[#D4A72C]/40 text-[#071426]"
+                                className="flex-1 h-8 text-xs border-[#D4A72C]/40 text-[#071426]"
                               >
-                                <Receipt className="h-3.5 w-3.5 text-[#D4A72C] mr-1" /> Receipt
+                                <Link href={`/receipt/${r.transaction.receipt.id}`} target="_blank">
+                                  <Receipt className="h-3.5 w-3.5 text-[#D4A72C] mr-1" /> Receipt
+                                </Link>
                               </Button>
-                            </Link>
                           )}
                         </div>
                       </div>
@@ -1448,11 +1414,13 @@ export default function CentralBookingsRentalsView({
             <div className="space-y-4 mt-2 text-xs">
               {/* Property Details */}
               <div className="p-3 bg-[#F8FAFC] rounded-lg border border-[#E5E7EB] flex items-center gap-3">
-                <div className="h-12 w-12 rounded-lg bg-slate-200 overflow-hidden shrink-0">
-                  <img
-                    src={viewBookingTarget.property?.images?.[0]?.url || "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=200"}
+                <div className="relative h-12 w-12 rounded-lg bg-slate-200 overflow-hidden shrink-0">
+                  <Image
+                    src={viewBookingTarget.property?.images?.[0]?.url || "/images/luxury_villa_twilight.jpg"}
                     alt=""
-                    className="h-full w-full object-cover"
+                    fill
+                    sizes="48px"
+                    className="object-cover"
                   />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -1570,15 +1538,34 @@ export default function CentralBookingsRentalsView({
             >
               Close
             </Button>
-            {!isAdmin && viewBookingTarget?.status === "PENDING" && (
-              <Button
-                onClick={() => handleApproveBooking(viewBookingTarget.id)}
-                disabled={busyId === viewBookingTarget.id}
-                className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs"
-              >
-                Approve Booking
-              </Button>
-            )}
+            {!isAdmin &&
+              viewBookingTarget &&
+              (viewBookingTarget.bookingStatus === "PENDING" ||
+                viewBookingTarget.status === "PENDING" ||
+                !viewBookingTarget.approvedAt) &&
+              viewBookingTarget.bookingStatus !== "CONFIRMED" &&
+              viewBookingTarget.bookingStatus !== "APPROVED" && (
+                <Button
+                  onClick={() => handleApproveBooking(viewBookingTarget.id)}
+                  disabled={!viewBookingTarget.id || busyId === viewBookingTarget.id}
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs"
+                >
+                  {busyId === viewBookingTarget?.id ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                  ) : (
+                    <Check className="h-3.5 w-3.5 mr-1" />
+                  )}
+                  Approve Booking
+                </Button>
+              )}
+            {!isAdmin &&
+              viewBookingTarget &&
+              (viewBookingTarget.bookingStatus === "CONFIRMED" ||
+                viewBookingTarget.bookingStatus === "APPROVED") && (
+                <span className="inline-flex items-center justify-center px-3 py-2 text-xs font-bold rounded-lg bg-emerald-600 text-white border border-emerald-700/20 shadow-xs gap-1.5 select-none whitespace-nowrap">
+                  <Check className="h-3.5 w-3.5 text-white stroke-[2.5]" /> Approved
+                </span>
+              )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1613,11 +1600,13 @@ export default function CentralBookingsRentalsView({
             <div className="space-y-4 mt-2 text-xs">
               {/* Property Details */}
               <div className="p-3 bg-[#F8FAFC] rounded-lg border border-[#E5E7EB] flex items-center gap-3">
-                <div className="h-12 w-12 rounded-lg bg-slate-200 overflow-hidden shrink-0">
-                  <img
-                    src={viewRentalTarget.property?.images?.[0]?.url || "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=200"}
+                <div className="relative h-12 w-12 rounded-lg bg-slate-200 overflow-hidden shrink-0">
+                  <Image
+                    src={viewRentalTarget.property?.images?.[0]?.url || "/images/luxury_villa_twilight.jpg"}
                     alt=""
-                    className="h-full w-full object-cover"
+                    fill
+                    sizes="48px"
+                    className="object-cover"
                   />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -1694,12 +1683,12 @@ export default function CentralBookingsRentalsView({
             >
               Close
             </Button>
-            {viewRentalTarget?.transaction?.receipt && (
-              <Link href={`/receipt/${viewRentalTarget.transaction.receipt.id}`} target="_blank">
-                <Button className="bg-[#071426] hover:bg-[#0B1E38] text-white font-semibold text-xs gap-1.5">
+            {viewRentalTarget?.transaction?.receipt?.id && (
+              <Button asChild className="bg-[#071426] hover:bg-[#0B1E38] text-white font-semibold text-xs gap-1.5">
+                <Link href={`/receipt/${viewRentalTarget.transaction.receipt.id}`} target="_blank">
                   <Receipt className="h-3.5 w-3.5 text-[#D4A72C]" /> View Official Receipt
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             )}
           </DialogFooter>
         </DialogContent>
@@ -1776,7 +1765,7 @@ export default function CentralBookingsRentalsView({
                 value={directPropertyId}
                 onChange={(e) => handlePropertySelect(e.target.value)}
                 required
-                className="w-full h-9 px-3 border border-[#E5E7EB] bg-white rounded-lg text-xs text-[#0F172A] focus:outline-hidden focus:ring-1 focus:ring-[#071426]"
+                className="w-full h-9 px-3 border border-[#E5E7EB] bg-white rounded-lg text-xs text-[#0F172A] focus:outline-none focus:ring-1 focus:ring-[#071426]"
               >
                 <option value="">-- Choose available property --</option>
                 {myProperties.map((p) => (
@@ -1788,14 +1777,24 @@ export default function CentralBookingsRentalsView({
             </div>
 
             <div>
-              <Label className="text-xs font-semibold text-[#0F172A] block mb-1">
-                Select Customer / Tenant *
-              </Label>
+              <div className="flex items-center justify-between mb-1">
+                <Label className="text-xs font-semibold text-[#0F172A]">
+                  Select Customer / Tenant *
+                </Label>
+                <button
+                  type="button"
+                  onClick={() => setIsAddCustomerOpen(true)}
+                  className="text-[11px] font-bold text-[#A97918] hover:text-[#07111F] flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <UserPlus className="h-3 w-3" />
+                  + Add New Customer
+                </button>
+              </div>
               <select
                 value={directCustomerId}
                 onChange={(e) => setDirectCustomerId(e.target.value)}
                 required
-                className="w-full h-9 px-3 border border-[#E5E7EB] bg-white rounded-lg text-xs text-[#0F172A] focus:outline-hidden focus:ring-1 focus:ring-[#071426]"
+                className="w-full h-9 px-3 border border-[#E5E7EB] bg-white rounded-lg text-xs text-[#0F172A] focus:outline-none focus:ring-1 focus:ring-[#071426]"
               >
                 <option value="">-- Choose customer --</option>
                 {customers.map((c) => (
@@ -1892,6 +1891,13 @@ export default function CentralBookingsRentalsView({
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Reusable Add Customer Modal */}
+      <AddCustomerModal
+        open={isAddCustomerOpen}
+        onOpenChange={setIsAddCustomerOpen}
+        onCustomerCreated={handleCustomerCreatedInModal}
+      />
     </div>
   );
 }

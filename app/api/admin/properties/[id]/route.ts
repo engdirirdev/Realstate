@@ -46,6 +46,42 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       return NextResponse.json({ error: "Invalid property status" }, { status: 400 });
     }
 
+    // Inspect existing property state to prevent illegal overwrites of SOLD/RENTED properties
+    const existing = await prisma.property.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        status: true,
+        availabilityStatus: true,
+        approvalStatus: true,
+        title: true,
+        managerId: true,
+      },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Property not found" }, { status: 404 });
+    }
+
+    const isCurrentlySold = existing.status === "SOLD" || existing.availabilityStatus === "SOLD";
+    const isCurrentlyRented = existing.status === "RENTED" || existing.availabilityStatus === "RENTED";
+
+    // GUARD: If a property is SOLD or RENTED, admin CANNOT approve it back to AVAILABLE
+    if (status === "APPROVED" || status === "PUBLISHED") {
+      if (isCurrentlySold) {
+        return NextResponse.json(
+          { error: "Cannot approve a property that is already SOLD. Finalized transactions cannot be made available." },
+          { status: 400 }
+        );
+      }
+      if (isCurrentlyRented) {
+        return NextResponse.json(
+          { error: "Cannot approve a property that is currently RENTED. It is occupied under an active tenancy agreement." },
+          { status: 400 }
+        );
+      }
+    }
+
     const updateData: any = {};
     if (status) updateData.status = status;
     if (isFeatured !== undefined) updateData.isFeatured = isFeatured;
@@ -60,6 +96,14 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       updateData.availabilityStatus = "AVAILABLE";
       updateData.isActive = true;
       updateData.rejectionReason = null;
+    } else if (status === "SOLD") {
+      updateData.status = "SOLD";
+      updateData.availabilityStatus = "SOLD";
+      updateData.isActive = false;
+    } else if (status === "RENTED") {
+      updateData.status = "RENTED";
+      updateData.availabilityStatus = "RENTED";
+      updateData.isActive = false;
     } else if (status === "INACTIVE" || status === "UNAVAILABLE") {
       updateData.availabilityStatus = "INACTIVE";
       updateData.isActive = false;

@@ -18,20 +18,51 @@ export async function GET(request: NextRequest) {
     const q = sp.get("q")?.trim();
     const { page, pageSize, skip } = parsePaging(sp);
 
-    const scope: any =
-      user.role === "ADMIN" ? {} : user.role === "USER" ? { managerId: user.id } : user.role === "CUSTOMER" ? { customerId: user.id } : null;
-    if (!scope) return forbidden();
+    const andClauses: any[] = [];
 
-    const where: any = { ...scope };
+    if (user.role === "ADMIN") {
+      // Admin has full global oversight
+    } else if (user.role === "USER") {
+      // Property Manager: sees requests directly assigned to them, requests for properties they manage, or unassigned requests
+      andClauses.push({
+        OR: [
+          { managerId: user.id },
+          { property: { managerId: user.id } },
+          { AND: [{ managerId: null }, { property: { managerId: null } }] },
+        ],
+      });
+    } else if (user.role === "CUSTOMER") {
+      andClauses.push({ customerId: user.id });
+    } else {
+      return forbidden();
+    }
+
+    if (sp.get("metrics") === "true") {
+      const now = new Date();
+      const in30Days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      const metricsScope: any = andClauses.length > 0 ? { AND: andClauses } : {};
+      const [pendingBookings, approvedBookings, activeRentals, expiringSoon] = await Promise.all([
+        prisma.rentalRequest.count({ where: { ...metricsScope, bookingStatus: "PENDING" } }),
+        prisma.rentalRequest.count({ where: { ...metricsScope, bookingStatus: { in: ["APPROVED", "CONFIRMED"] } } }),
+        prisma.rentalRequest.count({ where: { ...metricsScope, rentalStatus: "ACTIVE" } }),
+        prisma.rentalRequest.count({ where: { ...metricsScope, rentalStatus: "ACTIVE", endDate: { gt: now, lte: in30Days } } }),
+      ]);
+      return NextResponse.json({
+        success: true,
+        metrics: { pendingBookings, approvedBookings, activeRentals, expiringSoon },
+      });
+    }
+
+    const where: any = andClauses.length > 0 ? { AND: [...andClauses] } : {};
 
     if (kind === "rental" && mode === "bookings") {
-      // Rental Bookings: PENDING, APPROVED, REJECTED, CANCELLED
+      // Rental Bookings: PENDING, APPROVED, CONFIRMED, REJECTED, CANCELLED
       if (!status || status === "ALL") {
-        where.bookingStatus = { in: ["PENDING", "APPROVED", "REJECTED", "CANCELLED"] };
+        where.bookingStatus = { in: ["PENDING", "APPROVED", "CONFIRMED", "REJECTED", "CANCELLED"] };
       } else if (status === "PENDING") {
         where.bookingStatus = "PENDING";
-      } else if (status === "APPROVED") {
-        where.bookingStatus = "APPROVED";
+      } else if (status === "APPROVED" || status === "CONFIRMED") {
+        where.bookingStatus = { in: ["APPROVED", "CONFIRMED"] };
       } else if (status === "REJECTED") {
         where.bookingStatus = "REJECTED";
       } else if (status === "CANCELLED") {
@@ -55,12 +86,19 @@ export async function GET(request: NextRequest) {
     }
 
     if (q) {
-      where.OR = [
-        { requestNo: { contains: q } },
-        { agreementNo: { contains: q } },
-        { property: { title: { contains: q } } },
-        { customer: { name: { contains: q } } },
-      ];
+      const searchOr = {
+        OR: [
+          { requestNo: { contains: q } },
+          { agreementNo: { contains: q } },
+          { property: { title: { contains: q } } },
+          { customer: { name: { contains: q } } },
+        ],
+      };
+      if (where.AND) {
+        where.AND.push(searchOr);
+      } else {
+        where.AND = [searchOr];
+      }
     }
 
     const include = {

@@ -13,7 +13,6 @@ import {
   Heart,
   FileText,
   Key,
-  CreditCard,
   Building2,
   Sparkles,
   ArrowRight,
@@ -44,7 +43,6 @@ export default async function CustomerDashboardPage() {
 
   // ─── Real Database Queries for Metrics & Feeds ───
   const [
-    favoritesCount,
     pendingRentalsCount,
     pendingPurchasesCount,
     activeRentalsCount,
@@ -55,14 +53,9 @@ export default async function CustomerDashboardPage() {
     fallbackProperties,
     customerRentals,
     customerPurchases,
-    recentRentalRequests,
-    recentPurchaseRequests,
     recentPayments,
   ] = await Promise.all([
-    // 1. My Favorites Count
-    prisma.favorite.count({ where: { userId } }),
-
-    // 2. Pending Requests (Rentals + Purchases)
+    // 1. Pending Requests (Rentals + Purchases)
     prisma.rentalRequest.count({
       where: {
         customerId: userId,
@@ -206,19 +199,7 @@ export default async function CustomerDashboardPage() {
       take: 3,
     }),
 
-    // Recent events for activity feed
-    prisma.rentalRequest.findMany({
-      where: { customerId: userId },
-      select: { id: true, requestNo: true, createdAt: true, property: { select: { title: true } } },
-      orderBy: { createdAt: "desc" },
-      take: 2,
-    }),
-    prisma.purchaseRequest.findMany({
-      where: { customerId: userId },
-      select: { id: true, requestNo: true, createdAt: true, property: { select: { title: true } } },
-      orderBy: { createdAt: "desc" },
-      take: 2,
-    }),
+    // Recent paid payments for activity feed
     prisma.payment.findMany({
       where: { customerId: userId, status: "PAID" },
       select: { id: true, amount: true, createdAt: true, transactionRef: true },
@@ -266,7 +247,7 @@ export default async function CustomerDashboardPage() {
     });
   }
 
-  for (const rent of recentRentalRequests) {
+  for (const rent of customerRentals.slice(0, 2)) {
     realActivities.push({
       id: `rent-${rent.id}`,
       icon: Key,
@@ -278,7 +259,7 @@ export default async function CustomerDashboardPage() {
     });
   }
 
-  for (const pur of recentPurchaseRequests) {
+  for (const pur of customerPurchases.slice(0, 2)) {
     realActivities.push({
       id: `pur-${pur.id}`,
       icon: ShoppingBag,

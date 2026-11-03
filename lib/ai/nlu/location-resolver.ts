@@ -6,6 +6,7 @@
 export interface ResolvedLocation {
   canonicalCity: string;
   city: string;
+  district?: string;
   matchedAlias: string;
   confidence: number;
   isInDatabase: boolean;
@@ -241,6 +242,138 @@ export const SOMALI_CITY_DIRECTORY: CityDefinition[] = [
   },
 ];
 
+export interface DistrictDefinition {
+  canonicalDistrict: string;
+  parentCity: string;
+  aliases: string[];
+}
+
+export const SOMALI_DISTRICT_DIRECTORY: DistrictDefinition[] = [
+  // ─── MOGADISHU DISTRICTS ───
+  {
+    canonicalDistrict: "Hodan",
+    parentCity: "Mogadishu",
+    aliases: ["hodan", "degmada hodan", "km4", "taleex", "tarabuunka", "sayidka", "taleex hodan"],
+  },
+  {
+    canonicalDistrict: "Wadajir",
+    parentCity: "Mogadishu",
+    aliases: ["wadajir", "madiina", "medina", "degmada wadajir", "buulo xuubeey", "xalane"],
+  },
+  {
+    canonicalDistrict: "Daarusalaam",
+    parentCity: "Mogadishu",
+    aliases: ["daarusalaam", "daaru salaam", "darussalam", "darusalaam", "magaalada daarusalaam"],
+  },
+  {
+    canonicalDistrict: "Yaaqshiid",
+    parentCity: "Mogadishu",
+    aliases: ["yaaqshiid", "yaakhshiid", "degmada yaaqshiid", "fagax", "towfiiq"],
+  },
+  {
+    canonicalDistrict: "Kaaraan",
+    parentCity: "Mogadishu",
+    aliases: ["kaaraan", "karan", "degmada kaaraan"],
+  },
+  {
+    canonicalDistrict: "Dayniile",
+    parentCity: "Mogadishu",
+    aliases: ["dayniile", "deyniile", "degmada dayniile", "daynile"],
+  },
+  {
+    canonicalDistrict: "Howlwadaag",
+    parentCity: "Mogadishu",
+    aliases: ["howlwadaag", "holwadag", "hawl wadaag", "degmada howlwadaag", "bakaaro", "bakaaraha"],
+  },
+  {
+    canonicalDistrict: "Waaberi",
+    parentCity: "Mogadishu",
+    aliases: ["waaberi", "waberi", "degmada waaberi", "21 october"],
+  },
+  {
+    canonicalDistrict: "Shibis",
+    parentCity: "Mogadishu",
+    aliases: ["shibis", "degmada shibis"],
+  },
+  {
+    canonicalDistrict: "Boondheere",
+    parentCity: "Mogadishu",
+    aliases: ["boondheere", "bondhere", "degmada boondheere"],
+  },
+  {
+    canonicalDistrict: "Hamar Weyne",
+    parentCity: "Mogadishu",
+    aliases: ["xamar weyne", "hamar weyne", "degmada xamar weyne"],
+  },
+  {
+    canonicalDistrict: "Hamar Jajab",
+    parentCity: "Mogadishu",
+    aliases: ["xamar jajab", "hamar jajab", "degmada xamar jajab"],
+  },
+  {
+    canonicalDistrict: "Shangaani",
+    parentCity: "Mogadishu",
+    aliases: ["shangaani", "shangani", "degmada shangaani"],
+  },
+  {
+    canonicalDistrict: "Cabdicasis",
+    parentCity: "Mogadishu",
+    aliases: ["cabdicasis", "cabdicasiis", "abdi aziz", "liido", "lido", "lido beach"],
+  },
+  {
+    canonicalDistrict: "Dharkenley",
+    parentCity: "Mogadishu",
+    aliases: ["dharkenley", "dharkeynley", "degmada dharkenley"],
+  },
+  {
+    canonicalDistrict: "Kaxda",
+    parentCity: "Mogadishu",
+    aliases: ["kaxda", "degmada kaxda"],
+  },
+
+  // ─── HARGEISA DISTRICTS ───
+  {
+    canonicalDistrict: "Jigjiga Yar",
+    parentCity: "Hargeisa",
+    aliases: ["jigjiga yar", "jigjigayare", "jigjiga-yar"],
+  },
+  {
+    canonicalDistrict: "26 June",
+    parentCity: "Hargeisa",
+    aliases: ["26 june", "26-ka june", "labaatan iyo lixda june"],
+  },
+  {
+    canonicalDistrict: "Ibrahim Koodbuur",
+    parentCity: "Hargeisa",
+    aliases: ["ibrahim koodbuur", "koodbuur"],
+  },
+  {
+    canonicalDistrict: "Maxamed Mooge",
+    parentCity: "Hargeisa",
+    aliases: ["maxamed mooge", "mooge"],
+  },
+  {
+    canonicalDistrict: "Axmed Dhagax",
+    parentCity: "Hargeisa",
+    aliases: ["axmed dhagax", "ahmed dhagah"],
+  },
+  {
+    canonicalDistrict: "Gacan Libaax",
+    parentCity: "Hargeisa",
+    aliases: ["gacan libaax", "gacan-libaax"],
+  },
+  {
+    canonicalDistrict: "New Hargeisa",
+    parentCity: "Hargeisa",
+    aliases: ["new hargeisa", "hargeysa cusub"],
+  },
+  {
+    canonicalDistrict: "Masalaha",
+    parentCity: "Hargeisa",
+    aliases: ["masalaha", "masalaha hargeysa"],
+  },
+];
+
 /**
  * Fast lookup map from alias to CityDefinition
  */
@@ -286,7 +419,28 @@ export function resolveLocation(text: string): ResolvedLocation | null {
     };
   }
 
-  // 2. Scan for multi-word or single-word city phrases within the text
+  // 2. Scan for specific District match first (e.g. "Hodan", "Daarusalaam", "KM4", "Jigjiga Yar")
+  for (const dist of SOMALI_DISTRICT_DIRECTORY) {
+    for (const alias of dist.aliases) {
+      const isArabic = /[\u0600-\u06FF]/.test(alias);
+      const matched = isArabic
+        ? lower.includes(alias)
+        : new RegExp(`\\b${escapeRegExp(alias)}\\b`, "i").test(lower);
+
+      if (matched) {
+        return {
+          canonicalCity: dist.parentCity,
+          city: dist.parentCity,
+          district: dist.canonicalDistrict,
+          matchedAlias: alias,
+          confidence: 0.95,
+          isInDatabase: true,
+        };
+      }
+    }
+  }
+
+  // 3. Scan for multi-word or single-word city phrases within the text
   // Sort aliases by length descending so longer compound phrases match first
   for (const city of SOMALI_CITY_DIRECTORY) {
     for (const alias of city.aliases) {

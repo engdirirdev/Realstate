@@ -1,15 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Scale,
-  X,
   Building2,
   Check,
-  CheckCircle2,
-  ExternalLink,
-  Plus,
   ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -43,6 +40,16 @@ interface PropertyCompareModalProps {
   availableComps?: ComparableItem[];
 }
 
+function getAmenitiesList(p: ComparableItem): string[] {
+  try {
+    if (!p.amenities) return [];
+    const parsed = JSON.parse(p.amenities);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 export default function PropertyCompareModal({
   currentProperty,
   availableComps = [],
@@ -53,41 +60,31 @@ export default function PropertyCompareModal({
     ...(availableComps.slice(0, 1).map((c) => c.id)),
   ]);
 
-  const allProperties = [
-    currentProperty,
-    ...availableComps.filter((c) => c.id !== currentProperty.id),
-  ];
-
-  const comparedProperties = allProperties.filter((p) =>
-    selectedIds.includes(p.id)
+  const allProperties = useMemo(
+    () => [currentProperty, ...availableComps.filter((c) => c.id !== currentProperty.id)],
+    [currentProperty, availableComps]
   );
 
-  const toggleSelect = (id: string) => {
+  const comparedProperties = useMemo(
+    () => allProperties.filter((p) => selectedIds.includes(p.id)),
+    [allProperties, selectedIds]
+  );
+
+  const toggleSelect = useCallback((id: string) => {
     if (id === currentProperty.id) return; // Keep current property pinned
-    if (selectedIds.includes(id)) {
-      if (selectedIds.length > 1) {
-        setSelectedIds((prev) => prev.filter((item) => item !== id));
+    setSelectedIds((prev) => {
+      if (prev.includes(id)) {
+        return prev.length > 1 ? prev.filter((item) => item !== id) : prev;
+      } else {
+        return prev.length < 4 ? [...prev, id] : prev;
       }
-    } else {
-      if (selectedIds.length < 4) {
-        setSelectedIds((prev) => [...prev, id]);
-      }
-    }
-  };
+    });
+  }, [currentProperty.id]);
 
-  const getAmenitiesList = (p: ComparableItem): string[] => {
-    try {
-      if (!p.amenities) return [];
-      const parsed = JSON.parse(p.amenities);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  };
-
-  const allDistinctFeatures = Array.from(
-    new Set(comparedProperties.flatMap((p) => getAmenitiesList(p)))
-  );
+  const allDistinctFeatures = useMemo(() => {
+    if (!open) return [];
+    return Array.from(new Set(comparedProperties.flatMap((p) => getAmenitiesList(p))));
+  }, [comparedProperties, open]);
 
   return (
     <>
@@ -164,7 +161,7 @@ export default function PropertyCompareModal({
                       <div className="space-y-1.5">
                         <div className="h-28 rounded-xl overflow-hidden bg-black/40 relative border border-white/10">
                           {p.images && p.images[0] ? (
-                            <img src={p.images[0].url} alt="" className="w-full h-full object-cover" />
+                            <Image src={p.images[0].url} alt={p.title} fill sizes="(max-width: 640px) 100vw, 240px" className="object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-[#94A3B8]">
                               <Building2 className="h-6 w-6" />

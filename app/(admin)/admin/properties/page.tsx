@@ -11,15 +11,14 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { Building2, CheckCircle2, XCircle, Clock, Eye, Filter, Sparkles, Pencil } from "lucide-react";
+import { Building2, CheckCircle2, XCircle, Clock, Eye, Sparkles, Pencil } from "lucide-react";
 import { formatPrice, getPropertyTypeLabel } from "@/lib/utils";
 import AdminPropertyReviewModal from "@/components/AdminPropertyReviewModal";
-import AdminAddPropertyModal from "@/components/admin/AdminAddPropertyModal";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Manage Properties – Admin | Kiro-Maal Real Estate" };
 
-type Status = "APPROVED" | "PENDING" | "REJECTED" | "SOLD" | "UNAVAILABLE" | undefined;
+type Status = "APPROVED" | "PENDING" | "REJECTED" | "SOLD" | "RENTED" | "UNAVAILABLE" | undefined;
 
 export default async function AdminPropertiesPage({
   searchParams,
@@ -31,23 +30,56 @@ export default async function AdminPropertiesPage({
   if (!session || (session.user as any)?.role !== "ADMIN") redirect("/dashboard");
 
   const statusFilter = params.status as Status;
+  const currentPage = Math.max(1, Number(params.page) || 1);
+  const pageSize = 20;
 
-  const properties = await prisma.property.findMany({
-    where: statusFilter ? { status: statusFilter } : {},
-    include: {
-      images: { take: 1, orderBy: { order: "asc" } },
-      manager: { select: { id: true, name: true, email: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const whereClause: any = {};
+  if (statusFilter === "RENTED") {
+    whereClause.OR = [{ status: "RENTED" }, { availabilityStatus: "RENTED" }];
+  } else if (statusFilter === "SOLD") {
+    whereClause.OR = [{ status: "SOLD" }, { availabilityStatus: "SOLD" }];
+  } else if (statusFilter) {
+    whereClause.status = statusFilter;
+  }
+
+  const [
+    properties,
+    totalFiltered,
+    allCount,
+    pendingCount,
+    approvedCount,
+    rentedCount,
+    soldCount,
+    rejectedCount,
+  ] = await Promise.all([
+    prisma.property.findMany({
+      where: whereClause,
+      include: {
+        images: { take: 1, orderBy: { order: "asc" } },
+        manager: { select: { id: true, name: true, email: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: pageSize,
+      skip: (currentPage - 1) * pageSize,
+    }),
+    prisma.property.count({ where: whereClause }),
+    prisma.property.count(),
+    prisma.property.count({ where: { status: "PENDING" } }),
+    prisma.property.count({ where: { status: "APPROVED" } }),
+    prisma.property.count({ where: { OR: [{ status: "RENTED" }, { availabilityStatus: "RENTED" }] } }),
+    prisma.property.count({ where: { OR: [{ status: "SOLD" }, { availabilityStatus: "SOLD" }] } }),
+    prisma.property.count({ where: { status: "REJECTED" } }),
+  ]);
+
+  const totalPages = Math.ceil(totalFiltered / pageSize) || 1;
 
   const statusTabs = [
-    { label: "All Listings", value: "", count: await prisma.property.count() },
-    { label: "Pending Review", value: "PENDING", count: await prisma.property.count({ where: { status: "PENDING" } }) },
-    { label: "Approved Live", value: "APPROVED", count: await prisma.property.count({ where: { status: "APPROVED" } }) },
-    { label: "Rented", value: "RENTED", count: await prisma.property.count({ where: { OR: [{ status: "RENTED" }, { availabilityStatus: "RENTED" }] } }) },
-    { label: "Sold", value: "SOLD", count: await prisma.property.count({ where: { OR: [{ status: "SOLD" }, { availabilityStatus: "SOLD" }] } }) },
-    { label: "Rejected", value: "REJECTED", count: await prisma.property.count({ where: { status: "REJECTED" } }) },
+    { label: "All Listings", value: "", count: allCount },
+    { label: "Pending Review", value: "PENDING", count: pendingCount },
+    { label: "Approved Live", value: "APPROVED", count: approvedCount },
+    { label: "Rented", value: "RENTED", count: rentedCount },
+    { label: "Sold", value: "SOLD", count: soldCount },
+    { label: "Rejected", value: "REJECTED", count: rejectedCount },
   ];
 
   return (
@@ -210,6 +242,7 @@ export default async function AdminPropertiesPage({
                             propertyId={p.id}
                             propertyTitle={p.title}
                             currentStatus={p.status}
+                            availabilityStatus={p.availabilityStatus}
                           />
                         </div>
                       </td>
@@ -220,6 +253,40 @@ export default async function AdminPropertiesPage({
             </tbody>
           </table>
         </div>
+
+        {totalPages > 1 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#FCFBF7] border-t border-[#E8E1D4] px-5 py-3.5">
+            <p className="text-xs font-medium text-[#6B7280]">
+              Showing page <span className="font-bold text-[#07111F]">{currentPage}</span> of <span className="font-bold text-[#07111F]">{totalPages}</span> ({totalFiltered} total properties)
+            </p>
+            <div className="flex items-center gap-2">
+              {currentPage > 1 ? (
+                <Link
+                  href={`/admin/properties?${new URLSearchParams({ ...(statusFilter ? { status: statusFilter } : {}), page: String(currentPage - 1) }).toString()}`}
+                  className="px-3.5 py-1.5 rounded-xl border border-[#E8E1D4] bg-[#FCFBF7] hover:bg-[#F7F3EA] text-xs font-bold text-[#07111F] transition-colors"
+                >
+                  Previous
+                </Link>
+              ) : (
+                <span className="px-3.5 py-1.5 rounded-xl border border-[#E8E1D4] bg-[#F7F3EA] text-xs font-bold text-[#9CA3AF] cursor-not-allowed">
+                  Previous
+                </span>
+              )}
+              {currentPage < totalPages ? (
+                <Link
+                  href={`/admin/properties?${new URLSearchParams({ ...(statusFilter ? { status: statusFilter } : {}), page: String(currentPage + 1) }).toString()}`}
+                  className="px-3.5 py-1.5 rounded-xl border border-[#E8E1D4] bg-[#FCFBF7] hover:bg-[#F7F3EA] text-xs font-bold text-[#07111F] transition-colors"
+                >
+                  Next
+                </Link>
+              ) : (
+                <span className="px-3.5 py-1.5 rounded-xl border border-[#E8E1D4] bg-[#F7F3EA] text-xs font-bold text-[#9CA3AF] cursor-not-allowed">
+                  Next
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
+import { requireAuth } from "@/lib/auth-guards";
+import { canManageProperty } from "@/lib/rbac";
+import { cachedDbQuery, invalidatePropertyCache } from "@/lib/cache";
+import { cachedJsonResponse, CACHE_PROFILES } from "@/lib/api-cache";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -11,12 +14,21 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const property = await prisma.property.findUnique({
-      where: { id },
-      include: {
-        images: { orderBy: { order: "asc" } },
+    const property = await cachedDbQuery(
+      ["property", id],
+      async () => {
+        return prisma.property.findUnique({
+          where: { id },
+          include: {
+            images: { orderBy: { order: "asc" } },
+          },
+        });
       },
-    });
+      {
+        tags: ["properties", `property-${id}`],
+        revalidate: 60,
+      }
+    );
 
     if (!property) {
       return NextResponse.json(
@@ -25,13 +37,19 @@ export async function GET(
       );
     }
 
-    // Increment view count
-    await prisma.property.update({
-      where: { id },
-      data: { viewCount: { increment: 1 } },
-    });
+    // Increment view count asynchronously in background
+    prisma.property
+      .update({
+        where: { id },
+        data: { viewCount: { increment: 1 } },
+      })
+      .catch(() => {});
 
-    return NextResponse.json({ success: true, data: property });
+    return cachedJsonResponse(
+      req,
+      { success: true, data: property },
+      { profile: CACHE_PROFILES.PUBLIC_SHORT }
+    );
   } catch (error) {
     console.error("[GET /api/properties/[id]]", error);
     return NextResponse.json(
@@ -47,10 +65,11 @@ export async function PATCH(
   { params }: Props
 ) {
   try {
-    const session = await auth();
-    if (!session || !session.user?.id) {
-      return NextResponse.json({ success: false, error: "Unauthorized. Please sign in." }, { status: 401 });
+    const authResult = await requireAuth();
+    if (authResult.response) {
+      return authResult.response;
     }
+    const { user } = authResult;
 
     const { id } = await params;
     const existing = await prisma.property.findUnique({
@@ -62,10 +81,8 @@ export async function PATCH(
       return NextResponse.json({ success: false, error: "Property not found." }, { status: 404 });
     }
 
-    const isAdmin = (session.user as any)?.role === "ADMIN";
-    const isOwner = existing.managerId === session.user.id;
-
-    if (!isAdmin && !isOwner) {
+    const isAdmin = user.role === "ADMIN";
+    if (!canManageProperty(user, existing)) {
       return NextResponse.json({ success: false, error: "Unauthorized. You cannot edit this property." }, { status: 403 });
     }
 
@@ -145,24 +162,38 @@ export async function PATCH(
     }
 
     // Status logic:
+    const isCurrentlySold = existing.status === "SOLD" || existing.availabilityStatus === "SOLD";
+    const isCurrentlyRented = existing.status === "RENTED" || existing.availabilityStatus === "RENTED";
+
     if (isAdmin) {
       if (requestedStatus) {
-        updateData.status = requestedStatus;
         if (requestedStatus === "APPROVED" || requestedStatus === "PUBLISHED") {
+          if (isCurrentlySold) {
+            return NextResponse.json({ success: false, error: "Cannot approve or re-list a SOLD property as available." }, { status: 400 });
+          }
+          if (isCurrentlyRented) {
+            return NextResponse.json({ success: false, error: "Cannot approve or re-list a currently RENTED property as available." }, { status: 400 });
+          }
+          updateData.status = requestedStatus;
           updateData.approvalStatus = "APPROVED";
           updateData.availabilityStatus = "AVAILABLE";
           updateData.isActive = true;
           updateData.rejectionReason = null;
         } else if (requestedStatus === "REJECTED") {
+          updateData.status = requestedStatus;
           updateData.approvalStatus = "REJECTED";
           updateData.availabilityStatus = "INACTIVE";
           updateData.isActive = false;
         } else if (requestedStatus === "SOLD") {
+          updateData.status = "SOLD";
           updateData.availabilityStatus = "SOLD";
           updateData.isActive = false;
         } else if (requestedStatus === "RENTED") {
+          updateData.status = "RENTED";
           updateData.availabilityStatus = "RENTED";
           updateData.isActive = false;
+        } else {
+          updateData.status = requestedStatus;
         }
       }
       if (isFeatured !== undefined) updateData.isFeatured = isFeatured;
@@ -219,6 +250,8 @@ export async function PATCH(
       },
     });
 
+    await invalidatePropertyCache(id);
+
     return NextResponse.json({ success: true, data: updated, property: updated });
   } catch (error) {
     console.error("[PATCH /api/properties/[id]]", error);
@@ -235,10 +268,11 @@ export async function DELETE(
   { params }: Props
 ) {
   try {
-    const session = await auth();
-    if (!session || !session.user?.id) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    const authResult = await requireAuth();
+    if (authResult.response) {
+      return authResult.response;
     }
+    const { user } = authResult;
 
     const { id } = await params;
     const existing = await prisma.property.findUnique({
@@ -249,14 +283,12 @@ export async function DELETE(
       return NextResponse.json({ success: false, error: "Property not found." }, { status: 404 });
     }
 
-    const isAdmin = (session.user as any)?.role === "ADMIN";
-    const isOwner = existing.managerId === session.user.id;
-
-    if (!isAdmin && !isOwner) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 403 });
+    if (!canManageProperty(user, existing)) {
+      return NextResponse.json({ success: false, error: "Forbidden. You cannot delete this property." }, { status: 403 });
     }
 
     await prisma.property.delete({ where: { id } });
+    await invalidatePropertyCache(id);
     return NextResponse.json({ success: true, message: "Property deleted." });
   } catch (error) {
     console.error("[DELETE /api/properties/[id]]", error);

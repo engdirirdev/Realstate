@@ -9,8 +9,23 @@ import { Building2, Users, Bot, Globe, Heart, Zap, CheckCircle2, Star, Sparkles,
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "About Us – Kiro-Maal Real Estate",
-  description: "Learn about Somalia's leading luxury AI-powered real estate platform and our mission.",
+  title: "About Us — Kiro-Maal Luxury Real Estate & AI Intelligence",
+  description:
+    "Learn about Somalia's leading luxury AI-powered real estate platform, our leadership team, technology stack, and mission to modernize property investment.",
+  alternates: {
+    canonical: "/about",
+  },
+  openGraph: {
+    title: "About Us — Kiro-Maal Luxury Real Estate Somalia",
+    description: "Somalia's premier AI-powered property platform and luxury real estate brokerage.",
+    url: "/about",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "About Kiro-Maal Real Estate Somalia",
+    description: "Modernizing property acquisitions, title transparency, and AI valuation in Somalia.",
+  },
 };
 
 const team = [

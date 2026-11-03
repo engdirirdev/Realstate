@@ -6,12 +6,10 @@
 // ================================================================
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { getPropertyTypeLabel } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Search,
   Filter,
-  RotateCcw,
   MapPin,
   KeyRound,
   Building2,
@@ -24,11 +22,28 @@ import {
 import SaveSearchButton from "@/components/SaveSearchButton";
 import ResetFilterButton from "@/components/ResetFilterButton";
 import PropertyCard from "@/components/PropertyCard";
+import { resolveLocation } from "@/lib/ai/nlu/location-resolver";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Properties – Kiro-Maal Real Estate",
-  description: "Browse verified luxury properties with AI-powered valuations and smart search in Somalia.",
+  title: "Properties Directory – Kiro-Maal Luxury Real Estate Somalia",
+  description:
+    "Browse verified luxury villas, modern apartments, prime commercial land, and residential houses across Mogadishu, Hargeisa, and Somalia.",
+  alternates: {
+    canonical: "/properties",
+  },
+  openGraph: {
+    title: "Properties Directory – Kiro-Maal Luxury Real Estate Somalia",
+    description:
+      "Browse verified luxury villas, modern apartments, prime commercial land, and residential houses across Mogadishu, Hargeisa, and Somalia.",
+    type: "website",
+    url: "/properties",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Properties Directory – Kiro-Maal Luxury Real Estate Somalia",
+    description: "Browse verified luxury properties across Somalia with AI-powered valuations.",
+  },
 };
 
 export const revalidate = 60; // ISR: refresh every minute
@@ -66,31 +81,112 @@ export default async function PropertiesPage({
     furnished,
     parking,
     sort,
+    q,
+    search,
+    district,
   } = params;
 
-  const searchLocation = location || city;
+  const searchLocation = (location || city || "").toString().trim();
+  const keywordQuery = (q || search || "").toString().trim();
+  const explicitDistrict = (district || "").toString().trim();
 
   const where: any = {
     status: { in: ["APPROVED", "PUBLISHED"] },
     availabilityStatus: "AVAILABLE",
     isActive: true,
   };
+
   if (listingType && ["FOR_RENT", "FOR_SALE"].includes(String(listingType))) {
     where.listingType = String(listingType);
   }
-  if (searchLocation) where.city = { contains: String(searchLocation) };
-  if (type) where.type = String(type);
-  if (bedrooms) where.bedrooms = { gte: Number(bedrooms) };
+
+  const andClauses: any[] = [];
+
+  // 1. Keyword search (q / search) across relevant text fields
+  if (keywordQuery) {
+    andClauses.push({
+      OR: [
+        { title: { contains: keywordQuery } },
+        { description: { contains: keywordQuery } },
+        { location: { contains: keywordQuery } },
+        { address: { contains: keywordQuery } },
+        { city: { contains: keywordQuery } },
+      ],
+    });
+  }
+
+  // 2. City & District resolution with canonical normalization
+  if (searchLocation) {
+    const resolved = resolveLocation(searchLocation);
+    if (resolved) {
+      where.city = { contains: resolved.canonicalCity };
+      if (resolved.district) {
+        andClauses.push({
+          OR: [
+            { location: { contains: resolved.district } },
+            { address: { contains: resolved.district } },
+            { title: { contains: resolved.district } },
+            { description: { contains: resolved.district } },
+          ],
+        });
+      }
+    } else {
+      where.city = { contains: searchLocation };
+    }
+  }
+
+  if (explicitDistrict) {
+    andClauses.push({
+      OR: [
+        { location: { contains: explicitDistrict } },
+        { address: { contains: explicitDistrict } },
+        { title: { contains: explicitDistrict } },
+        { description: { contains: explicitDistrict } },
+      ],
+    });
+  }
+
+  // 3. Property Type (expand generic HOUSE to residential variants)
+  if (type) {
+    if (String(type).toUpperCase() === "HOUSE") {
+      where.type = { in: ["HOUSE", "VILLA", "TOWNHOUSE"] };
+    } else {
+      where.type = String(type);
+    }
+  }
+
+  // 4. Bedrooms with Studio (0 bed) support
+  if (bedrooms !== undefined && bedrooms !== "") {
+    const bedNum = Number(bedrooms);
+    if (!isNaN(bedNum)) {
+      if (bedNum === 0) {
+        where.bedrooms = 0;
+      } else {
+        where.bedrooms = { gte: bedNum };
+      }
+    }
+  }
+
   if (bathrooms) where.bathrooms = { gte: Number(bathrooms) };
   if (furnished === "true") where.isFurnished = true;
   if (parking) where.parking = { gte: Number(parking) };
-  if (minPrice) where.price = { ...(where.price || {}), gte: Number(minPrice) };
-  if (maxPrice) where.price = { ...(where.price || {}), lte: Number(maxPrice) };
 
-  let orderBy: any = { createdAt: "desc" };
-  if (sort === "price_asc") orderBy = { price: "asc" };
-  else if (sort === "price_desc") orderBy = { price: "desc" };
-  else if (sort === "area_desc") orderBy = { area: "desc" };
+  // 5. Price filtering
+  if (minPrice || maxPrice) {
+    where.price = {};
+    if (minPrice && !isNaN(Number(minPrice))) where.price.gte = Number(minPrice);
+    if (maxPrice && !isNaN(Number(maxPrice))) where.price.lte = Number(maxPrice);
+  }
+
+  if (andClauses.length > 0) {
+    where.AND = andClauses;
+  }
+
+  let orderBy: any = [{ isFeatured: "desc" }, { createdAt: "desc" }];
+  if (sort === "price_asc") orderBy = [{ price: "asc" }, { createdAt: "desc" }];
+  else if (sort === "price_desc") orderBy = [{ price: "desc" }, { createdAt: "desc" }];
+  else if (sort === "area_desc") orderBy = [{ area: "desc" }, { createdAt: "desc" }];
+  else if (sort === "newest") orderBy = [{ createdAt: "desc" }];
 
   // Fetch registered cities and categories from Admin registry + active properties
   const [registeredLocations, registeredCategories, properties, totalCount] = await Promise.all([
@@ -104,7 +200,32 @@ export default async function PropertiesPage({
     }),
     prisma.property.findMany({
       where,
-      include: { images: { orderBy: { order: "asc" }, take: 1 } },
+      select: {
+        id: true,
+        title: true,
+        price: true,
+        currency: true,
+        city: true,
+        location: true,
+        address: true,
+        type: true,
+        listingType: true,
+        bedrooms: true,
+        bathrooms: true,
+        area: true,
+        isFurnished: true,
+        parking: true,
+        status: true,
+        availabilityStatus: true,
+        isFeatured: true,
+        viewCount: true,
+        createdAt: true,
+        images: {
+          orderBy: { order: "asc" },
+          take: 1,
+          select: { id: true, url: true, isPrimary: true },
+        },
+      },
       orderBy,
       take: 40,
     }),
@@ -118,7 +239,7 @@ export default async function PropertiesPage({
   }));
 
   const hasActiveFilters = Boolean(
-    searchLocation || listingType || type || minPrice || maxPrice || bedrooms || sort
+    searchLocation || keywordQuery || explicitDistrict || listingType || type || minPrice || maxPrice || bedrooms || sort
   );
 
   return (
@@ -157,7 +278,25 @@ export default async function PropertiesPage({
           {/* ================================================================ */}
           {/* Professional Real Estate Filters Form                            */}
           {/* ================================================================ */}
-          <form method="GET" className="space-y-5">
+          <form method="GET" className="space-y-4">
+            {/* Top Row: Direct Fast Search Input */}
+            <div className="relative">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-[#A97918] mb-1.5 flex items-center gap-1 font-mono">
+                <Search className="w-3 h-3 text-[#C89B3C]" />
+                <span>Search Keywords / District / Property</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  name="q"
+                  placeholder="Search by neighborhood (e.g. Hodan, Wadajir, Jigjiga Yar), title, or amenities (pool, garden)..."
+                  defaultValue={keywordQuery}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#E8E1D4] bg-[#F7F3EA]/70 hover:bg-white focus:bg-white focus:border-[#C89B3C] focus:ring-2 focus:ring-[#C89B3C]/20 text-[#07111F] text-xs font-semibold h-11 transition-all placeholder:text-[#9CA3AF] shadow-2xs"
+                />
+                <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#A97918]" />
+              </div>
+            </div>
+
             {/* 6-Column Responsive Filter Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5">
               {/* 1. Destination / City Selector (Admin-Registered) */}
@@ -238,10 +377,11 @@ export default async function PropertiesPage({
                 <div className="relative">
                   <select
                     name="bedrooms"
-                    defaultValue={bedrooms ? String(bedrooms) : ""}
+                    defaultValue={bedrooms !== undefined ? String(bedrooms) : ""}
                     className="w-full appearance-none pl-3.5 pr-8 py-2.5 rounded-xl border border-[#E8E1D4] bg-[#F7F3EA]/70 hover:bg-white focus:bg-white focus:border-[#C89B3C] focus:ring-2 focus:ring-[#C89B3C]/20 text-[#07111F] text-xs font-semibold h-11 transition-all cursor-pointer shadow-2xs"
                   >
                     <option value="">Any Bedrooms</option>
+                    <option value="0">Studio (0 Beds)</option>
                     <option value="1">1+ Bedrooms</option>
                     <option value="2">2+ Bedrooms</option>
                     <option value="3">3+ Bedrooms</option>
@@ -252,7 +392,7 @@ export default async function PropertiesPage({
                 </div>
               </div>
 
-              {/* 5. Max Price / Budget */}
+              {/* 5. Max Price / Budget (Dynamic for Rent vs Sale) */}
               <div className="relative group">
                 <label className="text-[10px] font-bold uppercase tracking-wider text-[#A97918] mb-1.5 flex items-center gap-1 font-mono">
                   <DollarSign className="w-3 h-3 text-[#C89B3C]" />
@@ -264,12 +404,25 @@ export default async function PropertiesPage({
                     defaultValue={maxPrice ? String(maxPrice) : ""}
                     className="w-full appearance-none pl-3.5 pr-8 py-2.5 rounded-xl border border-[#E8E1D4] bg-[#F7F3EA]/70 hover:bg-white focus:bg-white focus:border-[#C89B3C] focus:ring-2 focus:ring-[#C89B3C]/20 text-[#07111F] text-xs font-semibold h-11 transition-all cursor-pointer shadow-2xs"
                   >
-                    <option value="">Any Price</option>
-                    <option value="50000">Under $50,000</option>
-                    <option value="100000">Under $100,000</option>
-                    <option value="200000">Under $200,000</option>
-                    <option value="500000">Under $500,000</option>
-                    <option value="1000000">Under $1,000,000</option>
+                    {listingType === "FOR_RENT" ? (
+                      <>
+                        <option value="">Any Monthly Rent</option>
+                        <option value="250">Under $250 / mo</option>
+                        <option value="500">Under $500 / mo</option>
+                        <option value="1000">Under $1,000 / mo</option>
+                        <option value="2500">Under $2,500 / mo</option>
+                        <option value="5000">Under $5,000 / mo</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="">Any Price</option>
+                        <option value="50000">Under $50,000</option>
+                        <option value="100000">Under $100,000</option>
+                        <option value="200000">Under $200,000</option>
+                        <option value="500000">Under $500,000</option>
+                        <option value="1000000">Under $1,000,000</option>
+                      </>
+                    )}
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#A97918] transition-transform group-hover:text-[#07111F]" />
                 </div>
@@ -287,10 +440,11 @@ export default async function PropertiesPage({
                     defaultValue={sort ? String(sort) : ""}
                     className="w-full appearance-none pl-3.5 pr-8 py-2.5 rounded-xl border border-[#E8E1D4] bg-[#F7F3EA]/70 hover:bg-white focus:bg-white focus:border-[#C89B3C] focus:ring-2 focus:ring-[#C89B3C]/20 text-[#07111F] text-xs font-semibold h-11 transition-all cursor-pointer shadow-2xs"
                   >
-                    <option value="">Sort: Newest First</option>
+                    <option value="">Sort: Featured &amp; Newest</option>
                     <option value="price_asc">Price: Low to High</option>
                     <option value="price_desc">Price: High to Low</option>
                     <option value="area_desc">Size: Largest Area</option>
+                    <option value="newest">Newest First</option>
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#A97918] transition-transform group-hover:text-[#07111F]" />
                 </div>
@@ -345,8 +499,8 @@ export default async function PropertiesPage({
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {properties.map((p) => (
-              <PropertyCard key={p.id} property={p as any} />
+            {properties.map((p, index) => (
+              <PropertyCard key={p.id} property={p as any} priority={index < 4} />
             ))}
           </div>
         )}

@@ -10,7 +10,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { Building2, Search, Filter, Sparkles, SlidersHorizontal } from "lucide-react";
+import { Building2, Filter, Sparkles } from "lucide-react";
 import PropertyCard from "@/components/PropertyCard";
 import type { Metadata } from "next";
 
@@ -154,7 +154,7 @@ export default async function CustomerPropertiesPage({
                 name="q"
                 defaultValue={q}
                 placeholder="Title, area, street..."
-                className="w-full px-3 py-2 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs font-semibold focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] outline-hidden transition-all"
+                className="w-full px-3 py-2 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs font-semibold focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] outline-none transition-all"
               />
             </div>
           </div>
@@ -166,7 +166,7 @@ export default async function CustomerPropertiesPage({
             <select
               name="listingType"
               defaultValue={listingType}
-              className="w-full px-3 py-2 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs font-semibold focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] outline-hidden transition-all"
+              className="w-full px-3 py-2 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs font-semibold focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] outline-none transition-all"
             >
               <option value="">All (Rent &amp; Sale)</option>
               <option value="FOR_RENT">For Rent</option>
@@ -182,7 +182,7 @@ export default async function CustomerPropertiesPage({
             <select
               name="city"
               defaultValue={city}
-              className="w-full px-3 py-2 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs font-semibold focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] outline-hidden transition-all"
+              className="w-full px-3 py-2 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs font-semibold focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] outline-none transition-all"
             >
               <option value="">All Registered Cities</option>
               {availableCities.map((c) => (
@@ -201,7 +201,7 @@ export default async function CustomerPropertiesPage({
             <select
               name="type"
               defaultValue={type}
-              className="w-full px-3 py-2 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs font-medium focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] outline-hidden transition-all"
+              className="w-full px-3 py-2 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs font-medium focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] outline-none transition-all"
             >
               {TYPES.map((t) => (
                 <option key={t.value} value={t.value}>
@@ -219,7 +219,7 @@ export default async function CustomerPropertiesPage({
             <select
               name="sort"
               defaultValue={sort}
-              className="w-full px-3 py-2 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs font-medium focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] outline-hidden transition-all"
+              className="w-full px-3 py-2 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs font-medium focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] outline-none transition-all"
             >
               <option value="latest">Newest Listings</option>
               <option value="price_asc">Price: Low to High</option>

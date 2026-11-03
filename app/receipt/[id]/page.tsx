@@ -3,7 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { formatPrice } from "@/lib/utils";
-import { CheckCircle2, ShieldCheck, Printer, ArrowLeft, Building2, Calendar, User, FileText } from "lucide-react";
+import { CheckCircle2, ShieldCheck, ArrowLeft } from "lucide-react";
 import PrintButton from "./PrintButton";
 
 type Props = { params: Promise<{ id: string }> };

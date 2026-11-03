@@ -29,158 +29,6 @@ export interface ScoredProperty {
   reasons: string[];
 }
 
-/**
- * Normalize a value to [0, 1] range given min and max
- */
-function normalize(value: number, min: number, max: number): number {
-  if (max === min) return 1;
-  return Math.max(0, Math.min(1, (value - min) / (max - min)));
-}
-
-/**
- * Score a single property against user preferences.
- * Returns a score 0-100 and a list of human-readable reasons.
- */
-function scoreProperty(
-  property: any,
-  prefs: RecommendationInput,
-  priceMin: number,
-  priceMax: number,
-  areaMin: number,
-  areaMax: number
-): ScoredProperty {
-  let totalScore = 0;
-  const reasons: string[] = [];
-
-  // ─── LOCATION (30%) ───────────────────────────────
-  const LOCATION_WEIGHT = 30;
-  if (prefs.location) {
-    const prefLoc = prefs.location.toLowerCase();
-    const propCity = (property.city || "").toLowerCase();
-    const propLocation = (property.location || "").toLowerCase();
-    if (propCity === prefLoc || propLocation.includes(prefLoc)) {
-      totalScore += LOCATION_WEIGHT;
-      reasons.push("Matches your preferred location");
-    } else if (propCity.includes(prefLoc) || prefLoc.includes(propCity)) {
-      totalScore += LOCATION_WEIGHT * 0.5;
-      reasons.push("In a nearby area to your preferred location");
-    }
-  } else {
-    // No location preference — give full location score
-    totalScore += LOCATION_WEIGHT;
-  }
-
-  // ─── PRICE (30%) ──────────────────────────────────
-  const PRICE_WEIGHT = 30;
-  const budget = prefs.maxBudget;
-  const minBudget = prefs.minBudget || 0;
-  const price = property.price;
-
-  if (budget && minBudget) {
-    if (price >= minBudget && price <= budget) {
-      totalScore += PRICE_WEIGHT;
-      reasons.push("Within your budget range");
-    } else if (price <= budget * 1.1) {
-      // Slightly over budget (within 10%) — partial score
-      totalScore += PRICE_WEIGHT * 0.7;
-      reasons.push("Slightly above your budget but close");
-    } else if (price < minBudget) {
-      // Under budget — still good
-      totalScore += PRICE_WEIGHT * 0.85;
-      reasons.push("Below your minimum budget (great value)");
-    }
-  } else if (budget) {
-    if (price <= budget) {
-      totalScore += PRICE_WEIGHT;
-      reasons.push("Within your maximum budget");
-    } else if (price <= budget * 1.1) {
-      totalScore += PRICE_WEIGHT * 0.7;
-    }
-  } else {
-    // No budget preference — use normalized price score
-    const priceScore = 1 - normalize(price, priceMin, priceMax);
-    totalScore += PRICE_WEIGHT * priceScore;
-  }
-
-  // ─── BEDROOMS / TYPE-SPECIFIC UTILITY (20%) ─────────
-  const BEDROOM_WEIGHT = 20;
-  const isLand = property.type === "LAND";
-  const isCommercial = ["SHOP", "WAREHOUSE", "OFFICE", "COMMERCIAL"].includes(property.type);
-
-  let parsedDetails: any = null;
-  if (property.typeDetails) {
-    try {
-      parsedDetails = typeof property.typeDetails === "string" ? JSON.parse(property.typeDetails) : property.typeDetails;
-    } catch {}
-  }
-
-  if (isLand) {
-    // For land, re-attribute bedroom score to land utility, road access, and legal deed
-    let landScore = 14;
-    if (parsedDetails?.roadAccess) {
-      landScore += 3;
-      reasons.push("Direct road access included");
-    }
-    if (parsedDetails?.titleDeedStatus?.includes("Title Deed")) {
-      landScore += 3;
-      reasons.push("Verified registered title deed");
-    }
-    totalScore += Math.min(BEDROOM_WEIGHT, landScore);
-  } else if (isCommercial) {
-    // For commercial / shop / warehouse, re-attribute to access and commercial readiness
-    totalScore += BEDROOM_WEIGHT;
-    if (parsedDetails?.frontageWidth || parsedDetails?.loadingBays || parsedDetails?.meetingRooms) {
-      reasons.push(`Tailored commercial infrastructure for ${property.type.toLowerCase()}`);
-    }
-  } else if (prefs.preferredBedrooms) {
-    const diff = Math.abs(property.bedrooms - prefs.preferredBedrooms);
-    if (diff === 0) {
-      totalScore += BEDROOM_WEIGHT;
-      reasons.push("Exact bedroom count match");
-    } else if (diff === 1) {
-      totalScore += BEDROOM_WEIGHT * 0.6;
-      reasons.push(`${property.bedrooms} bedrooms (close to your preference)`);
-    } else if (diff === 2) {
-      totalScore += BEDROOM_WEIGHT * 0.3;
-    }
-  } else {
-    totalScore += BEDROOM_WEIGHT;
-  }
-
-  // ─── PROPERTY TYPE (10%) ──────────────────────────
-  const TYPE_WEIGHT = 10;
-  if (prefs.preferredType) {
-    if (property.type === prefs.preferredType) {
-      totalScore += TYPE_WEIGHT;
-      reasons.push(`Matches your preferred property type (${property.type.toLowerCase()})`);
-    }
-  } else {
-    totalScore += TYPE_WEIGHT;
-  }
-
-  // ─── AREA (10%) ───────────────────────────────────
-  const AREA_WEIGHT = 10;
-  const effectiveArea = property.area || parsedDetails?.landArea || parsedDetails?.shopArea || parsedDetails?.warehouseArea || 0;
-  if (prefs.preferredMinArea || prefs.preferredMaxArea) {
-    const minA = prefs.preferredMinArea || 0;
-    const maxA = prefs.preferredMaxArea || Infinity;
-    if (effectiveArea >= minA && effectiveArea <= maxA) {
-      totalScore += AREA_WEIGHT;
-      reasons.push("Area matches your preference");
-    } else {
-      const areaScore = 1 - normalize(Math.abs(effectiveArea - (minA + maxA) / 2), 0, maxA - minA);
-      totalScore += AREA_WEIGHT * Math.max(0, areaScore);
-    }
-  } else {
-    totalScore += AREA_WEIGHT;
-  }
-
-  return {
-    propertyId: property.id,
-    score: Math.round(Math.min(100, Math.max(0, totalScore))),
-    reasons,
-  };
-}
 
 /**
  * Generate and store personalized recommendations for a user.
@@ -228,23 +76,27 @@ export async function generateRecommendations(
 
   const ranked = rankPropertiesPersonalized(properties, learnedProfile, explicitPrefs, { topN });
 
-  // 4. Save to database (upsert to avoid duplicates)
-  for (const rec of ranked) {
-    await prisma.recommendation.upsert({
-      where: {
-        userId_propertyId: { userId: input.userId, propertyId: rec.propertyId },
-      },
-      update: {
-        score: rec.score,
-        reasons: JSON.stringify(rec.reasons),
-      },
-      create: {
-        userId: input.userId,
-        propertyId: rec.propertyId,
-        score: rec.score,
-        reasons: JSON.stringify(rec.reasons),
-      },
-    });
+  // 4. Save to database (batched upsert to avoid duplicate N+1 queries)
+  if (ranked.length > 0) {
+    await prisma.$transaction(
+      ranked.map((rec) =>
+        prisma.recommendation.upsert({
+          where: {
+            userId_propertyId: { userId: input.userId, propertyId: rec.propertyId },
+          },
+          update: {
+            score: rec.score,
+            reasons: JSON.stringify(rec.reasons),
+          },
+          create: {
+            userId: input.userId,
+            propertyId: rec.propertyId,
+            score: rec.score,
+            reasons: JSON.stringify(rec.reasons),
+          },
+        })
+      )
+    );
   }
 
   // 5. Return enriched results
@@ -360,7 +212,8 @@ export function calculatePropertyScore(property: {
   breakdown.push({ factor: "Detail Completeness & Age", points: detailScore, max: 25 });
   total += detailScore;
 
-  const finalScore = Math.min(99, Math.max(45, total));
+  const totalScore = total;
+  const finalScore = Math.min(100, Math.max(0, totalScore));
   let label = "Good Listing";
   if (finalScore >= 88) label = "Top Tier Investment";
   else if (finalScore >= 75) label = "High Value Match";

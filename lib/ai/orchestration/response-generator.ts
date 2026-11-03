@@ -18,7 +18,7 @@ import { openAIProvider } from "../providers/openai-provider";
 import { geminiProvider } from "../providers/gemini-provider";
 import { validateGrounding } from "./grounding-validator";
 import { generateNaturalDialogResponse } from "../conversation/language-manager";
-import { ResultItem } from "../conversation/types";
+
 
 export interface GroundedResponseOutput {
   replyText: string;

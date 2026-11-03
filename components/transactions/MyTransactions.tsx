@@ -159,11 +159,11 @@ export default function MyTransactions() {
                               </Button>
                             )}
                             {t.receipt && (
-                              <Link href={`/receipt/${t.receipt.id}`} target="_blank">
-                                <Button size="sm" variant="outline" className="h-8 rounded-lg text-[11px] border-[#E8E1D4] gap-1">
+                              <Button asChild size="sm" variant="outline" className="h-8 rounded-lg text-[11px] border-[#E8E1D4] gap-1">
+                                <Link href={`/receipt/${t.receipt.id}`} target="_blank">
                                   <Receipt className="h-3 w-3" /> Receipt
-                                </Button>
-                              </Link>
+                                </Link>
+                              </Button>
                             )}
                           </div>
                         </td>
@@ -205,11 +205,11 @@ export default function MyTransactions() {
                                 </Button>
                               )}
                               {r.transaction?.receipt && (
-                                <Link href={`/receipt/${r.transaction.receipt.id}`} target="_blank">
-                                  <Button size="sm" variant="outline" className="h-8 rounded-lg text-[11px] border-[#E8E1D4] gap-1">
+                                <Button asChild size="sm" variant="outline" className="h-8 rounded-lg text-[11px] border-[#E8E1D4] gap-1">
+                                  <Link href={`/receipt/${r.transaction.receipt.id}`} target="_blank">
                                     <Receipt className="h-3 w-3" /> Receipt
-                                  </Button>
-                                </Link>
+                                  </Link>
+                                </Button>
                               )}
                             </div>
                           </td>

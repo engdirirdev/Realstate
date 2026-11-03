@@ -4,6 +4,7 @@
 // DESCRIPTION: Kiro-Maal Master Design System
 // ================================================================
 import Link from "next/link";
+import Image from "next/image";
 import {
   Building2, Users, Award, Star, ArrowRight, Bot,
   Sparkles, Search, TrendingUp, Compass
@@ -12,27 +13,52 @@ import { prisma } from "@/lib/prisma";
 import PropertyCard from "@/components/PropertyCard";
 import OpenAIChatButton from "@/components/OpenAIChatButton";
 import type { Metadata } from "next";
+import { cachedDbQuery } from "@/lib/cache";
 
 export const metadata: Metadata = {
-  title: "Kiro-Maal Real Estate | Somalia's Premier Luxury Properties",
+  title: "Kiro-Maal Real Estate | Somalia's Premier Luxury Properties & AI Valuation",
   description:
-    "Discover, buy, rent, or sell luxury properties with the power of AI. Smart search. Better valuations. Verified luxury living in Somalia.",
+    "Discover, buy, rent, or sell luxury properties with the power of AI. Smart semantic search, machine learning price valuations, and verified luxury living across Mogadishu, Hargeisa, and Somalia.",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "Kiro-Maal Real Estate | Somalia's Premier Luxury Properties",
+    description:
+      "Find verified luxury villas, penthouses, and prime commercial plots in Somalia with AI valuation.",
+    url: "/",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Kiro-Maal Real Estate | Somalia's Premier Luxury Properties",
+    description: "Verified luxury properties, 360 tours, and AI valuation in Somalia.",
+  },
 };
 
 export const revalidate = 60; // ISR cache 60s
 
 async function getHomeData() {
   try {
-    const [featuredProperties, totalCount] = await Promise.all([
-      prisma.property.findMany({
-        where: { status: "APPROVED" },
-        include: { images: { orderBy: { order: "asc" }, take: 1 } },
-        take: 4,
-        orderBy: { createdAt: "desc" },
-      }),
-      prisma.property.count({ where: { status: "APPROVED" } }),
-    ]);
-    return { featuredProperties, totalCount };
+    return await cachedDbQuery(
+      ["home", "featured-data"],
+      async () => {
+        const [featuredProperties, totalCount] = await Promise.all([
+          prisma.property.findMany({
+            where: { status: "APPROVED" },
+            include: { images: { orderBy: { order: "asc" }, take: 1 } },
+            take: 4,
+            orderBy: { createdAt: "desc" },
+          }),
+          prisma.property.count({ where: { status: "APPROVED" } }),
+        ]);
+        return { featuredProperties, totalCount };
+      },
+      {
+        tags: ["home", "properties", "featured"],
+        revalidate: 60,
+      }
+    );
   } catch (error) {
     console.error("Database connection failed in getHomeData:", error);
     return { featuredProperties: [], totalCount: 0 };
@@ -57,10 +83,13 @@ export default async function HomePage() {
       <section className="relative min-h-[640px] lg:min-h-[720px] flex items-center justify-center pt-24 pb-16 px-4">
         {/* Background Image with Gradient Overlay */}
         <div className="absolute inset-0 z-0 overflow-hidden">
-          <img
+          <Image
             src="/images/luxury_villa_twilight.jpg"
             alt="Kiro-Maal Luxury Villa"
-            className="w-full h-full object-cover object-center scale-105 animate-fade-in"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-center scale-105"
           />
           {/* Deep Navy Gradient Overlay matching Kiro-Maal Master Reference */}
           <div className="absolute inset-0 bg-gradient-to-r from-[#07111F]/95 via-[#0B1728]/85 to-[#07111F]/70" />

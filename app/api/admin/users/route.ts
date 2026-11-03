@@ -90,3 +90,6 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Failed to update user." }, { status: 500 });
   }
 }
+
+// Re-export GET from users-list for RESTful convention
+export { GET } from "../users-list/route";

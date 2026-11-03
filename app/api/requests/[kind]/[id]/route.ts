@@ -4,7 +4,7 @@ import { requireUser, jsonError, unauthorized } from "@/lib/api-utils";
 
 type Props = { params: Promise<{ kind: string; id: string }> };
 
-const ACTIONS: ReviewAction[] = ["approve", "reject", "review", "cancel"];
+const ACTIONS: ReviewAction[] = ["approve", "reject", "review", "cancel", "confirm"];
 
 // PATCH /api/requests/[kind]/[id]  body: { action, notes? }
 export async function PATCH(request: NextRequest, { params }: Props) {

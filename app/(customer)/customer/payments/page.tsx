@@ -9,7 +9,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { CreditCard, CheckCircle2, Building2, Calendar, FileText, Download, Sparkles, ExternalLink } from "lucide-react";
+import { CreditCard, CheckCircle2, Building2, FileText, Sparkles } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import type { Metadata } from "next";
 

@@ -152,9 +152,17 @@ export async function executeHybridSearch(
   const h = understanding.hardConstraints;
 
   if (h.city) structuredWhere.city = { contains: h.city };
+  if (h.district) {
+    structuredWhere.OR = [
+      { location: { contains: h.district } },
+      { address: { contains: h.district } },
+      { title: { contains: h.district } },
+      { description: { contains: h.district } },
+    ];
+  }
   if (h.propertyType) {
     if (h.propertyType === "HOUSE") {
-      structuredWhere.type = { in: ["HOUSE", "TOWNHOUSE"] };
+      structuredWhere.type = { in: ["HOUSE", "VILLA", "TOWNHOUSE"] };
     } else {
       structuredWhere.type = h.propertyType;
     }

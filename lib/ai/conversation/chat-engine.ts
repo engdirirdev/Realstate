@@ -23,7 +23,9 @@ import {
   initializeConversationState,
   validatePropertyAgainstQuery,
   attachActiveResultSet,
+  isPureConversationalGreeting,
 } from "./state-manager";
+import { resolveLocation } from "../nlu/location-resolver";
 import { generateGroundedAIDAResponse } from "../orchestration/response-generator";
 import { validateGrounding } from "../orchestration/grounding-validator";
 import {
@@ -181,8 +183,12 @@ async function executePropertySearchTool(
   }
 
   const targetType = toolArgs.propertyType || state.slots.propertyType;
-  if (targetType && targetType !== "HOUSE") {
-    searchFilter.type = targetType;
+  if (targetType) {
+    if (targetType === "HOUSE") {
+      searchFilter.type = { in: ["HOUSE", "VILLA", "TOWNHOUSE"] };
+    } else {
+      searchFilter.type = targetType;
+    }
   }
 
   const maxBudget = toolArgs.maxPrice !== undefined ? toolArgs.maxPrice : state.slots.maxPrice;
@@ -257,6 +263,7 @@ async function executePropertySearchTool(
       },
       {
         ...state.slots,
+        district: targetDistrict,
         city: targetCity,
         excludedLocations: uniqueExcluded,
         maxPrice: maxBudget,
@@ -324,7 +331,7 @@ async function executePropertySearchTool(
 export async function processConversationalTurn(
   input: ProcessTurnInput
 ): Promise<ProcessTurnOutput> {
-  const { sessionId, message, userName = "Guest", userRole = "PUBLIC" } = input;
+  const { sessionId, message } = input;
   const history = input.history || input.conversationHistory || [];
 
   // 1. Restore Conversation State from previous turns
@@ -347,7 +354,64 @@ export async function processConversationalTurn(
   }
   state.language = activeLanguage;
 
-  // 3. GEMINI 3.8 FLASH IS THE SOLE CONVERSATIONAL & NATURAL LANGUAGE AUTHORITY
+  // 2b. Strict Pure Greeting Interceptor
+  // When a user simply says "hi", "hello", "asc", "salaam", etc., NEVER show property cards!
+  if (isPureConversationalGreeting(message)) {
+    const greetingText =
+      activeLanguage === "en"
+        ? "Hello and welcome to Kiro-Maal Real Estate! 👋 How can I help you today? Are you looking for rental properties, homes for sale, apartments, or villas?"
+        : activeLanguage === "ar"
+        ? "أهلاً ومرحباً بك في كيرو-مال للعقارات! 👋 كيف يمكنني مساعدتك اليوم؟ هل تبحث عن عقارات للإيجار، للبيع، شقق، أم فلل؟"
+        : "Waad salaaman tahay 👋 Ku soo dhowow Kiro-Maal Real Estate! Maxaan maanta kaa caawin karaa—guri kirro ah, guri iib ah, apartment, villa mise dhul?";
+
+    state.lastAssistantMessage = greetingText;
+    state.lastUserMessage = message;
+    state.lastUserRequest = message;
+    state.turnCount += 1;
+    state.updatedAt = new Date().toISOString();
+    state.activeResultSet = [];
+
+    return {
+      reply: greetingText,
+      properties: [],
+      intent: "GREETING",
+      topic: "PROPERTY_SEARCH",
+      confidence: 0.98,
+      language: activeLanguage,
+      conversationLanguage: activeLanguage,
+      languageConfidence: 0.98,
+      searchReadiness: "GREETING",
+      missingSlots: [],
+      totalMatches: 0,
+      state,
+      updatedState: state,
+      responseType: "GREETING",
+      shouldRenderPropertyCards: false,
+      shouldRenderCards: false,
+      activeSearchCriteria: state.slots,
+      referencedPropertyIds: [],
+    };
+  }
+
+  // 2c. Explicit City Extraction & Cross-City Slot Reset
+  // If the user's current turn explicitly specifies a city (e.g. "show houses in mogadishu"),
+  // overwrite the city slot immediately and wipe any contradictory previous city filters!
+  const explicitLoc = resolveLocation(message);
+  if (explicitLoc && explicitLoc.canonicalCity) {
+    const newCity = explicitLoc.canonicalCity;
+    if (state.slots.city && state.slots.city.toLowerCase() !== newCity.toLowerCase()) {
+      delete state.slots.district;
+      state.slots.excludedLocations = [];
+      state.activeResultSet = [];
+      delete state.referencedPropertyId;
+    }
+    state.slots.city = newCity;
+    if (explicitLoc.district) {
+      state.slots.district = explicitLoc.district;
+    }
+  }
+
+  // 3. GEMINI IS THE CONVERSATIONAL & NATURAL LANGUAGE AUTHORITY
   // Raw user message reaches Gemini with full history, context data, and active property inventory.
   const geminiDecision = await geminiProvider.decideConversationalAction({
     userMessage: message,
@@ -438,15 +502,26 @@ export async function processConversationalTurn(
     }
 
     // Return verified database results to Gemini to generate the grounded natural response
+    const targetLocName = state.slots.city || toolArgs.city || "Somalia";
     const fallbackReply = returnedProperties.length > 0
-      ? (toolArgs.prioritizeBest || message.includes("ugu fiican")
-          ? `Waxaan kuu helay guryaha ugu fiican ee ku jira miisaaniyaddaada ($${state.slots.maxPrice || 500}). Halkan ka eeg xulashooyinka ugu dhow shuruudahaaga:`
-          : `Waxaan kuu helay ${returnedProperties.length} guri oo buuxinaya shuruudahaaga:`)
-      : (activeLanguage === "so"
+      ? (activeLanguage === "en"
+          ? (toolArgs.prioritizeBest || message.includes("best")
+              ? `I found the best matching properties in ${targetLocName} within your budget ($${state.slots.maxPrice || 500}). Here are the top verified options:`
+              : `I found ${returnedProperties.length} verified ${returnedProperties.length === 1 ? "property" : "properties"} in ${targetLocName} matching your criteria:`)
+          : activeLanguage === "ar"
+          ? `وجدت لك ${returnedProperties.length} من العقارات المؤكدة في ${targetLocName}:`
+          : (toolArgs.prioritizeBest || message.includes("ugu fiican")
+              ? `Waxaan kuu helay guryaha ugu fiican ee ku jira miisaaniyaddaada ($${state.slots.maxPrice || 500}). Halkan ka eeg xulashooyinka ugu dhow shuruudahaaga:`
+              : `Waxaan kuu helay ${returnedProperties.length} guri oo ku yaal ${targetLocName} oo buuxiya shuruudahaaga:`))
+      : (activeLanguage === "en"
           ? (state.slots.excludedLocations && state.slots.excludedLocations.length > 0
-              ? `Waxaan hubiyey guryaha ${state.slots.city || "Mogadishu"} ee miisaaniyaddaada ($${state.slots.maxPrice || 500}). Maadaama aad ${state.slots.excludedLocations.join(", ")} ka saartay, ma helin guri buuxiya dhammaan shuruudahaas oo ku jira miisaaniyaddaada. Ma rabtaa inaan miisaaniyadda wax yar kor u qaadno mise goobo kale ayaan eegnaa?`
-              : `Waan baaray xog-ururintayada, laakiin kuma helin guri buuxiya dhammaan shuruudahaaga miisaaniyaddaada.`)
-          : `I searched our verified database, but could not locate listings matching your criteria within your budget.`);
+              ? `I checked listings in ${targetLocName} within your budget. Since you excluded ${state.slots.excludedLocations.join(", ")}, no listings matched all criteria. Would you like to adjust your budget or explore other areas?`
+              : `I searched our verified database, but could not locate active listings in ${targetLocName} matching your criteria.`)
+          : activeLanguage === "ar"
+          ? `بحثت في قاعدة بياناتنا المؤكدة، لكن لم أجد عقارات في ${targetLocName} تطابق معاييرك حالياً.`
+          : (state.slots.excludedLocations && state.slots.excludedLocations.length > 0
+              ? `Waxaan hubiyey guryaha ${targetLocName} ee miisaaniyaddaada ($${state.slots.maxPrice || 500}). Maadaama aad ${state.slots.excludedLocations.join(", ")} ka saartay, ma helin guri buuxiya dhammaan shuruudahaas oo ku jira miisaaniyaddaada. Ma rabtaa inaan miisaaniyadda wax yar kor u qaadno mise goobo kale ayaan eegnaa?`
+              : `Waan baaray xog-ururintayada, laakiin kuma helin guri buuxiya dhammaan shuruudahaaga miisaaniyaddaada.`));
 
     const groundedAI = await generateGroundedAIDAResponse(
       {

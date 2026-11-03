@@ -16,16 +16,9 @@ import {
   BedDouble,
   Bath,
   SquareStack,
-  Building2,
   ArrowLeft,
-  Star,
   CheckCircle2,
-  Calendar,
-  Sparkles,
-  Scale,
   ShieldCheck,
-  Car,
-  Sofa,
 } from "lucide-react";
 import { formatPrice, getPropertyTypeLabel } from "@/lib/utils";
 import PropertyActions from "@/components/PropertyActions";

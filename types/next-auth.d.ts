@@ -1,5 +1,6 @@
 import "next-auth";
 import "next-auth/jwt";
+import type { Role } from "@/lib/rbac";
 
 declare module "next-auth" {
   interface Session {
@@ -8,8 +9,9 @@ declare module "next-auth" {
       name?: string | null;
       email?: string | null;
       image?: string | null;
-      role: string;
+      role: Role | string;
       phone?: string | null;
+      isActive?: boolean;
     };
   }
 
@@ -18,14 +20,17 @@ declare module "next-auth" {
     name?: string | null;
     email?: string | null;
     image?: string | null;
-    role: string;
+    role: Role | string;
     phone?: string | null;
+    isActive?: boolean;
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
     id: string;
-    role: string;
+    role: Role | string;
+    isActive?: boolean;
+    lastValidated?: number;
   }
 }

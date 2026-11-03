@@ -16,6 +16,7 @@ import { Role } from "@prisma/client";
 
 export interface SemanticSearchFilters {
   city?: string;
+  district?: string;
   type?: string;
   minPrice?: number;
   maxPrice?: number;
@@ -107,7 +108,21 @@ export async function executeSemanticSearch(
   if (params.filters) {
     const f = params.filters;
     if (f.city) where.city = { contains: f.city };
-    if (f.type) where.type = f.type;
+    if (f.district) {
+      where.OR = [
+        { location: { contains: f.district } },
+        { address: { contains: f.district } },
+        { title: { contains: f.district } },
+        { description: { contains: f.district } },
+      ];
+    }
+    if (f.type) {
+      if (f.type === "HOUSE") {
+        where.type = { in: ["HOUSE", "VILLA", "TOWNHOUSE"] };
+      } else {
+        where.type = f.type;
+      }
+    }
     if (f.bedrooms) where.bedrooms = { gte: f.bedrooms };
     if (f.bathrooms) where.bathrooms = { gte: f.bathrooms };
     if (f.furnished !== undefined) where.isFurnished = f.furnished;

@@ -20,6 +20,21 @@ export const metadata: Metadata = {
   title: "Services & Advisory — Kiro-Maal Real Estate",
   description:
     "Explore premier real estate services in Somalia: property sales, executive leasing, AI price prediction, diaspora asset management, and verified title clearance.",
+  alternates: {
+    canonical: "/services",
+  },
+  openGraph: {
+    title: "Services & Advisory — Kiro-Maal Real Estate",
+    description:
+      "Premier real estate brokerage, AI valuation, and diaspora property management across Somalia.",
+    url: "/services",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Real Estate Services in Somalia — Kiro-Maal",
+    description: "Property acquisitions, verified leasing, and AI valuation in Somalia.",
+  },
 };
 
 const services = [

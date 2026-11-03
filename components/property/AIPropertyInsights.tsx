@@ -5,8 +5,6 @@ import {
   TrendingUp,
   Award,
   CheckCircle2,
-  AlertCircle,
-  HelpCircle,
   History,
   Target,
   BarChart2,

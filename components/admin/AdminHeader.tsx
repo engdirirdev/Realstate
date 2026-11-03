@@ -14,7 +14,6 @@ import {
   Shield,
   LogOut,
   Building2,
-  Sparkles,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -24,7 +23,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import AdminSidebarNav from "@/app/(admin)/admin/AdminSidebarNav";
 import BrandLogo from "@/components/layout/BrandLogo";
 
@@ -48,9 +46,12 @@ export default function AdminHeader({
 
   return (
     <>
-      <header className="bg-[#FCFBF7]/95 backdrop-blur-md border-b border-[#E8E1D4] h-[72px] min-h-[72px] px-6 sm:px-8 flex items-center justify-between sticky top-0 z-20 shadow-xs transition-all">
+      <header
+        suppressHydrationWarning
+        className="bg-[#FCFBF7]/95 backdrop-blur-md border-b border-[#E8E1D4] h-[72px] min-h-[72px] px-6 sm:px-8 flex items-center justify-between sticky top-0 z-20 shadow-xs transition-all"
+      >
         {/* Left: Mobile Trigger + Search Input */}
-        <div className="flex items-center gap-3 sm:gap-4 flex-1 max-w-xl">
+        <div suppressHydrationWarning className="flex items-center gap-3 sm:gap-4 flex-1 max-w-xl">
           <button
             type="button"
             onClick={() => setMobileMenuOpen(true)}
@@ -60,7 +61,7 @@ export default function AdminHeader({
             <Menu className="h-5 w-5" />
           </button>
 
-          <div className="relative w-full">
+          <div suppressHydrationWarning className="relative w-full">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#A97918] pointer-events-none transition-colors" />
             <input
               type="text"
@@ -69,18 +70,21 @@ export default function AdminHeader({
               onChange={(e) => setSearchValue(e.target.value)}
               className="w-full bg-white hover:bg-[#FCFBF7] border border-[#E8E1D4] focus:border-[#C89B3C] focus:bg-white rounded-xl pl-10 pr-12 py-2 text-xs sm:text-sm text-[#07111F] placeholder:text-[#94A3B8] font-medium shadow-xs focus:ring-2 focus:ring-[#C89B3C]/15 transition-all outline-none"
             />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none hidden sm:flex items-center gap-0.5 text-[10px] font-bold text-[#8C7A6B] bg-[#F7F3EA] px-1.5 py-0.5 rounded-md border border-[#E8E1D4]/80">
+            <div
+              suppressHydrationWarning
+              className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none hidden sm:flex items-center gap-0.5 text-[10px] font-bold text-[#8C7A6B] bg-[#F7F3EA] px-1.5 py-0.5 rounded-md border border-[#E8E1D4]/80"
+            >
               ⌘K
             </div>
           </div>
         </div>
 
         {/* Right: Public Site Link, Notifications & Admin Profile */}
-        <div className="flex items-center gap-2.5 sm:gap-4">
+        <div suppressHydrationWarning className="flex items-center gap-2.5 sm:gap-4">
           {/* Public Website Button */}
           <Link
             href="/"
-            prefetch={false}
+            prefetch={true}
             target="_blank"
             className="hidden md:inline-flex items-center gap-1.5 text-xs font-semibold text-[#07111F] hover:text-[#C89B3C] bg-white hover:bg-[#F7F3EA] border border-[#E8E1D4] px-3.5 py-2 rounded-xl transition-all shadow-xs group"
           >
@@ -91,7 +95,7 @@ export default function AdminHeader({
           {/* Notifications Button */}
           <Link
             href="/admin/messages"
-            prefetch={false}
+            prefetch={true}
             className="relative p-2.5 text-[#07111F] hover:text-[#C89B3C] bg-white hover:bg-[#F7F3EA] rounded-xl border border-[#E8E1D4] transition-all shadow-xs"
             title="Notifications & Contact Inquiries"
           >
@@ -110,14 +114,16 @@ export default function AdminHeader({
                 type="button"
                 className="flex items-center gap-2.5 sm:gap-3 pl-2 sm:pl-3 border-l border-[#E8E1D4] cursor-pointer group outline-none"
               >
-                <Avatar className="h-9 w-9 ring-2 ring-[#C89B3C]/30 group-hover:ring-[#C89B3C] transition-all">
-                  {userImage && (
-                    <AvatarImage src={userImage} alt={userName || "Admin"} />
+                <div
+                  suppressHydrationWarning
+                  className="w-9 h-9 rounded-full ring-2 ring-[#C89B3C]/30 group-hover:ring-[#C89B3C] transition-all overflow-hidden flex items-center justify-center text-xs bg-gradient-to-tr from-[#C99126] to-[#E8B849] text-white font-extrabold shadow-inner shrink-0"
+                >
+                  {userImage ? (
+                    <img src={userImage} alt={userName || "Admin"} className="w-full h-full object-cover" />
+                  ) : (
+                    <span suppressHydrationWarning>{initial}</span>
                   )}
-                  <AvatarFallback className="text-xs bg-gradient-to-tr from-[#C99126] to-[#E8B849] text-white font-extrabold shadow-inner">
-                    {initial}
-                  </AvatarFallback>
-                </Avatar>
+                </div>
 
                 <div className="hidden sm:flex flex-col items-start text-left leading-tight">
                   <span className="text-xs font-bold text-[#07111F] group-hover:text-[#C89B3C] transition-colors truncate max-w-[130px]">
@@ -157,7 +163,7 @@ export default function AdminHeader({
               <DropdownMenuItem asChild>
                 <Link
                   href="/admin/properties"
-                  prefetch={false}
+                  prefetch={true}
                   className="flex items-center gap-2.5 text-xs font-semibold text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl px-2.5 py-2 cursor-pointer transition-colors"
                 >
                   <Building2 className="h-4 w-4 text-[#C89B3C]" />
@@ -168,7 +174,7 @@ export default function AdminHeader({
               <DropdownMenuItem asChild>
                 <Link
                   href="/admin/settings"
-                  prefetch={false}
+                  prefetch={true}
                   className="flex items-center gap-2.5 text-xs font-semibold text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl px-2.5 py-2 cursor-pointer transition-colors"
                 >
                   <Settings className="h-4 w-4 text-[#C89B3C]" />
@@ -179,7 +185,7 @@ export default function AdminHeader({
               <DropdownMenuItem asChild>
                 <Link
                   href="/admin/audit-logs"
-                  prefetch={false}
+                  prefetch={true}
                   className="flex items-center gap-2.5 text-xs font-semibold text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl px-2.5 py-2 cursor-pointer transition-colors"
                 >
                   <Shield className="h-4 w-4 text-[#C89B3C]" />
@@ -190,7 +196,7 @@ export default function AdminHeader({
               <DropdownMenuItem asChild>
                 <Link
                   href="/"
-                  prefetch={false}
+                  prefetch={true}
                   target="_blank"
                   className="flex items-center gap-2.5 text-xs font-semibold text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl px-2.5 py-2 cursor-pointer transition-colors"
                 >

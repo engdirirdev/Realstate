@@ -8,8 +8,6 @@ import {
   Maximize2,
   ShieldCheck,
   CheckCircle2,
-  X,
-  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {

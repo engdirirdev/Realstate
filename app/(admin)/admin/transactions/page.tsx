@@ -24,7 +24,7 @@ export default async function AdminTransactionsPage({
       : "payments";
 
   return (
-    <div className="space-y-6 max-w-7xl p-4 sm:p-8 bg-[#F7F3EA] min-h-screen">
+    <div className="space-y-6 w-full min-w-0">
       <div>
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#07111F] border border-[#C89B3C]/30 text-[#D9B45B] text-xs font-semibold uppercase tracking-wider mb-2 shadow-xs">
           <ShieldCheck className="w-3.5 h-3.5 text-[#C89B3C]" /> Platform Financial Settlements &amp; Escrow

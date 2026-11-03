@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Star, MessageSquare, Send, Loader2 } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Star, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
@@ -58,9 +58,11 @@ export default function PropertyReviews({
     }
   };
 
-  const avgRating = reviews.length > 0
-    ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
-    : "5.0";
+  const avgRating = useMemo(() => {
+    return reviews.length > 0
+      ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
+      : "5.0";
+  }, [reviews]);
 
   return (
     <div className="bg-[#FCFBF7] rounded-2xl border border-[#E8E1D4] p-6 shadow-sm space-y-6">

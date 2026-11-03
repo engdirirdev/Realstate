@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   ResponsiveContainer,
   BarChart,
@@ -37,6 +38,12 @@ export default function ManagerCharts({
   statusDistribution,
   totalProperties,
 }: ManagerChartsProps) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   // Map status items to Kiro-Maal palette if needed
   const kiroStatusDistribution = statusDistribution.map((item, idx) => {
     const palette = ["#C89B3C", "#D9B45B", "#07111F", "#A97918"];
@@ -56,19 +63,20 @@ export default function ManagerCharts({
             <p className="text-xs text-[#6B7280]">Monthly tour viewings and rental lease volumes</p>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold px-2.5 py-1 bg-[#F7F3EA] border border-[#E8E1D4] rounded-xl text-[#A97918]">
+            <span suppressHydrationWarning className="text-xs font-bold px-2.5 py-1 bg-[#F7F3EA] border border-[#E8E1D4] rounded-xl text-[#A97918]">
               {new Date().getFullYear()}
             </span>
           </div>
         </div>
 
         <div className="h-64 sm:h-72 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={salesPerformance}
-              margin={{ top: 10, right: 10, left: -15, bottom: 0 }}
-              barGap={4}
-            >
+          {isMounted ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={salesPerformance}
+                margin={{ top: 10, right: 10, left: -15, bottom: 0 }}
+                barGap={4}
+              >
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E8E1D4" />
               <XAxis
                 dataKey="month"
@@ -113,22 +121,26 @@ export default function ManagerCharts({
               <Bar dataKey="rentals" name="Rentals" fill="#07111F" radius={[4, 4, 0, 0]} maxBarSize={16} />
             </BarChart>
           </ResponsiveContainer>
+        ) : (
+          <div className="w-full h-full bg-[#FAF5EC]/50 rounded-2xl animate-pulse" />
+        )}
+      </div>
+    </div>
+
+    {/* ─── Property Status Donut Chart (1 col) ─── */}
+    <div className="bg-[#FCFBF7] rounded-3xl border border-[#E8E1D4] p-5 sm:p-6 shadow-sm text-[#07111F] flex flex-col justify-between">
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <h3 className="text-base sm:text-lg font-bold font-serif text-[#07111F] tracking-tight">Portfolio Status</h3>
+          <p className="text-xs text-[#6B7280]">Listing breakdown by state</p>
         </div>
+        <span className="text-xs font-bold px-2.5 py-1 bg-[#F7F3EA] border border-[#E8E1D4] rounded-xl text-[#A97918]">
+          Active
+        </span>
       </div>
 
-      {/* ─── Property Status Donut Chart (1 col) ─── */}
-      <div className="bg-[#FCFBF7] rounded-3xl border border-[#E8E1D4] p-5 sm:p-6 shadow-sm text-[#07111F] flex flex-col justify-between">
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <h3 className="text-base sm:text-lg font-bold font-serif text-[#07111F] tracking-tight">Portfolio Status</h3>
-            <p className="text-xs text-[#6B7280]">Listing breakdown by state</p>
-          </div>
-          <span className="text-xs font-bold px-2.5 py-1 bg-[#F7F3EA] border border-[#E8E1D4] rounded-xl text-[#A97918]">
-            Active
-          </span>
-        </div>
-
-        <div className="relative h-48 sm:h-52 w-full flex items-center justify-center my-2">
+      <div className="relative h-48 sm:h-52 w-full flex items-center justify-center my-2">
+        {isMounted ? (
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -160,6 +172,9 @@ export default function ManagerCharts({
               />
             </PieChart>
           </ResponsiveContainer>
+        ) : (
+          <div className="w-full h-full rounded-full border-4 border-dashed border-[#E8E1D4] animate-pulse" />
+        )}
 
           {/* Center total */}
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">

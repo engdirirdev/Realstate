@@ -10,12 +10,12 @@
 // ================================================================
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
-  Users, Search, Filter, Mail, Phone, Calendar, Shield, UserPlus,
-  Eye, CheckCircle2, AlertTriangle, ShieldCheck, Loader2, UserX, UserCheck, Trash2, Sparkles
+  Users, Search, Mail, Phone, UserPlus,
+  Eye, AlertTriangle, ShieldCheck, Loader2, Trash2, Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,7 +79,7 @@ function UsersDirectoryContent() {
     role: "CUSTOMER" as "ADMIN" | "USER" | "CUSTOMER",
   });
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -87,23 +87,28 @@ function UsersDirectoryContent() {
       params.set("role", activeTab === "ALL" ? "USERS" : activeTab);
       if (statusFilter !== "ALL") params.set("status", statusFilter);
 
-      const res = await fetch(`/api/admin/users-list?${params.toString()}`);
+      const res = await fetch(`/api/admin/users-list?${params.toString()}`, { signal });
       const data = await res.json();
       if (data.success) {
         setUsers(data.users);
       }
-    } catch {
-      toast({ title: "Error", description: "Failed to load users.", variant: "destructive" });
+    } catch (err: any) {
+      if (err.name !== "AbortError") {
+        toast({ title: "Error", description: "Failed to load users.", variant: "destructive" });
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchQuery, activeTab, statusFilter]);
 
   useEffect(() => {
-    const delay = searchQuery ? 250 : 0;
-    const timer = setTimeout(() => fetchUsers(), delay);
-    return () => clearTimeout(timer);
-  }, [searchQuery, activeTab, statusFilter]);
+    const controller = new AbortController();
+    const timer = setTimeout(() => fetchUsers(controller.signal), 250);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [fetchUsers]);
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();

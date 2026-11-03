@@ -163,7 +163,7 @@ export default function PropertyActions({
       if (data.success) {
         toast({
           title: "Purchase Request Submitted",
-          description: `Request ${data.request.requestNo} is awaiting review by the property manager.`,
+          description: `Request ${data.request.requestNo} is awaiting review & approval by the administrator.`,
         });
         setBuyOpen(false);
         router.push("/customer/requests");

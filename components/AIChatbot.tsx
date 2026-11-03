@@ -249,7 +249,7 @@ export default function AIChatbot() {
 
       {/* ─── Kiro-Maal AI Assistant Modal Window ─── */}
       {isOpen && (
-        <div className="w-[94vw] sm:w-[420px] md:w-[440px] h-[610px] bg-[#FCFBF7] rounded-[32px] shadow-[0_25px_70px_rgba(7,17,31,0.4)] border border-[#C89B3C]/40 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-6 duration-200 relative">
+        <div className="w-[94vw] sm:w-[420px] md:w-[440px] h-[610px] max-h-[85vh] bg-[#FCFBF7] rounded-[32px] shadow-[0_25px_70px_rgba(7,17,31,0.4)] border border-[#C89B3C]/40 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-6 duration-200 relative gpu-accelerated will-change-[transform,opacity]">
           {/* ─── Top Header with Deep Navy & Gold Accents ─── */}
           <div className="relative bg-[#07111F] text-white px-5 py-4 flex items-center justify-between overflow-hidden shrink-0 border-b border-[#C89B3C]/30">
             {/* Subtle Villa Overlay */}
@@ -354,10 +354,13 @@ export default function AIChatbot() {
                             <div className="flex gap-3">
                               <div className="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 shrink-0 border border-[#E8E1D4] relative">
                                 {p.imageUrl ? (
-                                  <img
+                                  <Image
                                     src={p.imageUrl}
                                     alt={p.title}
-                                    className="w-full h-full object-cover"
+                                    fill
+                                    sizes="80px"
+                                    className="object-cover"
+                                    loading="lazy"
                                   />
                                 ) : (
                                   <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400">

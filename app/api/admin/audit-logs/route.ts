@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
+import { requirePermission } from "@/lib/auth-guards";
+import { PERMISSIONS } from "@/lib/rbac";
 
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session || (session.user as any)?.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const authResult = await requirePermission(PERMISSIONS.AUDIT_LOG_VIEW);
+    if (authResult.response) {
+      return authResult.response;
     }
 
     const logs = await prisma.auditLog.findMany({

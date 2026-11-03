@@ -8,7 +8,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { BarChart3, Building2, TrendingUp, CheckCircle2, Clock, DollarSign, Sparkles } from "lucide-react";
+import { BarChart3, Building2, Sparkles } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import type { Metadata } from "next";
 

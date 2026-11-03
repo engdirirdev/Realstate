@@ -89,6 +89,13 @@ export function checkRateLimit(
 }
 
 /**
+ * Clears rate limit records for an identifier (e.g. after successful authentication).
+ */
+export function clearRateLimit(identifier: string): void {
+  rateLimitStore.delete(identifier);
+}
+
+/**
  * Derives a reliable client identifier from the request.
  * Uses authenticated user ID if provided; otherwise derives from client IP.
  */

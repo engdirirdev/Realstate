@@ -6,7 +6,6 @@ import {
   Lock,
   Sparkles,
   Bell,
-  Shield,
   Loader2,
   CheckCircle2,
   KeyRound,
@@ -36,7 +35,6 @@ export default function CustomerSettingsPage() {
   });
 
   // Notification toggles
-  const [notifyEmail, setNotifyEmail] = useState(true);
   const [notifyTransactions, setNotifyTransactions] = useState(true);
   const [notifyRecommendations, setNotifyRecommendations] = useState(true);
 

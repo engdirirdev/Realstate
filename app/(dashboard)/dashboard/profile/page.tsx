@@ -27,7 +27,7 @@ const TYPES = [
 ];
 
 export default function ProfilePage() {
-  const { data: session, update } = useSession();
+  const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [prefLoading, setPrefLoading] = useState(false);

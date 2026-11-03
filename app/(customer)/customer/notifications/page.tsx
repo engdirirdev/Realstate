@@ -8,7 +8,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { Bell, Sparkles, Calendar, CreditCard, MessageSquare, CheckCircle2 } from "lucide-react";
+import { Bell, Sparkles } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Notifications – Customer Portal | Kiro-Maal Real Estate" };

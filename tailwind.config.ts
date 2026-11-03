@@ -16,7 +16,12 @@ module.exports = {
     },
     extend: {
       spacing: {
+        4.5: "1.125rem",
+        9.5: "2.375rem",
         18: "4.5rem",
+      },
+      backdropBlur: {
+        xs: "2px",
       },
       colors: {
         border: "hsl(var(--border))",
@@ -24,6 +29,22 @@ module.exports = {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+
+        // ─── Primary Brand Colors ───
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+          50:  "#FAF7EE",
+          100: "#F5EFDD",
+          200: "#EBDDBA",
+          300: "#E0CA97",
+          400: "#D9B45B",
+          500: "#C89B3C",
+          600: "#B88924",
+          700: "#A97918",
+          800: "#8C6518",
+          900: "#6B4D12",
+        },
 
         // ─── Theme Colors matching Kiro-Maal Master Design System ───
         brand: {
@@ -164,6 +185,8 @@ module.exports = {
       },
 
       boxShadow: {
+        xs: "0 1px 2px 0 rgba(15, 39, 71, 0.05)",
+        "2xs": "0 1px 1px 0 rgba(15, 39, 71, 0.03)",
         card:       "0 1px 3px rgba(15,39,71,0.05), 0 4px 12px rgba(15,39,71,0.03)",
         "card-hover":"0 12px 28px rgba(15,39,71,0.08), 0 4px 8px rgba(15,39,71,0.04)",
         glow:       "0 0 0 3px rgba(22,119,255,0.20)",

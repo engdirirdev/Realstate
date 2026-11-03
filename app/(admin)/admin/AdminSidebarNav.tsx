@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Building2,
@@ -12,16 +12,11 @@ import {
   UserCheck,
   CreditCard,
   MessageSquare,
-  Calendar,
-  CalendarCheck,
   BarChart3,
   ScrollText,
   Settings,
-  History,
   BadgeDollarSign,
-  Key,
   FileText,
-  KeyRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -52,9 +47,8 @@ const navGroups: NavGroup[] = [
   {
     title: "TRANSACTIONS & SETTLEMENTS",
     items: [
-      { href: "/admin/sales", label: "Sales Management", icon: BadgeDollarSign },
-      { href: "/admin/bookings", label: "Rental Bookings", icon: FileText },
-      { href: "/admin/rentals", label: "Rentals", icon: KeyRound },
+      { href: "/admin/sales", label: "Purchase Requests & Sales", icon: BadgeDollarSign },
+      { href: "/admin/bookings", label: "Bookings & Rents", icon: FileText },
       { href: "/admin/transactions", label: "Payments & Transactions", icon: CreditCard },
     ],
   },
@@ -83,10 +77,9 @@ const navGroups: NavGroup[] = [
 
 export default function AdminSidebarNav() {
   const pathname = usePathname();
-  const router = useRouter();
 
   return (
-    <nav className="flex-1 px-3.5 py-2 space-y-4 overflow-y-auto scrollbar-hide">
+    <nav suppressHydrationWarning className="flex-1 px-3.5 py-2 space-y-4 overflow-y-auto scrollbar-hide">
       {navGroups.map((group, groupIdx) => (
         <div key={groupIdx} className="space-y-1">
           {group.title && (
@@ -98,17 +91,14 @@ export default function AdminSidebarNav() {
             const isActive =
               pathname === href ||
               (label === "Dashboard" && pathname === "/admin") ||
+              (href === "/admin/sales" && (pathname === "/admin/sales" || pathname === "/admin/requests")) ||
               (href === "/admin/transactions" && (pathname === "/admin/transactions" || pathname === "/admin/payments")) ||
-              (href === "/admin/bookings" && (pathname === "/admin/bookings" || pathname === "/admin/requests")) ||
-              (href === "/admin/rentals" && pathname === "/admin/rentals");
+              (href === "/admin/bookings" && (pathname === "/admin/bookings" || pathname === "/admin/rentals"));
             return (
               <Link
                 key={href + label}
                 href={href}
-                prefetch={false}
-                onMouseEnter={() => router.prefetch(href)}
-                onPointerDown={() => router.prefetch(href)}
-                onFocus={() => router.prefetch(href)}
+                prefetch={true}
                 className={cn(
                   "group flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200",
                   isActive

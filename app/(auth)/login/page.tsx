@@ -39,6 +39,16 @@ interface AuthPageProps {
   initialTab?: "login" | "register";
 }
 
+function isSafeCallbackUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  return (
+    url.startsWith("/") &&
+    !url.startsWith("//") &&
+    !url.includes("://") &&
+    !url.includes("\\")
+  );
+}
+
 function AuthContent({ initialTab = "login" }: AuthPageProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -46,13 +56,32 @@ function AuthContent({ initialTab = "login" }: AuthPageProps) {
   // Tab mode: "login" or "register"
   const [tab, setTab] = useState<"login" | "register">(initialTab);
 
-  // Sync tab with URL query if provided
+  // Sync tab with URL query if provided and check for auth errors
   useEffect(() => {
     const tabParam = searchParams?.get("tab");
     if (tabParam === "register") {
       setTab("register");
     } else if (tabParam === "login") {
       setTab("login");
+    }
+
+    const errParam = searchParams?.get("error");
+    if (errParam === "account_deactivated") {
+      toast({
+        title: "Account Deactivated",
+        description: "Your account is deactivated. Please contact administration.",
+        variant: "destructive",
+      });
+    } else if (errParam === "session_expired") {
+      toast({
+        title: "Session Expired",
+        description: "Your session has expired. Please sign in again.",
+        variant: "destructive",
+      });
+    } else if (errParam === "Configuration") {
+      if (typeof window !== "undefined") {
+        window.history.replaceState(null, "", window.location.pathname);
+      }
     }
   }, [searchParams]);
 
@@ -82,7 +111,8 @@ function AuthContent({ initialTab = "login" }: AuthPageProps) {
   // Handle Login Submit
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!loginForm.email || !loginForm.password) {
+    const cleanEmail = loginForm.email.trim().toLowerCase();
+    if (!cleanEmail || !loginForm.password) {
       toast({
         title: "Missing fields",
         description: "Please fill in all fields.",
@@ -93,15 +123,23 @@ function AuthContent({ initialTab = "login" }: AuthPageProps) {
     setLoginLoading(true);
     try {
       const result = await signIn("credentials", {
-        email: loginForm.email,
+        email: cleanEmail,
         password: loginForm.password,
         redirect: false,
       });
 
       if (result?.error) {
+        const errKey = (result.error || (result as any).code || "").toLowerCase();
+        let description = "Invalid email or password.";
+        if (errKey.includes("deactivated")) {
+          description = "This account has been deactivated. Please contact support.";
+        } else if (errKey.includes("attempts") || errKey.includes("rate")) {
+          description = "Too many login attempts. Please wait 60 seconds before trying again.";
+        }
+
         toast({
           title: "Login failed",
-          description: "Invalid email or password.",
+          description,
           variant: "destructive",
         });
       } else {
@@ -116,7 +154,11 @@ function AuthContent({ initialTab = "login" }: AuthPageProps) {
         const userRole = sessionData?.user?.role;
 
         router.refresh();
-        if (userRole === "ADMIN") {
+
+        const rawCallback = searchParams?.get("callbackUrl");
+        if (rawCallback && isSafeCallbackUrl(rawCallback)) {
+          router.push(rawCallback);
+        } else if (userRole === "ADMIN") {
           router.push("/admin");
         } else if (userRole === "CUSTOMER") {
           router.push("/customer");
@@ -167,7 +209,7 @@ function AuthContent({ initialTab = "login" }: AuthPageProps) {
 
       // Automatically sign in upon registration
       await signIn("credentials", {
-        email: registerForm.email,
+        email: registerForm.email.trim().toLowerCase(),
         password: registerForm.password,
         redirect: false,
       });
@@ -179,7 +221,12 @@ function AuthContent({ initialTab = "login" }: AuthPageProps) {
       } as any);
 
       router.refresh();
-      router.push("/customer");
+      const rawCallback = searchParams?.get("callbackUrl");
+      if (rawCallback && isSafeCallbackUrl(rawCallback)) {
+        router.push(rawCallback);
+      } else {
+        router.push("/customer");
+      }
     } catch {
       toast({
         title: "Error",

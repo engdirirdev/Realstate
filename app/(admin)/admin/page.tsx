@@ -27,8 +27,17 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
-import AdminCharts from "@/components/admin/AdminCharts";
+import dynamic from "next/dynamic";
 import type { Metadata } from "next";
+
+const AdminCharts = dynamic(() => import("@/components/admin/AdminCharts"), {
+  loading: () => (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-pulse">
+      <div className="lg:col-span-2 h-80 bg-[#FCFBF7] rounded-3xl border border-[#E8E1D4]" />
+      <div className="h-80 bg-[#FCFBF7] rounded-3xl border border-[#E8E1D4]" />
+    </div>
+  ),
+});
 
 export const metadata: Metadata = {
   title: "Admin Dashboard – Kiro-Maal Real Estate",
@@ -86,6 +95,7 @@ export default async function AdminPage() {
     totalRevenueAgg,
     pendingInquiries,
     pendingProperties,
+    pendingPurchaseRequests,
     todayBookings,
     activeAgents,
     propertiesByType,
@@ -113,9 +123,10 @@ export default async function AdminPage() {
       where: { status: "PAID" },
       _sum: { amount: true },
     }),
-    // 6. Pending Inquiries & Properties
+    // 6. Pending Inquiries, Properties & Purchase Proposals
     prisma.inquiry.count({ where: { status: "NEW" } }),
     prisma.property.count({ where: { status: "PENDING" } }),
+    prisma.purchaseRequest.count({ where: { status: { in: ["PENDING", "UNDER_REVIEW"] } } }),
     // 7. Today's Appointments
     prisma.booking.count({
       where: { createdAt: { gte: startOfDay } },
@@ -134,20 +145,32 @@ export default async function AdminPage() {
       where: { status: "PAID", createdAt: { gte: yearStart } },
       select: { amount: true, createdAt: true },
     }),
-    // Recent Properties
+    // Recent Properties (Selective projection: exclude unneeded manager joins and descriptions)
     prisma.property.findMany({
       orderBy: { createdAt: "desc" },
       take: 5,
-      include: {
-        images: { take: 1, orderBy: { order: "asc" } },
-        manager: true,
+      select: {
+        id: true,
+        title: true,
+        city: true,
+        type: true,
+        price: true,
+        status: true,
+        images: { take: 1, orderBy: { order: "asc" }, select: { url: true } },
       },
     }),
-    // Recent Customers
+    // Recent Customers (Selective projection: exclude password and preferences)
     prisma.user.findMany({
       where: { role: "CUSTOMER" },
       orderBy: { createdAt: "desc" },
       take: 5,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        image: true,
+        createdAt: true,
+      },
     }),
     // Section 14 Rental Bookings & Payment Metrics
     prisma.rentalRequest.count(),
@@ -160,7 +183,7 @@ export default async function AdminPage() {
   ]);
 
   const totalRevenue = totalRevenueAgg._sum.amount || 0;
-  const pendingRequests = pendingInquiries + pendingProperties;
+  const pendingRequests = pendingInquiries + pendingProperties + pendingPurchaseRequests;
 
   // Monthly Revenue Chart Data
   const monthNames = [
@@ -271,11 +294,11 @@ export default async function AdminPage() {
           <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-[#D9A336]">
             <Calendar className="w-4 h-4" />
           </div>
-          <div className="text-left">
-            <p className="font-extrabold text-xs text-white leading-tight">
+          <div suppressHydrationWarning className="text-left">
+            <p suppressHydrationWarning className="font-extrabold text-xs text-white leading-tight">
               {dateFormatted}
             </p>
-            <p className="text-[10px] text-slate-400 font-medium leading-none mt-0.5">
+            <p suppressHydrationWarning className="text-[10px] text-slate-400 font-medium leading-none mt-0.5">
               {weekdayFormatted}
             </p>
           </div>
@@ -316,64 +339,68 @@ export default async function AdminPage() {
         </div>
 
         {/* ── CARD 2: PROPERTIES SOLD (White / Soft Cream) ── */}
-        <div className="bg-white text-slate-900 rounded-2xl p-5 border border-[#E6DED4] shadow-xs relative overflow-hidden flex flex-col justify-between min-h-[145px] group hover:border-[#C99126]/50 transition-all">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#C99126] text-white flex items-center justify-center shrink-0 shadow-xs">
-                <Tag className="w-5 h-5" />
+        <Link href="/admin/sales" className="block group">
+          <div className="bg-white text-slate-900 rounded-2xl p-5 border border-[#E6DED4] shadow-xs relative overflow-hidden flex flex-col justify-between min-h-[145px] group-hover:border-[#C99126]/50 transition-all cursor-pointer">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#C99126] text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Tag className="w-5 h-5" />
+                </div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
+                  PROPERTIES SOLD
+                </span>
               </div>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
-                PROPERTIES SOLD
-              </span>
+              <div className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 group-hover:border-slate-400 group-hover:text-slate-700 transition-all">
+                <ChevronRight className="w-4 h-4" />
+              </div>
             </div>
-            <div className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 group-hover:border-slate-400 group-hover:text-slate-700 transition-all">
-              <ChevronRight className="w-4 h-4" />
-            </div>
-          </div>
 
-          <div className="flex items-center justify-between my-2">
-            <div className="text-3xl sm:text-4xl font-black text-[#0B1523] tracking-tight">
-              {propertiesSold}
+            <div className="flex items-center justify-between my-2">
+              <div className="text-3xl sm:text-4xl font-black text-[#0B1523] tracking-tight">
+                {propertiesSold}
+              </div>
+              <MiniBarChart />
             </div>
-            <MiniBarChart />
-          </div>
 
-          <div className="flex items-center gap-2 text-xs">
-            <span className="font-bold text-[#EF4444]">↑ Today</span>
-            <span className="text-slate-500 font-medium">Sold Listings</span>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="font-bold text-[#EF4444]">↑ Live</span>
+              <span className="text-slate-500 font-medium">Sales Governance</span>
+            </div>
           </div>
-        </div>
+        </Link>
 
         {/* ── CARD 3: PROPERTIES RENTED (Dark Navy) ── */}
-        <div className="bg-[#0B1523] text-white rounded-2xl p-5 border border-white/10 shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[145px] group hover:border-[#C99126]/60 transition-all">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#C99126] text-white flex items-center justify-center shrink-0 shadow-xs">
-                <Key className="w-5 h-5" />
+        <Link href="/admin/bookings?tab=rentals" className="block group">
+          <div className="bg-[#0B1523] text-white rounded-2xl p-5 border border-white/10 shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[145px] group-hover:border-[#C99126]/60 transition-all cursor-pointer">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#C99126] text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Key className="w-5 h-5" />
+                </div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300">
+                  PROPERTIES RENTED
+                </span>
               </div>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300">
-                PROPERTIES RENTED
+              <div className="w-7 h-7 rounded-full border border-white/20 flex items-center justify-center text-white/60 group-hover:border-white/50 group-hover:text-white transition-all">
+                <ChevronRight className="w-4 h-4" />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between my-2">
+              <div className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                {propertiesRented}
+              </div>
+              <MiniBarChart />
+            </div>
+
+            <div className="flex items-center gap-2 text-xs">
+              <span className="font-bold text-[#C89B3C] flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#C89B3C]" /> Active
               </span>
-            </div>
-            <div className="w-7 h-7 rounded-full border border-white/20 flex items-center justify-center text-white/60 group-hover:border-white/50 group-hover:text-white transition-all">
-              <ChevronRight className="w-4 h-4" />
+              <span className="text-slate-400 font-medium">In Lease</span>
             </div>
           </div>
-
-          <div className="flex items-center justify-between my-2">
-            <div className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-              {propertiesRented}
-            </div>
-            <MiniBarChart />
-          </div>
-
-          <div className="flex items-center gap-2 text-xs">
-            <span className="font-bold text-[#C89B3C] flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#C89B3C]" /> Active
-            </span>
-            <span className="text-slate-400 font-medium">In Lease</span>
-          </div>
-        </div>
+        </Link>
 
         {/* ── CARD 4: TOTAL CUSTOMERS (White / Soft Cream) ── */}
         <div className="bg-white text-slate-900 rounded-2xl p-5 border border-[#E6DED4] shadow-xs relative overflow-hidden flex flex-col justify-between min-h-[145px] group hover:border-[#C99126]/50 transition-all">
@@ -437,36 +464,38 @@ export default async function AdminPage() {
         </div>
 
         {/* ── CARD 6: PENDING REQUESTS (Dark Navy) ── */}
-        <div className="bg-[#0B1523] text-white rounded-2xl p-5 border border-white/10 shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[145px] group hover:border-[#C99126]/60 transition-all">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#C99126] text-white flex items-center justify-center shrink-0 shadow-xs">
-                <FileText className="w-5 h-5" />
+        <Link href="/admin/sales" className="block group">
+          <div className="bg-[#0B1523] text-white rounded-2xl p-5 border border-white/10 shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[145px] group-hover:border-[#C99126]/60 transition-all cursor-pointer">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#C99126] text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300">
+                  PENDING REQUESTS
+                </span>
               </div>
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300">
-                PENDING REQUESTS
+              <div className="w-7 h-7 rounded-full border border-white/20 flex items-center justify-center text-white/60 group-hover:border-white/50 group-hover:text-white transition-all">
+                <ChevronRight className="w-4 h-4" />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between my-2">
+              <div className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                {pendingRequests}
+              </div>
+              <MiniBarChart />
+            </div>
+
+            <div className="flex items-center gap-2 text-xs">
+              <span className="font-bold text-[#EF4444] flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444]" /> Needs
+                Action
               </span>
-            </div>
-            <div className="w-7 h-7 rounded-full border border-white/20 flex items-center justify-center text-white/60 group-hover:border-white/50 group-hover:text-white transition-all">
-              <ChevronRight className="w-4 h-4" />
+              <span className="text-slate-400 font-medium">Review &amp; Approve</span>
             </div>
           </div>
-
-          <div className="flex items-center justify-between my-2">
-            <div className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-              {pendingRequests}
-            </div>
-            <MiniBarChart />
-          </div>
-
-          <div className="flex items-center gap-2 text-xs">
-            <span className="font-bold text-[#EF4444] flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444]" /> Needs
-              Action
-            </span>
-            <span className="text-slate-400 font-medium">Pending Inquiries</span>
-          </div>
-        </div>
+        </Link>
 
         {/* ── CARD 7: TODAY'S APPOINTMENTS (White / Soft Cream) ── */}
         <div className="bg-white text-slate-900 rounded-2xl p-5 border border-[#E6DED4] shadow-xs relative overflow-hidden flex flex-col justify-between min-h-[145px] group hover:border-[#C99126]/50 transition-all">
@@ -751,7 +780,10 @@ export default async function AdminPage() {
                   className="flex items-center justify-between gap-3 p-2.5 rounded-xl hover:bg-[#FAF5EC]/60 border border-transparent hover:border-[#E6DED4] transition-all"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-full bg-[#C99126] text-white font-extrabold text-xs flex items-center justify-center shrink-0 shadow-2xs">
+                    <div
+                      suppressHydrationWarning
+                      className="w-10 h-10 rounded-full bg-[#C99126] text-white font-extrabold text-xs flex items-center justify-center shrink-0 shadow-2xs"
+                    >
                       {customer.image ? (
                         <img
                           src={customer.image}
@@ -759,7 +791,9 @@ export default async function AdminPage() {
                           className="w-full h-full object-cover rounded-full"
                         />
                       ) : (
-                        customer.name?.charAt(0).toUpperCase() || "C"
+                        <span suppressHydrationWarning>
+                          {customer.name?.charAt(0).toUpperCase() || "C"}
+                        </span>
                       )}
                     </div>
 
@@ -778,7 +812,7 @@ export default async function AdminPage() {
                       <ShieldCheck className="w-3 h-3 text-emerald-600" />
                       Active
                     </span>
-                    <p className="text-[10px] text-slate-400 mt-0.5">
+                    <p suppressHydrationWarning className="text-[10px] text-slate-400 mt-0.5">
                       {formatRelativeTime(customer.createdAt)}
                     </p>
                   </div>

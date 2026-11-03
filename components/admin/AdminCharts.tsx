@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -33,23 +34,19 @@ interface AdminChartsProps {
   totalProperties: number;
 }
 
-// Exact colors matching reference donut chart
-const DONUT_COLORS: Record<string, string> = {
-  APARTMENT: "#1E60D5", // Royal Blue (40%)
-  VILLA: "#059669",     // Emerald (25%)
-  HOUSE: "#D9A336",     // Gold (20%)
-  COMMERCIAL: "#E11D48",// Crimson (10%)
-  LAND: "#F43F5E",      // Coral/Rose (5%)
-  OFFICE: "#3B82F6",
-  TOWNHOUSE: "#8B5CF6",
-  STUDIO: "#64748B",
-};
+
 
 export default function AdminCharts({
   monthlyRevenue,
   propertyTypes,
   totalProperties,
 }: AdminChartsProps) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* ─── Monthly Revenue Area Chart (2 cols) ─── */}
@@ -70,17 +67,18 @@ export default function AdminCharts({
           </div>
 
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#D9CEBF] rounded-xl text-xs font-semibold text-slate-700 shadow-2xs cursor-pointer hover:bg-slate-50">
-            <span>{new Date().getFullYear()}</span>
+            <span suppressHydrationWarning>{new Date().getFullYear()}</span>
             <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
           </div>
         </div>
 
         <div className="h-64 sm:h-72 w-full pt-2">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart
-              data={monthlyRevenue}
-              margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
-            >
+          {isMounted ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={monthlyRevenue}
+                margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+              >
               <defs>
                 <linearGradient id="goldRevenueGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#C99126" stopOpacity={0.3} />
@@ -137,33 +135,37 @@ export default function AdminCharts({
               />
             </AreaChart>
           </ResponsiveContainer>
+        ) : (
+          <div className="w-full h-full bg-[#FAF5EC]/40 rounded-xl animate-pulse" />
+        )}
+      </div>
+    </div>
+
+    {/* ─── Property Types Donut Chart (1 col) ─── */}
+    <div className="bg-white rounded-2xl border border-[#E8E1D4] p-5 sm:p-6 shadow-xs flex flex-col justify-between">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#C99126] to-[#E8B849] text-white flex items-center justify-center shrink-0 shadow-xs">
+            <Building2 className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-base sm:text-lg font-bold text-[#0B1523] tracking-tight">
+              Property Types
+            </h3>
+            <p className="text-xs text-slate-500 font-medium">Distribution of active assets</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#FAF7F2] border border-[#E8E1D4] rounded-xl text-xs font-semibold text-slate-700 shadow-2xs">
+          <span suppressHydrationWarning>{new Date().getFullYear()}</span>
+          <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
         </div>
       </div>
 
-      {/* ─── Property Types Donut Chart (1 col) ─── */}
-      <div className="bg-white rounded-2xl border border-[#E8E1D4] p-5 sm:p-6 shadow-xs flex flex-col justify-between">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#C99126] to-[#E8B849] text-white flex items-center justify-center shrink-0 shadow-xs">
-              <Building2 className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-base sm:text-lg font-bold text-[#0B1523] tracking-tight">
-                Property Types
-              </h3>
-              <p className="text-xs text-slate-500 font-medium">Distribution of active assets</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#FAF7F2] border border-[#E8E1D4] rounded-xl text-xs font-semibold text-slate-700 shadow-2xs">
-            <span>{new Date().getFullYear()}</span>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-5 my-auto pt-3">
-          {/* Donut Chart with Centered Number */}
-          <div className="relative w-44 h-44 shrink-0 flex items-center justify-center">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-5 my-auto pt-3">
+        {/* Donut Chart with Centered Number */}
+        <div className="relative w-44 h-44 shrink-0 flex items-center justify-center">
+          {isMounted ? (
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -211,6 +213,9 @@ export default function AdminCharts({
                 />
               </PieChart>
             </ResponsiveContainer>
+          ) : (
+            <div className="w-full h-full rounded-full border-4 border-dashed border-[#E8E1D4] animate-pulse" />
+          )}
 
             {/* Donut Center */}
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">

@@ -135,33 +135,66 @@ export async function createPurchaseRequest(customerId: string, propertyId: stri
     });
     if (open) throw new TxnError("You already have an open purchase request for this property.", 409);
 
+    let assignedManagerId = property.managerId;
+    if (!assignedManagerId) {
+      const activeManager = await tx.user.findFirst({ where: { role: "USER", isActive: true } });
+      if (activeManager) assignedManagerId = activeManager.id;
+    }
+
     const request = await tx.purchaseRequest.create({
       data: {
         requestNo: genNo("PUR"),
         customerId,
         propertyId,
-        managerId: property.managerId,
+        managerId: assignedManagerId,
         salePrice: property.price,
         currency: property.currency,
         notes: notes?.trim() || null,
       },
     });
 
+    if (!property.managerId && assignedManagerId) {
+      await tx.property.update({
+        where: { id: property.id },
+        data: { managerId: assignedManagerId },
+      });
+    }
+
+    // 1. Notify Customer
     await notifyUser(
       tx,
       customerId,
       "Purchase Request Submitted",
-      `Your request ${request.requestNo} for "${property.title}" was submitted and is awaiting review.`,
-      "/customer/transactions"
+      `Your request ${request.requestNo} for "${property.title}" was submitted and is awaiting administrator approval.`,
+      "/customer/requests",
+      "TRANSACTION"
     );
-    await notifyStaff(
-      tx,
-      property.managerId,
-      "New Purchase Request",
-      `New purchase request ${request.requestNo} for "${property.title}".`,
-      "/dashboard/requests",
-      "/admin/requests"
-    );
+
+    // 2. Notify all active Admins (Admin can approve)
+    const admins = await tx.user.findMany({ where: { role: "ADMIN", isActive: true }, select: { id: true } });
+    for (const a of admins) {
+      await notifyUser(
+        tx,
+        a.id,
+        "New Purchase Request 🏛️",
+        `New purchase request ${request.requestNo} for "${property.title}" requires admin review & approval.`,
+        "/admin/sales",
+        "TRANSACTION"
+      );
+    }
+
+    // 3. Notify Manager if assigned
+    if (assignedManagerId) {
+      await notifyUser(
+        tx,
+        assignedManagerId,
+        "New Purchase Request Submitted",
+        `Customer submitted purchase request ${request.requestNo} for "${property.title}".`,
+        "/dashboard/properties",
+        "TRANSACTION"
+      );
+    }
+
     await audit(tx, customerId, "PURCHASE_REQUEST_CREATED", "PurchaseRequest", request.id, property.title);
     return request;
   });
@@ -207,12 +240,19 @@ export async function createRentalRequest(
     if (open) throw new TxnError("You already have a pending rental request for these dates.", 409);
 
     const calc = computeRental(property.price, property.rentPeriod, property.securityDeposit, start, end);
+
+    let assignedManagerId = property.managerId;
+    if (!assignedManagerId) {
+      const activeManager = await tx.user.findFirst({ where: { role: "USER", isActive: true } });
+      if (activeManager) assignedManagerId = activeManager.id;
+    }
+
     const request = await tx.rentalRequest.create({
       data: {
         requestNo: genNo("RNT"),
         customerId,
         propertyId,
-        managerId: property.managerId,
+        managerId: assignedManagerId,
         startDate: start,
         endDate: end,
         rentalPeriod: calc.period,
@@ -229,13 +269,20 @@ export async function createRentalRequest(
       },
     });
 
+    if (!property.managerId && assignedManagerId) {
+      await tx.property.update({
+        where: { id: property.id },
+        data: { managerId: assignedManagerId },
+      });
+    }
+
     // Create central Transaction (status: PENDING)
     const transaction = await tx.transaction.create({
       data: {
         txnNo: genNo("TXN"),
         type: "RENTAL",
         customerId,
-        managerId: property.managerId,
+        managerId: assignedManagerId,
         propertyId: property.id,
         amount: calc.totalAmount,
         currency: property.currency,
@@ -250,7 +297,7 @@ export async function createRentalRequest(
         transactionId: transaction.id,
         propertyId: property.id,
         customerId,
-        managerId: property.managerId,
+        managerId: assignedManagerId,
         amount: calc.totalAmount,
         currency: property.currency,
         paymentMethod: paymentMethod || "EVC Plus",
@@ -265,7 +312,7 @@ export async function createRentalRequest(
       tx,
       customerId,
       "Rental Booking Submitted",
-      "Your rental booking has been submitted.",
+      "Your rental booking has been submitted and is awaiting manager approval.",
       "/customer/requests",
       "TRANSACTION"
     );
@@ -280,16 +327,42 @@ export async function createRentalRequest(
       "PAYMENT"
     );
 
-    // Notification to Manager
-    await notifyStaff(
-      tx,
-      property.managerId,
-      "New Rental Booking",
-      "New rental booking requires your review.",
-      "/dashboard/bookings?tab=rentals",
-      "/admin/bookings?tab=rentals",
-      "TRANSACTION"
-    );
+    // Notification to Property Manager (Manager must be able to approve)
+    if (assignedManagerId) {
+      await notifyUser(
+        tx,
+        assignedManagerId,
+        "New Rental Booking 📅",
+        `New rental booking ${request.requestNo} for "${property.title}" requires your review & approval.`,
+        "/dashboard/bookings?tab=rentals",
+        "TRANSACTION"
+      );
+    } else {
+      const managers = await tx.user.findMany({ where: { role: "USER", isActive: true }, select: { id: true } });
+      for (const m of managers) {
+        await notifyUser(
+          tx,
+          m.id,
+          "New Rental Booking 📅",
+          `New rental booking ${request.requestNo} for "${property.title}" requires review & approval.`,
+          "/dashboard/bookings?tab=rentals",
+          "TRANSACTION"
+        );
+      }
+    }
+
+    // Notification to Admin (Admin can view)
+    const admins = await tx.user.findMany({ where: { role: "ADMIN", isActive: true }, select: { id: true } });
+    for (const a of admins) {
+      await notifyUser(
+        tx,
+        a.id,
+        "New Rental Booking Submitted 📋",
+        `New rental booking ${request.requestNo} for "${property.title}" submitted (awaiting manager approval).`,
+        "/admin/bookings?tab=rentals",
+        "TRANSACTION"
+      );
+    }
 
     await audit(tx, customerId, "RENTAL_REQUEST_CREATED", "RentalRequest", request.id, property.title);
     return { ...request, transaction, payment };
@@ -301,7 +374,7 @@ export async function createRentalRequest(
 // ----------------------------------------------------------------
 
 export type RequestKind = "purchase" | "rental";
-export type ReviewAction = "approve" | "reject" | "review" | "cancel";
+export type ReviewAction = "approve" | "reject" | "review" | "cancel" | "confirm";
 
 export async function reviewRequest(
   kind: RequestKind,
@@ -362,19 +435,72 @@ export async function reviewRequest(
       return model.update({ where: { id: req.id }, data: { status: "UNDER_REVIEW", ...reviewData } });
     }
 
-    // ---- approve ----
-    if (action === "approve") {
-      if (!["PENDING", "UNDER_REVIEW"].includes(req.status)) {
-        throw new TxnError("This request has already been processed.", 409);
-      }
-      if (
-        !(AVAILABLE_STATUSES as readonly string[]).includes(property.status) ||
-        (property.availabilityStatus && property.availabilityStatus !== "AVAILABLE")
-      ) {
-        throw new TxnError(NO_LONGER_AVAILABLE, 409);
+    // ---- confirm (Purchase confirmation to allow payment) or approve ----
+    if (action === "confirm" || action === "approve") {
+      if (kind === "rental") {
+        const isRentalPending =
+          req.bookingStatus === "PENDING" ||
+          req.bookingStatus === "UNDER_REVIEW" ||
+          req.status === "PENDING" ||
+          req.status === "UNDER_REVIEW" ||
+          !req.approvedAt;
+        if (!isRentalPending) {
+          throw new TxnError("This rental booking has already been processed.", 409);
+        }
+      } else {
+        // Purchase logic:
+        // If action is "approve" and request is already PAYMENT_PENDING:
+        // Admin is performing final approval of a paid purchase!
+        if (action === "approve" && req.status === "PAYMENT_PENDING") {
+          const isPaid = await tx.payment.findFirst({
+            where: { transaction: { purchaseRequestId: req.id }, status: "PAID" },
+          });
+          if (!isPaid) {
+            throw new TxnError("Cannot approve purchase until customer payment has been received.", 400);
+          }
+
+          // Finalize property sale
+          await tx.property.update({
+            where: { id: property.id },
+            data: { status: "SOLD", availabilityStatus: "SOLD", isActive: false },
+          });
+
+          // Finalize purchase request
+          const updated = await model.update({
+            where: { id: req.id },
+            data: { status: "COMPLETED", completedAt: new Date(), ...reviewData },
+          });
+
+          // Finalize transaction
+          await tx.transaction.updateMany({
+            where: { purchaseRequestId: req.id },
+            data: { status: "COMPLETED", completedAt: new Date() },
+          });
+
+          await notifyUser(
+            tx,
+            req.customerId,
+            "Purchase Approved & Finalized 🎉",
+            `Your purchase of "${property.title}" has been approved and completed by Admin.`,
+            "/customer/requests"
+          );
+          await audit(tx, actor.id, "PURCHASE_FINAL_APPROVED", "Request", req.id);
+          return updated;
+        }
+
+        if (!["PENDING", "UNDER_REVIEW"].includes(req.status)) {
+          throw new TxnError("This request has already been processed.", 409);
+        }
       }
 
       if (kind === "purchase") {
+        // Initial Admin Confirmation: confirms request and authorizes customer payment
+        if (
+          !(AVAILABLE_STATUSES as readonly string[]).includes(property.status) ||
+          (property.availabilityStatus && property.availabilityStatus !== "AVAILABLE")
+        ) {
+          throw new TxnError(NO_LONGER_AVAILABLE, 409);
+        }
         if ((property.listingType || "FOR_SALE") !== "FOR_SALE") throw new TxnError("Property is not for sale.");
         await tx.property.update({
           where: { id: property.id },
@@ -409,11 +535,11 @@ export async function reviewRequest(
         await notifyUser(
           tx,
           req.customerId,
-          "Purchase Approved",
-          `Your request ${req.requestNo} for "${property.title}" was approved. Please complete payment.`,
-          "/customer/transactions"
+          "Purchase Request Confirmed",
+          `Your request ${req.requestNo} for "${property.title}" was confirmed by Admin. You can now complete payment.`,
+          "/customer/requests"
         );
-        await audit(tx, actor.id, "PURCHASE_APPROVED", "Request", req.id);
+        await audit(tx, actor.id, "PURCHASE_CONFIRMED", "Request", req.id);
         return updated;
       } else {
         // RENTAL APPROVAL WORKFLOW
@@ -451,16 +577,29 @@ export async function reviewRequest(
 
         const now = new Date();
         const agreementNo = req.agreementNo || genNo("AGR");
-        // 1. Update RentalRequest: Booking = APPROVED, Rental = ACTIVE
+        const effectiveManagerId = req.managerId || property.managerId || actor.id;
+
+        // 1. Update RentalRequest: Booking = CONFIRMED, Rental = ACTIVE
         const updated = await model.update({
           where: { id: req.id },
           data: {
             status: "ACTIVE",
-            bookingStatus: "APPROVED",
+            bookingStatus: "CONFIRMED",
             rentalStatus: "ACTIVE",
             agreementNo,
             approvedAt: now,
+            managerId: effectiveManagerId,
             ...reviewData,
+          },
+        });
+
+        // Ensure property status is updated to RENTED and assigned to manager
+        await tx.property.update({
+          where: { id: property.id },
+          data: {
+            status: "RENTED",
+            availabilityStatus: "RENTED",
+            managerId: effectiveManagerId,
           },
         });
 
@@ -472,7 +611,7 @@ export async function reviewRequest(
               txnNo: genNo("TXN"),
               type: "RENTAL",
               customerId: req.customerId,
-              managerId: property.managerId,
+              managerId: effectiveManagerId,
               propertyId: property.id,
               amount: req.totalAmount,
               currency: property.currency,
@@ -484,7 +623,7 @@ export async function reviewRequest(
         } else {
           txn = await tx.transaction.update({
             where: { id: txn.id },
-            data: { status: "ACTIVE", completedAt: now },
+            data: { status: "ACTIVE", completedAt: now, managerId: effectiveManagerId },
           });
         }
 
@@ -493,7 +632,7 @@ export async function reviewRequest(
         if (payment) {
           payment = await tx.payment.update({
             where: { id: payment.id },
-            data: { status: "PAID", paidAt: now },
+            data: { status: "PAID", paidAt: now, managerId: effectiveManagerId },
           });
         } else {
           payment = await tx.payment.create({
@@ -654,19 +793,14 @@ export async function payTransaction(transactionId: string, customerId: string, 
     if (alreadyPaid) throw new TxnError("This transaction has already been paid.", 409);
 
     const now = new Date();
-    let nextTxnStatus: "COMPLETED" | "ACTIVE";
+    let nextTxnStatus: "COMPLETED" | "ACTIVE" | "PAID";
 
     if (txn.type === "SALE") {
       const req = txn.purchaseRequest;
       if (!req || req.status !== "PAYMENT_PENDING") throw new TxnError("This purchase is no longer payable.", 409);
-      // Atomic guard: only flip to SOLD if the property is still reserved for this sale.
-      const flipped = await tx.property.updateMany({
-        where: { id: property.id, status: "PAYMENT_PENDING" },
-        data: { status: "SOLD", availabilityStatus: "SOLD", isActive: false },
-      });
-      if (flipped.count !== 1) throw new TxnError(NO_LONGER_AVAILABLE, 409);
-      await tx.purchaseRequest.update({ where: { id: req.id }, data: { status: "COMPLETED", completedAt: now } });
-      nextTxnStatus = "COMPLETED";
+      // Property remains reserved for this buyer; transaction moves to PAID.
+      // Admin will perform final approval after payment.
+      nextTxnStatus = "PAID";
     } else {
       const req = txn.rentalRequest;
       if (!req || req.status !== "PAYMENT_PENDING") throw new TxnError("This rental is no longer payable.", 409);
@@ -732,7 +866,7 @@ export async function payTransaction(transactionId: string, customerId: string, 
 
     await tx.transaction.update({
       where: { id: transactionId },
-      data: { status: nextTxnStatus, completedAt: txn.type === "SALE" ? now : null },
+      data: { status: nextTxnStatus, completedAt: null },
     });
 
     const verb = txn.type === "SALE" ? "purchase" : "rental";
@@ -783,7 +917,7 @@ export async function syncRentalLifecycle(force = false) {
         });
         await tx.transaction.updateMany({ where: { rentalRequestId: r.id }, data: { status: "EXPIRED" } });
         const stillActive = await tx.rentalRequest.count({
-          where: { propertyId: r.propertyId, status: "ACTIVE", startDate: { lte: now }, endDate: { gt: now } },
+          where: { propertyId: r.propertyId, status: "ACTIVE", bookingStatus: { in: ["APPROVED", "CONFIRMED"] }, startDate: { lte: now }, endDate: { gt: now } },
         });
         if (!stillActive) {
           await tx.property.updateMany({
@@ -791,17 +925,18 @@ export async function syncRentalLifecycle(force = false) {
             data: { status: "APPROVED", availabilityStatus: "AVAILABLE", isActive: true },
           });
         }
-        await notifyUser(tx, r.customerId, "Rental Expired", `Your rental ${r.requestNo} has ended.`, "/customer/transactions");
+        await notifyUser(tx, r.customerId, "Rental Expired", `Your rental ${r.requestNo} has ended.`, "/customer/requests");
       });
     }
     // 2. Activate paid rentals whose start date has arrived.
     const starting = await prisma.rentalRequest.findMany({
-      where: { status: "ACTIVE", startDate: { lte: now }, endDate: { gt: now } },
+      where: { status: "ACTIVE", bookingStatus: { in: ["APPROVED", "CONFIRMED"] }, startDate: { lte: now }, endDate: { gt: now } },
       select: { propertyId: true },
     });
-    for (const r of starting) {
+    if (starting.length > 0) {
+      const startingPropertyIds = Array.from(new Set(starting.map((r) => r.propertyId)));
       await prisma.property.updateMany({
-        where: { id: r.propertyId, status: { in: ["APPROVED", "PUBLISHED"] } },
+        where: { id: { in: startingPropertyIds }, status: { in: ["APPROVED", "PUBLISHED"] } },
         data: { status: "RENTED", availabilityStatus: "RENTED", isActive: false },
       });
     }

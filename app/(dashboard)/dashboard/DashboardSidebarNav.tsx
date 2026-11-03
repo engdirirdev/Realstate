@@ -1,15 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Building2,
-  ListFilter,
   PlusCircle,
   MessageSquare,
-  Calendar,
-  CalendarCheck,
   TrendingUp,
   Sparkles,
   BarChart3,
@@ -17,8 +14,7 @@ import {
   Bell,
   CreditCard,
   FileText,
-  History,
-  KeyRound,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -47,6 +43,7 @@ const managerNavGroups: NavGroup[] = [
   {
     title: "CLIENTS & LEADS",
     items: [
+      { href: "/dashboard/customers", label: "Customers", icon: Users },
       { href: "/dashboard/inquiries", label: "Inquiries & Leads", icon: MessageSquare },
       { href: "/dashboard/notifications", label: "Alerts & Notifications", icon: Bell },
     ],
@@ -54,9 +51,8 @@ const managerNavGroups: NavGroup[] = [
   {
     title: "TRANSACTIONS",
     items: [
-      { href: "/dashboard/bookings", label: "Rental Bookings", icon: FileText },
-      { href: "/dashboard/rentals", label: "Rentals", icon: KeyRound },
-      { href: "/dashboard/transactions", label: "Payments & Transactions", icon: CreditCard },
+      { href: "/dashboard/bookings", label: "Bookings & Rents", icon: FileText },
+      { href: "/dashboard/transactions", label: "Payments", icon: CreditCard },
     ],
   },
   {
@@ -77,7 +73,6 @@ const managerNavGroups: NavGroup[] = [
 
 export default function DashboardSidebarNav() {
   const pathname = usePathname();
-  const router = useRouter();
 
   return (
     <nav className="flex-1 px-3 py-2 space-y-4 overflow-y-auto scrollbar-hide">
@@ -92,17 +87,14 @@ export default function DashboardSidebarNav() {
             const isActive =
               pathname === href ||
               (label === "Dashboard" && pathname === "/dashboard") ||
-              (href === "/dashboard/bookings" && pathname === "/dashboard/bookings") ||
-              (href === "/dashboard/rentals" && pathname === "/dashboard/rentals") ||
+              (href === "/dashboard/customers" && pathname?.startsWith("/dashboard/customers")) ||
+              (href === "/dashboard/bookings" && (pathname === "/dashboard/bookings" || pathname === "/dashboard/rentals")) ||
               (href === "/dashboard/transactions" && (pathname === "/dashboard/transactions" || pathname === "/dashboard/payments"));
             return (
               <Link
                 key={label + href}
                 href={href}
-                prefetch={false}
-                onMouseEnter={() => router.prefetch(href)}
-                onPointerDown={() => router.prefetch(href)}
-                onFocus={() => router.prefetch(href)}
+                prefetch={true}
                 className={cn(
                   "group flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200",
                   isActive

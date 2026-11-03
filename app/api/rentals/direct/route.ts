@@ -1,19 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { requirePermission } from "@/lib/auth-guards";
+import { PERMISSIONS } from "@/lib/rbac";
 import { createDirectRental, TxnError } from "@/lib/transactions";
 
 // POST /api/rentals/direct - Manager creates rental agreement directly for a customer
 export async function POST(req: NextRequest) {
   try {
-    const session = await auth();
-    if (!session || !session.user?.id) {
-      return NextResponse.json({ success: false, error: "Unauthorized. Please sign in." }, { status: 401 });
+    const authResult = await requirePermission(PERMISSIONS.DIRECT_RENTAL_CREATE);
+    if (authResult.response) {
+      return authResult.response;
     }
-
-    const role = (session.user as any)?.role;
-    if (role !== "USER" && role !== "ADMIN") {
-      return NextResponse.json({ success: false, error: "Only managers and administrators can create direct rentals." }, { status: 403 });
-    }
+    const { user } = authResult;
 
     const body = await req.json();
     const { propertyId, customerId, startDate, endDate, rentAmount, securityDeposit, paymentStatus, notes } = body;
@@ -26,7 +23,7 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await createDirectRental(
-      { id: session.user.id, role, name: session.user.name },
+      { id: user.id, role: user.role, name: user.name },
       {
         propertyId,
         customerId,

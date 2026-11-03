@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   MapPin,
   Compass,
@@ -39,6 +39,73 @@ const CITY_COORDS: Record<string, { lat: number; lng: number }> = {
   abudwak: { lat: 6.2417, lng: 46.3986 },
 };
 
+// Authentic Somali neighborhood amenities with distance, walking and driving estimates (hoisted constant)
+const NEARBY_PLACES_DATA = [
+  {
+    name: "International & Primary School Academy",
+    category: "EDUCATION",
+    type: "School",
+    distance: "0.6 km",
+    walkTime: "7 min",
+    driveTime: "2 min",
+    icon: School,
+  },
+  {
+    name: "District General Hospital & 24/7 Clinic",
+    category: "HEALTH",
+    type: "Hospital",
+    distance: "1.2 km",
+    walkTime: "14 min",
+    driveTime: "3 min",
+    icon: Hospital,
+  },
+  {
+    name: "Central Juma Mosque & Islamic Center",
+    category: "WORSHIP",
+    type: "Mosque",
+    distance: "350 m",
+    walkTime: "4 min",
+    driveTime: "1 min",
+    icon: Compass,
+  },
+  {
+    name: "Supermarket, Bakery & Fresh Produce Bazaar",
+    category: "SHOPPING",
+    type: "Market",
+    distance: "550 m",
+    walkTime: "6 min",
+    driveTime: "2 min",
+    icon: ShoppingBag,
+  },
+  {
+    name: "Somali & International Cuisine Restaurant",
+    category: "DINING",
+    type: "Restaurant",
+    distance: "800 m",
+    walkTime: "10 min",
+    driveTime: "2 min",
+    icon: Utensils,
+  },
+  {
+    name: "Hass / Total Energy Fuel & Service Station",
+    category: "FUEL",
+    type: "Fuel Station",
+    distance: "1.1 km",
+    walkTime: "13 min",
+    driveTime: "3 min",
+    icon: Fuel,
+  },
+  {
+    name: "Dahabshiil & Salaam Somali Bank Branch",
+    category: "BANKING",
+    type: "Bank & ATM",
+    distance: "700 m",
+    walkTime: "8 min",
+    driveTime: "2 min",
+    icon: Landmark,
+  },
+];
+
 export default function PropertyMapSection({
   title,
   city,
@@ -62,77 +129,13 @@ export default function PropertyMapSection({
   const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
   const streetViewUrl = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}`;
 
-  // Authentic Somali neighborhood amenities with distance, walking and driving estimates
-  const nearbyPlaces = [
-    {
-      name: "International & Primary School Academy",
-      category: "EDUCATION",
-      type: "School",
-      distance: "0.6 km",
-      walkTime: "7 min",
-      driveTime: "2 min",
-      icon: School,
-    },
-    {
-      name: "District General Hospital & 24/7 Clinic",
-      category: "HEALTH",
-      type: "Hospital",
-      distance: "1.2 km",
-      walkTime: "14 min",
-      driveTime: "3 min",
-      icon: Hospital,
-    },
-    {
-      name: "Central Juma Mosque & Islamic Center",
-      category: "WORSHIP",
-      type: "Mosque",
-      distance: "350 m",
-      walkTime: "4 min",
-      driveTime: "1 min",
-      icon: Compass,
-    },
-    {
-      name: "Supermarket, Bakery & Fresh Produce Bazaar",
-      category: "SHOPPING",
-      type: "Market",
-      distance: "550 m",
-      walkTime: "6 min",
-      driveTime: "2 min",
-      icon: ShoppingBag,
-    },
-    {
-      name: "Somali & International Cuisine Restaurant",
-      category: "DINING",
-      type: "Restaurant",
-      distance: "800 m",
-      walkTime: "10 min",
-      driveTime: "2 min",
-      icon: Utensils,
-    },
-    {
-      name: "Hass / Total Energy Fuel & Service Station",
-      category: "FUEL",
-      type: "Fuel Station",
-      distance: "1.1 km",
-      walkTime: "13 min",
-      driveTime: "3 min",
-      icon: Fuel,
-    },
-    {
-      name: "Dahabshiil & Salaam Somali Bank Branch",
-      category: "BANKING",
-      type: "Bank & ATM",
-      distance: "700 m",
-      walkTime: "8 min",
-      driveTime: "2 min",
-      icon: Landmark,
-    },
-  ];
-
-  const filteredPlaces =
-    activeCategory === "ALL"
-      ? nearbyPlaces
-      : nearbyPlaces.filter((p) => p.category === activeCategory);
+  const filteredPlaces = useMemo(
+    () =>
+      activeCategory === "ALL"
+        ? NEARBY_PLACES_DATA
+        : NEARBY_PLACES_DATA.filter((p) => p.category === activeCategory),
+    [activeCategory]
+  );
 
   return (
     <div className="bg-[#FCFBF7] rounded-3xl border border-[#E8E1D4] p-6 sm:p-7 shadow-sm space-y-6">

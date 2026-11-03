@@ -285,18 +285,12 @@ export async function estimatePropertyPrice(
     artifact.schema.scaler.std
   );
 
-  // 2. Model Inference
   let estimatedPrice: number;
-  let uncertaintyStd = artifact.residualStdError;
-
   const pred = activePredictor!.predictOne(stdVector);
   if (typeof pred === "number") {
     estimatedPrice = Math.round(pred);
   } else {
     estimatedPrice = Math.round(pred.mean);
-    if (pred.std > 0) {
-      uncertaintyStd = Math.max(pred.std, artifact.residualStdError);
-    }
   }
 
   // Ensure positive valuation

@@ -74,7 +74,7 @@ export default function CustomerHeroSearch() {
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
           placeholder="Search properties, areas..."
-          className="w-full bg-transparent text-xs font-semibold text-[#07111F] placeholder:text-[#94A3B8] focus:outline-hidden"
+          className="w-full bg-transparent text-xs font-semibold text-[#07111F] placeholder:text-[#94A3B8] focus:outline-none"
         />
       </div>
 
@@ -86,7 +86,7 @@ export default function CustomerHeroSearch() {
         <select
           value={city}
           onChange={(e) => setCity(e.target.value)}
-          className="w-full bg-transparent text-xs font-semibold text-[#07111F] focus:outline-hidden cursor-pointer"
+          className="w-full bg-transparent text-xs font-semibold text-[#07111F] focus:outline-none cursor-pointer"
         >
           <option value="">All Cities</option>
           <option value="Mogadishu">Mogadishu</option>
@@ -105,7 +105,7 @@ export default function CustomerHeroSearch() {
         <select
           value={propertyType}
           onChange={(e) => setPropertyType(e.target.value)}
-          className="w-full bg-transparent text-xs font-semibold text-[#07111F] focus:outline-hidden cursor-pointer"
+          className="w-full bg-transparent text-xs font-semibold text-[#07111F] focus:outline-none cursor-pointer"
         >
           <option value="">All Types</option>
           <option value="VILLA">Villa</option>
@@ -124,7 +124,7 @@ export default function CustomerHeroSearch() {
         <select
           value={priceRange}
           onChange={(e) => setPriceRange(e.target.value)}
-          className="w-full bg-transparent text-xs font-semibold text-[#07111F] focus:outline-hidden cursor-pointer"
+          className="w-full bg-transparent text-xs font-semibold text-[#07111F] focus:outline-none cursor-pointer"
         >
           <option value="">Any Price</option>
           {dealType === "RENT" ? (

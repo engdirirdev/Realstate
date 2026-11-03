@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Building2,
@@ -16,6 +16,7 @@ import {
   Bell,
   User,
   Settings,
+  Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -45,6 +46,7 @@ const customerNavGroups: NavGroup[] = [
   {
     title: "TRANSACTIONS",
     items: [
+      { href: "/customer/bookings", label: "My Bookings", icon: Calendar },
       { href: "/customer/requests", label: "My Requests", icon: FileText },
       { href: "/customer/rentals", label: "My Rentals", icon: Key },
       { href: "/customer/purchases", label: "My Purchases", icon: ShoppingBag },
@@ -81,7 +83,6 @@ const customerNavGroups: NavGroup[] = [
 
 export default function CustomerSidebarNav() {
   const pathname = usePathname();
-  const router = useRouter();
 
   return (
     <nav className="flex-1 px-3 py-2 space-y-4 overflow-y-auto scrollbar-hide">
@@ -106,10 +107,7 @@ export default function CustomerSidebarNav() {
               <Link
                 key={label + href}
                 href={href}
-                prefetch={false}
-                onMouseEnter={() => router.prefetch(href)}
-                onPointerDown={() => router.prefetch(href)}
-                onFocus={() => router.prefetch(href)}
+                prefetch={true}
                 className={cn(
                   "group flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200",
                   isActive

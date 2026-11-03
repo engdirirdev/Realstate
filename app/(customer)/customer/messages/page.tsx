@@ -16,9 +16,6 @@ import {
   Clock,
   CheckCircle2,
   Sparkles,
-  User,
-  ArrowRight,
-  ShieldCheck,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import type { Metadata } from "next";

@@ -380,7 +380,6 @@ export default function CentralTransactionsView({
                                   <Link
                                     href={`/properties/${p.property.id}`}
                                     className="font-bold text-xs text-[#07111F] hover:text-[#C89B3C] transition-colors truncate block"
-                                    target="_blank"
                                     title={p.property.title}
                                   >
                                     {p.property.title}
@@ -467,7 +466,7 @@ export default function CentralTransactionsView({
                                     variant="outline"
                                     className="h-7 text-xs rounded-lg border-[#E8E1D4] hover:border-[#C89B3C] text-[#07111F] bg-[#FCFBF7] gap-1 cursor-pointer font-medium"
                                   >
-                                    <Link href={`/receipt/${p.receipt.id}`} target="_blank">
+                                    <Link href={`/receipt/${p.receipt.id}`}>
                                       <Receipt className="h-3 w-3 text-[#C89B3C]" /> Receipt
                                     </Link>
                                   </Button>
@@ -533,9 +532,8 @@ export default function CentralTransactionsView({
                         <div className="min-w-0 flex-1 space-y-0.5">
                           {p.property ? (
                             <Link
-                              href={`/properties/${p.property.id}`}
-                              className="font-bold text-xs text-[#07111F] hover:text-[#C89B3C] transition-colors truncate block"
-                              target="_blank"
+                                    href={`/properties/${p.property.id}`}
+                                    className="font-bold text-xs text-[#07111F] hover:text-[#C89B3C] transition-colors truncate block"
                             >
                               {p.property.title}
                             </Link>
@@ -595,7 +593,7 @@ export default function CentralTransactionsView({
                             variant="outline"
                             className="h-8 text-xs rounded-lg border-[#E8E1D4] hover:border-[#C89B3C] text-[#07111F] bg-[#FCFBF7] gap-1 cursor-pointer font-medium"
                           >
-                            <Link href={`/receipt/${p.receipt.id}`} target="_blank">
+                            <Link href={`/receipt/${p.receipt.id}`}>
                               <Receipt className="h-3.5 w-3.5 text-[#C89B3C]" /> Receipt
                             </Link>
                           </Button>
@@ -780,7 +778,6 @@ export default function CentralTransactionsView({
                                   <Link
                                     href={`/properties/${t.property?.id}`}
                                     className="font-bold text-xs text-[#07111F] hover:text-[#C89B3C] transition-colors truncate block"
-                                    target="_blank"
                                     title={t.property?.title}
                                   >
                                     {t.property?.title}
@@ -878,7 +875,7 @@ export default function CentralTransactionsView({
                                     variant="outline"
                                     className="h-7 text-xs rounded-lg border-[#E8E1D4] hover:border-[#C89B3C] text-[#07111F] bg-[#FCFBF7] gap-1 cursor-pointer font-medium"
                                   >
-                                    <Link href={`/receipt/${t.receipt.id}`} target="_blank">
+                                    <Link href={`/receipt/${t.receipt.id}`}>
                                       <Receipt className="h-3 w-3 text-[#C89B3C]" /> Receipt
                                     </Link>
                                   </Button>
@@ -943,9 +940,8 @@ export default function CentralTransactionsView({
                           </div>
                           <div className="min-w-0 flex-1 space-y-0.5">
                             <Link
-                              href={`/properties/${t.property?.id}`}
-                              className="font-bold text-xs text-[#07111F] hover:text-[#C89B3C] transition-colors truncate block"
-                              target="_blank"
+                                    href={`/properties/${t.property?.id}`}
+                                    className="font-bold text-xs text-[#07111F] hover:text-[#C89B3C] transition-colors truncate block"
                             >
                               {t.property?.title}
                             </Link>
@@ -1006,7 +1002,7 @@ export default function CentralTransactionsView({
                               variant="outline"
                               className="h-8 text-xs rounded-lg border-[#E8E1D4] hover:border-[#C89B3C] text-[#07111F] bg-[#FCFBF7] gap-1 cursor-pointer font-medium"
                             >
-                              <Link href={`/receipt/${t.receipt.id}`} target="_blank">
+                              <Link href={`/receipt/${t.receipt.id}`}>
                                 <Receipt className="h-3.5 w-3.5 text-[#C89B3C]" /> Receipt
                               </Link>
                             </Button>
@@ -1158,7 +1154,7 @@ export default function CentralTransactionsView({
                     size="sm"
                     className="bg-[#07111F] hover:bg-[#07111F]/90 text-[#D9B45B] text-xs rounded-xl gap-1.5 cursor-pointer"
                   >
-                    <Link href={`/receipt/${selectedPayment.receipt.id}`} target="_blank">
+                    <Link href={`/receipt/${selectedPayment.receipt.id}`}>
                       <Receipt className="h-3.5 w-3.5 text-[#C89B3C]" /> View Official Receipt
                     </Link>
                   </Button>
@@ -1170,7 +1166,7 @@ export default function CentralTransactionsView({
                     variant="outline"
                     className="border-[#E8E1D4] text-xs rounded-xl gap-1 cursor-pointer"
                   >
-                    <Link href={`/properties/${selectedPayment.property.id}`} target="_blank">
+                    <Link href={`/properties/${selectedPayment.property.id}`}>
                       <ExternalLink className="h-3 w-3" /> View Listing
                     </Link>
                   </Button>

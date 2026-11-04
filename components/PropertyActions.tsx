@@ -87,10 +87,22 @@ export default function PropertyActions({
   const [buyOpen, setBuyOpen] = useState(false);
   const [useBroker, setUseBroker] = useState(false);
 
-  const resolvedCompanyFee = typeof companyServiceFee === "number" && companyServiceFee >= 0 ? companyServiceFee : 300;
-  const resolvedLegalFee = typeof legalTransferFee === "number" && legalTransferFee >= 0 ? legalTransferFee : 200;
-  const resolvedBrokerFee = typeof brokerCommission === "number" && brokerCommission >= 0 ? brokerCommission : 500;
-  const resolvedBasePrice = typeof basePrice === "number" && basePrice > 0 ? basePrice : Math.max(500, propertyPrice - resolvedCompanyFee - resolvedLegalFee);
+  const resolvedCompanyFee =
+    typeof companyServiceFee === "number" && companyServiceFee >= 0
+      ? companyServiceFee
+      : (isRent ? 0 : 300);
+  const resolvedLegalFee =
+    typeof legalTransferFee === "number" && legalTransferFee >= 0
+      ? legalTransferFee
+      : (isRent ? 0 : 200);
+  const resolvedBrokerFee =
+    typeof brokerCommission === "number" && brokerCommission >= 0
+      ? brokerCommission
+      : (isRent ? 0 : 500);
+  const resolvedBasePrice =
+    typeof basePrice === "number" && basePrice > 0
+      ? basePrice
+      : Math.max(0, propertyPrice - resolvedCompanyFee - resolvedLegalFee);
   const totalPurchasePrice = resolvedBasePrice + resolvedCompanyFee + resolvedLegalFee;
   const finalPurchasePrice = totalPurchasePrice + (useBroker ? resolvedBrokerFee : 0);
   const [rentOpen, setRentOpen] = useState(false);
@@ -135,8 +147,12 @@ export default function PropertyActions({
     const s = new Date(startDate);
     const e = new Date(endDate);
     if (isNaN(s.getTime()) || isNaN(e.getTime()) || e <= s) return null;
-    return computeRental(propertyPrice, rentPeriod, securityDeposit, s, e);
-  }, [startDate, endDate, propertyPrice, rentPeriod, securityDeposit]);
+    return computeRental(resolvedBasePrice, rentPeriod, securityDeposit, s, e, {
+      companyServiceFee: resolvedCompanyFee,
+      legalTransferFee: resolvedLegalFee,
+      brokerFee: useBroker ? resolvedBrokerFee : 0,
+    });
+  }, [startDate, endDate, resolvedBasePrice, rentPeriod, securityDeposit, resolvedCompanyFee, resolvedLegalFee, useBroker, resolvedBrokerFee]);
 
   const selectedPaymentMethod = useMemo(() => {
     return paymentMethods.find((m) => m.id === selectedMethodId) || paymentMethods[0];
@@ -530,7 +546,7 @@ export default function PropertyActions({
                 Step {rentalStep} of 2: {rentalStep === 1 ? "Booking Details" : "Manual Payment"}
               </span>
               <span className="text-xs font-semibold text-[#C89B3C]">
-                {formatPrice(propertyPrice)} / {period.per}
+                {formatPrice(resolvedBasePrice)} / {period.per}
               </span>
             </div>
             <DialogTitle className="text-xl font-bold font-serif text-[#07111F] flex items-center gap-2 mt-1">
@@ -583,32 +599,54 @@ export default function PropertyActions({
 
                 {rentalPreview ? (
                   <>
-                    <div className="flex justify-between">
+                    <div className="flex justify-between pb-1 border-b border-[#E8E1D4]/60">
                       <span className="text-[#6B7280]">
-                        Rental Period:
+                        Duration Booked:
                       </span>
                       <span className="font-semibold text-[#07111F]">
                         {rentalPreview.periods} {rentalPreview.periods === 1 ? period.unit : period.plural}
                       </span>
                     </div>
+
                     <div className="flex justify-between">
-                      <span className="text-[#6B7280]">Rent Amount</span>
+                      <span className="text-[#6B7280]">
+                        Base Rent ({formatPrice(rentalPreview.unitPrice)} × {rentalPreview.periods} {rentalPreview.periods === 1 ? period.unit : period.plural})
+                      </span>
                       <span className="font-semibold text-[#07111F]">{formatPrice(rentalPreview.rentAmount)}</span>
                     </div>
+
+                    {rentalPreview.companyServiceFee > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-[#6B7280]">Company Service Fee</span>
+                        <span className="font-semibold text-[#07111F]">{formatPrice(rentalPreview.companyServiceFee)}</span>
+                      </div>
+                    )}
+
+                    {rentalPreview.legalTransferFee > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-[#6B7280]">Legal / Lease Agreement Fee</span>
+                        <span className="font-semibold text-[#07111F]">{formatPrice(rentalPreview.legalTransferFee)}</span>
+                      </div>
+                    )}
+
                     {rentalPreview.securityDeposit > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-[#6B7280]">Security Deposit</span>
+                        <span className="text-[#6B7280]">Security Deposit (Refundable)</span>
                         <span className="font-semibold text-[#07111F]">{formatPrice(rentalPreview.securityDeposit)}</span>
                       </div>
                     )}
+
                     <div className="flex justify-between border-t border-[#E8E1D4] pt-2">
-                      <span className="font-bold text-[#07111F] text-sm">Total Amount Due</span>
+                      <div>
+                        <span className="font-bold text-[#07111F] text-sm block">Total Amount Due</span>
+                        <span className="text-[10px] text-[#6B7280]">Base rent + other charges</span>
+                      </div>
                       <span className="font-bold text-[#C89B3C] text-base font-serif">{formatPrice(rentalPreview.totalAmount)}</span>
                     </div>
                   </>
                 ) : (
                   <p className="text-[#6B7280] italic py-1">
-                    Select valid check-in and check-out dates to calculate total rent and security deposit.
+                    Select valid check-in and check-out dates to calculate total rent and charges.
                   </p>
                 )}
               </div>
@@ -679,10 +717,21 @@ export default function PropertyActions({
 
                 <div className="border-t border-white/10 pt-2 flex items-center justify-between text-xs">
                   <div className="space-y-0.5">
-                    <span className="text-[#94A3B8] block">
-                      Rent: {formatPrice(rentalPreview.rentAmount)}
-                      {rentalPreview.securityDeposit > 0 && ` + Deposit: ${formatPrice(rentalPreview.securityDeposit)}`}
+                    <span className="text-white block font-medium">
+                      Base Rent: {formatPrice(rentalPreview.rentAmount)} ({formatPrice(rentalPreview.unitPrice)} × {rentalPreview.periods} {rentalPreview.periods === 1 ? period.unit : period.plural})
                     </span>
+                    {rentalPreview.otherCharges > 0 && (
+                      <span className="text-[#94A3B8] text-[11px] block">
+                        + Other Charges: {formatPrice(rentalPreview.otherCharges)}
+                        {rentalPreview.companyServiceFee > 0 && ` (Service: ${formatPrice(rentalPreview.companyServiceFee)})`}
+                        {rentalPreview.legalTransferFee > 0 && ` (Legal: ${formatPrice(rentalPreview.legalTransferFee)})`}
+                      </span>
+                    )}
+                    {rentalPreview.securityDeposit > 0 && (
+                      <span className="text-[#94A3B8] text-[11px] block">
+                        + Security Deposit: {formatPrice(rentalPreview.securityDeposit)}
+                      </span>
+                    )}
                   </div>
                   <div className="text-right">
                     <span className="text-[10px] text-[#D9B45B] block font-bold uppercase">Total Amount</span>

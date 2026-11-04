@@ -1197,11 +1197,15 @@ export default function DynamicPropertyForm({
                     <Receipt className="h-4 w-4 text-[#C89B3C]" /> Property Cost Settings
                   </h3>
                   <p className="text-[11px] text-[#6B7280]">
-                    Configure base selling price, company service fee, legal transfer fee, and optional broker commission.
+                    {listingType === "FOR_RENT"
+                      ? "Configure base rent per period, company service fee, and legal transfer fee. (Only Base Rent multiplies by duration booked)."
+                      : "Configure base selling price, company service fee, legal transfer fee, and optional broker commission."}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 text-xs font-bold text-[#07111F]">
-                  <span className="text-[#6B7280]">Total Purchase Price:</span>
+                  <span className="text-[#6B7280]">
+                    {listingType === "FOR_RENT" ? "Base Rent + Fees (1st Period):" : "Total Purchase Price:"}
+                  </span>
                   <span className="text-base font-extrabold text-[#C89B3C] font-serif">
                     ${(
                       Number(common.basePrice || 0) +
@@ -1217,7 +1221,7 @@ export default function DynamicPropertyForm({
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <Label className="text-xs font-bold text-[#07111F]">
-                      Property Base Price *
+                      {listingType === "FOR_RENT" ? "Property Base Rent (per period) *" : "Property Base Price *"}
                     </Label>
                     {validationErrors.basePrice && (
                       <span className="text-[10px] text-red-600 font-semibold">{validationErrors.basePrice}</span>
@@ -1245,7 +1249,9 @@ export default function DynamicPropertyForm({
                       required
                     />
                   </div>
-                  <p className="text-[10px] text-[#6B7280]">Original selling price of the property.</p>
+                  <p className="text-[10px] text-[#6B7280]">
+                    {listingType === "FOR_RENT" ? "Multiplies by duration (days/months) booked." : "Original selling price of the property."}
+                  </p>
                 </div>
 
                 {/* 2. Company Service Fee * */}
@@ -1346,7 +1352,9 @@ export default function DynamicPropertyForm({
               <div className="p-3 bg-[#FCFBF7] border border-[#E8E1D4] rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
                 <div className="flex items-center gap-4">
                   <div>
-                    <span className="text-[#6B7280]">Total Purchase Price (Never includes broker): </span>
+                    <span className="text-[#6B7280]">
+                      {listingType === "FOR_RENT" ? "1st Period + Fees (Excludes broker): " : "Total Purchase Price (Never includes broker): "}
+                    </span>
                     <strong className="text-[#07111F] font-serif text-sm">
                       ${(
                         Number(common.basePrice || 0) +
@@ -1357,7 +1365,9 @@ export default function DynamicPropertyForm({
                   </div>
                   <div className="hidden sm:block text-[#E8E1D4]">|</div>
                   <div>
-                    <span className="text-[#6B7280]">Final Purchase Price (with Broker): </span>
+                    <span className="text-[#6B7280]">
+                      {listingType === "FOR_RENT" ? "Initial Cost (with Broker): " : "Final Purchase Price (with Broker): "}
+                    </span>
                     <strong className="text-[#C89B3C] font-serif text-sm">
                       ${(
                         Number(common.basePrice || 0) +
@@ -2951,7 +2961,9 @@ export default function DynamicPropertyForm({
               </div>
 
               <div className="text-left sm:text-right">
-                <span className="text-xs text-[#6B7280]">Total Purchase Price</span>
+                <span className="text-xs text-[#6B7280]">
+                  {listingType === "FOR_RENT" ? "Base Rent + Initial Fees" : "Total Purchase Price"}
+                </span>
                 <p className="text-2xl font-black text-[#07111F]">
                   <span className="text-[#C89B3C]">$</span>
                   {Number(common.price || 0).toLocaleString()}

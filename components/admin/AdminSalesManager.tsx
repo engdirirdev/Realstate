@@ -386,7 +386,6 @@ export default function AdminSalesManager({
                           <td className="p-3.5 max-w-[200px]">
                             <Link
                               href={`/properties/${r.property?.id}`}
-                              target="_blank"
                               className="font-semibold text-[#07111F] hover:text-[#C89B3C] block truncate"
                             >
                               {r.property?.title}
@@ -450,7 +449,6 @@ export default function AdminSalesManager({
                               {r.transaction?.receipt && (
                                 <Link
                                   href={`/receipt/${r.transaction.receipt.id}`}
-                                  target="_blank"
                                 >
                                   <Button
                                     size="sm"
@@ -584,7 +582,6 @@ export default function AdminSalesManager({
                         <td className="p-3.5">
                           <Link
                             href={`/properties/${p.id}`}
-                            target="_blank"
                             className="font-bold text-[#07111F] hover:text-[#C89B3C] block truncate max-w-[220px]"
                           >
                             {p.title}
@@ -642,7 +639,8 @@ export default function AdminSalesManager({
                               variant="outline"
                               className="h-7 px-2.5 text-[11px] border-[#E8E1D4] text-[#07111F] hover:bg-white gap-1"
                             >
-                              <Link href={`/properties/${p.id}`} target="_blank">
+                              <Link
+                            href={`/properties/${p.id}`}>
                                 <ExternalLink className="w-3 h-3" /> View Listing
                               </Link>
                             </Button>
@@ -715,7 +713,6 @@ export default function AdminSalesManager({
                 <div className="pt-2 flex gap-2 border-t border-slate-100">
                   <Link
                     href={`/properties/${selectedRequest.property?.id}`}
-                    target="_blank"
                     className="text-[11px] font-semibold text-[#C89B3C] hover:underline flex items-center gap-1"
                   >
                     Open Public Listing <ExternalLink className="w-3 h-3" />
@@ -794,7 +791,6 @@ export default function AdminSalesManager({
                     {selectedRequest.transaction.receipt && (
                       <Link
                         href={`/receipt/${selectedRequest.transaction.receipt.id}`}
-                        target="_blank"
                       >
                         <Button
                           size="sm"

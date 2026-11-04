@@ -160,7 +160,7 @@ export default function MyTransactions() {
                             )}
                             {t.receipt && (
                               <Button asChild size="sm" variant="outline" className="h-8 rounded-lg text-[11px] border-[#E8E1D4] gap-1">
-                                <Link href={`/receipt/${t.receipt.id}`} target="_blank">
+                                <Link href={`/receipt/${t.receipt.id}`}>
                                   <Receipt className="h-3 w-3" /> Receipt
                                 </Link>
                               </Button>
@@ -206,7 +206,7 @@ export default function MyTransactions() {
                               )}
                               {r.transaction?.receipt && (
                                 <Button asChild size="sm" variant="outline" className="h-8 rounded-lg text-[11px] border-[#E8E1D4] gap-1">
-                                  <Link href={`/receipt/${r.transaction.receipt.id}`} target="_blank">
+                                  <Link href={`/receipt/${r.transaction.receipt.id}`}>
                                     <Receipt className="h-3 w-3" /> Receipt
                                   </Link>
                                 </Button>

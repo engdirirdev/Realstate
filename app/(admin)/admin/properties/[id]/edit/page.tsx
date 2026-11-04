@@ -10,7 +10,7 @@
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Sparkles, Loader2, AlertCircle, ExternalLink } from "lucide-react";
+import { ArrowLeft, Sparkles, Loader2, AlertCircle, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DynamicPropertyForm from "@/components/property/DynamicPropertyForm";
 
@@ -100,10 +100,9 @@ export default function AdminEditPropertyPage({ params }: EditPropertyPageProps)
         <div className="flex items-center gap-2">
           <Link
             href={`/properties/${property.id}`}
-            target="_blank"
             className="inline-flex items-center gap-1.5 text-xs font-bold text-[#07111F] hover:text-[#C89B3C] transition-colors bg-[#FCFBF7] border border-[#E8E1D4] px-3.5 py-2 rounded-xl shadow-2xs"
           >
-            <ExternalLink className="h-3.5 w-3.5 text-[#C89B3C]" /> View Public Listing
+            <Eye className="h-3.5 w-3.5 text-[#C89B3C]" /> View Public Listing
           </Link>
         </div>
       </div>

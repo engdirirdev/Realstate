@@ -357,10 +357,20 @@ export default async function PropertyDetailPage({ params }: Props) {
               <div className="text-left sm:text-right shrink-0">
                 <div className="text-3xl font-black text-[#07111F]">
                   <span className="text-[#C89B3C]">$</span>
-                  {property.price?.toLocaleString()}
+                  {(property.listingType === "FOR_RENT" && typeof property.basePrice === "number" && property.basePrice > 0
+                    ? property.basePrice
+                    : property.price
+                  )?.toLocaleString()}
+                  {property.listingType === "FOR_RENT" && (
+                    <span className="text-sm font-normal text-[#6B7280]">
+                      {" "}/ {property.rentPeriod?.toLowerCase().replace("ly", "").replace("dai", "day") || "month"}
+                    </span>
+                  )}
                 </div>
                 <span className="text-xs text-[#6B7280]">
-                  Est. {formatPrice(areaInsights.avgPricePerM2)}/m² in {property.city}
+                  {property.listingType === "FOR_RENT"
+                    ? "Base rent + service & transfer fees"
+                    : `Est. ${formatPrice(areaInsights.avgPricePerM2)}/m² in ${property.city}`}
                 </span>
               </div>
             </div>
@@ -505,6 +515,8 @@ export default async function PropertyDetailPage({ params }: Props) {
             brokerCommission={property.brokerCommission}
             propertyType={property.type}
             city={property.city}
+            listingType={property.listingType}
+            rentPeriod={property.rentPeriod}
           />
 
           {/* Requirement 5: Professional Share Property Section */}

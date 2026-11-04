@@ -205,7 +205,6 @@ export default async function ManagerPropertiesPage({
                           <div>
                             <Link
                               href={`/properties/${p.id}`}
-                              target="_blank"
                               className="font-semibold text-[#07111F] text-xs hover:text-[#C89B3C] max-w-[170px] truncate block"
                               title={p.title}
                             >
@@ -319,7 +318,6 @@ export default async function ManagerPropertiesPage({
                         <div className="flex items-center justify-end gap-1">
                           <Link
                             href={`/properties/${p.id}`}
-                            target="_blank"
                             className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-xs font-semibold text-[#6B7280] hover:text-[#07111F] bg-[#FCFBF7] border border-[#E8E1D4] hover:bg-[#F7F3EA]"
                             title="View Public Listing"
                           >
@@ -418,7 +416,6 @@ export default async function ManagerPropertiesPage({
                     <div className="min-w-0 flex-1">
                       <Link
                         href={`/properties/${p.id}`}
-                        target="_blank"
                         className="font-bold text-sm text-[#07111F] hover:text-[#C89B3C] truncate block"
                       >
                         {p.title}
@@ -460,7 +457,6 @@ export default async function ManagerPropertiesPage({
                     <div className="flex items-center gap-1.5">
                       <Link
                         href={`/properties/${p.id}`}
-                        target="_blank"
                         className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-[#6B7280] hover:text-[#07111F] bg-[#FCFBF7] border border-[#E8E1D4]"
                       >
                         <Eye className="h-3.5 w-3.5" />

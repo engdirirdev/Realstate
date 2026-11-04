@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, forbiddenResponse } from "@/lib/auth-guards";
 import { canAccessBooking } from "@/lib/rbac";
+import { computeRental } from "@/lib/rental-pricing";
 
 // GET: Fetch bookings for Customer, Manager, or Admin
 export async function GET(request: NextRequest) {
@@ -80,6 +81,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    let calculatedTotalPrice = property.price;
+    if (startDate && endDate) {
+      const s = new Date(startDate);
+      const e = new Date(endDate);
+      if (!isNaN(s.getTime()) && !isNaN(e.getTime()) && e > s) {
+        const numBase =
+          typeof property.basePrice === "number" && property.basePrice > 0
+            ? property.basePrice
+            : Math.max(0, property.price - (property.companyServiceFee || 0) - (property.legalTransferFee || 0));
+        const calc = computeRental(
+          numBase,
+          property.rentPeriod,
+          property.securityDeposit,
+          s,
+          e,
+          {
+            companyServiceFee: property.companyServiceFee,
+            legalTransferFee: property.legalTransferFee,
+          }
+        );
+        calculatedTotalPrice = calc.totalAmount;
+      }
+    }
+
     const booking = await prisma.booking.create({
       data: {
         propertyId,
@@ -87,7 +112,7 @@ export async function POST(request: NextRequest) {
         managerId: property.managerId,
         startDate: startDate ? new Date(startDate) : null,
         endDate: endDate ? new Date(endDate) : null,
-        totalPrice: property.price,
+        totalPrice: calculatedTotalPrice,
         status: "PENDING",
         notes: notes || null,
       },

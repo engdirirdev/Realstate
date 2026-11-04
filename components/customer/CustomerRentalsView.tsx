@@ -322,7 +322,6 @@ export default function CustomerRentalsView() {
                     >
                       <Link
                         href={`/receipt/${rental.transaction.receipt.id}`}
-                        target="_blank"
                       >
                         <Receipt className="h-3.5 w-3.5 text-[#C89B3C]" /> View Receipt
                       </Link>

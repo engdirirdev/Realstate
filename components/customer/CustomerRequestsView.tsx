@@ -496,7 +496,7 @@ export default function CustomerRequestsView() {
                       variant="outline"
                       className="rounded-xl text-xs border-[#E8E1D4] gap-1 cursor-pointer font-medium"
                     >
-                      <Link href={`/receipt/${item.transaction.receipt.id}`} target="_blank">
+                      <Link href={`/receipt/${item.transaction.receipt.id}`}>
                         <Receipt className="h-3 w-3 text-[#C89B3C]" /> Receipt
                       </Link>
                     </Button>

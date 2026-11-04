@@ -115,7 +115,6 @@ export default async function CustomerPaymentsPage() {
                         {p.receipt ? (
                           <Link
                             href={`/receipt/${p.receipt.id}`}
-                            target="_blank"
                             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-[#C89B3C]/50 text-[#A97918] hover:bg-[#F7F3EA] text-xs font-bold transition-all shadow-2xs"
                           >
                             <FileText className="h-3.5 w-3.5 text-[#C89B3C]" />

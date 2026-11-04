@@ -168,7 +168,6 @@ export default function PropertyReviewPage({ params }: ReviewPageProps) {
           </Link>
           <Link
             href={`/properties/${property.id}`}
-            target="_blank"
             className="inline-flex items-center gap-1.5 text-xs font-bold text-[#07111F] hover:text-[#C89B3C] transition-colors bg-[#FCFBF7] border border-[#E8E1D4] px-3 py-1.5 rounded-xl shadow-2xs"
           >
             <ExternalLink className="h-3.5 w-3.5 text-[#C89B3C]" /> View Public Page

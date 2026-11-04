@@ -249,7 +249,22 @@ export async function createRentalRequest(
     });
     if (open) throw new TxnError("You already have a pending rental request for these dates.", 409);
 
-    const calc = computeRental(property.price, property.rentPeriod, property.securityDeposit, start, end);
+    const numBase =
+      typeof property.basePrice === "number" && property.basePrice > 0
+        ? property.basePrice
+        : Math.max(0, property.price - (property.companyServiceFee || 0) - (property.legalTransferFee || 0));
+
+    const calc = computeRental(
+      numBase,
+      property.rentPeriod,
+      property.securityDeposit,
+      start,
+      end,
+      {
+        companyServiceFee: property.companyServiceFee,
+        legalTransferFee: property.legalTransferFee,
+      }
+    );
 
     let assignedManagerId = property.managerId;
     if (!assignedManagerId) {
@@ -1020,12 +1035,21 @@ export async function createDirectRental(
       throw new TxnError(PERIOD_UNAVAILABLE, 409);
     }
 
+    const numBase =
+      typeof property.basePrice === "number" && property.basePrice > 0
+        ? property.basePrice
+        : Math.max(0, property.price - (property.companyServiceFee || 0) - (property.legalTransferFee || 0));
+
     const calc = computeRental(
-      property.price,
+      numBase,
       property.rentPeriod,
       property.securityDeposit,
       start,
-      end
+      end,
+      {
+        companyServiceFee: property.companyServiceFee,
+        legalTransferFee: property.legalTransferFee,
+      }
     );
 
     const rentAmount = Number(params.rentAmount) > 0 ? Number(params.rentAmount) : calc.rentAmount;
@@ -1033,7 +1057,7 @@ export async function createDirectRental(
       params.securityDeposit !== undefined && params.securityDeposit !== null && Number(params.securityDeposit) >= 0
         ? Number(params.securityDeposit)
         : calc.securityDeposit;
-    const totalAmount = rentAmount * calc.periods + securityDeposit;
+    const totalAmount = rentAmount + calc.otherCharges + securityDeposit;
 
     const agreementNo = genNo("AGR");
     const request = await tx.rentalRequest.create({

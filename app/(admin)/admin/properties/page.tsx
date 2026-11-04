@@ -179,7 +179,7 @@ export default async function AdminPropertiesPage({
                             )}
                           </div>
                           <div className="min-w-0">
-                            <Link href={`/properties/${p.id}`} target="_blank" className="font-semibold text-[#07111F] text-xs hover:text-[#C89B3C] max-w-[170px] truncate block" title={p.title}>
+                            <Link href={`/properties/${p.id}`} className="font-semibold text-[#07111F] text-xs hover:text-[#C89B3C] max-w-[170px] truncate block" title={p.title}>
                               {p.title}
                             </Link>
                             <p className="text-[11px] text-[#6B7280] truncate max-w-[170px]">
@@ -237,7 +237,6 @@ export default async function AdminPropertiesPage({
                         <div className="flex items-center justify-end gap-1">
                           <Link
                             href={`/properties/${p.id}`}
-                            target="_blank"
                             className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-xs font-semibold text-[#6B7280] hover:text-[#07111F] bg-[#FCFBF7] border border-[#E8E1D4] hover:bg-[#F7F3EA]"
                             title="View Public Listing"
                           >

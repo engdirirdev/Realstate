@@ -56,10 +56,15 @@ function PropertyCard({
   const [savingFav, setSavingFav] = useState(false);
 
   const isRent = property.listingType ? property.listingType === "FOR_RENT" : property.price < 5000;
+  const baseRentalRate =
+    typeof property.basePrice === "number" && property.basePrice > 0
+      ? property.basePrice
+      : property.price;
   const totalPurchasePrice =
     typeof property.basePrice === "number" && property.basePrice > 0
       ? property.basePrice + (property.companyServiceFee || 0) + (property.legalTransferFee || 0)
       : property.price;
+  const displayPrice = isRent ? baseRentalRate : totalPurchasePrice;
   const isAvailable = !property.status || property.status === "APPROVED" || property.status === "PUBLISHED";
   const isLand = String(property.type).toUpperCase() === "LAND";
   const rentUnit = property.rentPeriod?.toLowerCase().replace("ly", "").replace("dai", "day") || "month";
@@ -196,7 +201,7 @@ function PropertyCard({
           <div className="flex items-baseline justify-between mb-3">
             <div>
               <div className="text-lg font-extrabold text-[#07111F]">
-                <span className="text-[#C89B3C]">$</span>{totalPurchasePrice?.toLocaleString()}
+                <span className="text-[#C89B3C]">$</span>{displayPrice?.toLocaleString()}
                 {isRent && <span className="text-xs font-normal text-[#6B7280]"> /{rentUnit}</span>}
               </div>
               <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider block mt-0.5">

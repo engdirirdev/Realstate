@@ -85,7 +85,7 @@ export default function AdminHeader({
           <Link
             href="/"
             prefetch={true}
-            target="_blank"
+            
             className="hidden md:inline-flex items-center gap-1.5 text-xs font-semibold text-[#07111F] hover:text-[#C89B3C] bg-white hover:bg-[#F7F3EA] border border-[#E8E1D4] px-3.5 py-2 rounded-xl transition-all shadow-xs group"
           >
             <ExternalLink className="h-3.5 w-3.5 text-[#C89B3C] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
@@ -197,7 +197,7 @@ export default function AdminHeader({
                 <Link
                   href="/"
                   prefetch={true}
-                  target="_blank"
+                  
                   className="flex items-center gap-2.5 text-xs font-semibold text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl px-2.5 py-2 cursor-pointer transition-colors"
                 >
                   <ExternalLink className="h-4 w-4 text-[#6B7280]" />

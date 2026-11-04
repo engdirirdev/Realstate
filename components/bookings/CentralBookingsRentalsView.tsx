@@ -1234,7 +1234,7 @@ export default function CentralBookingsRentalsView({
                                       variant="outline"
                                       className="h-7 px-2 text-xs border-[#D4A72C]/40 text-[#071426] hover:bg-[#F8FAFC] rounded-md gap-1 font-medium cursor-pointer"
                                     >
-                                      <Link href={`/receipt/${r.transaction.receipt.id}`} target="_blank">
+                                      <Link href={`/receipt/${r.transaction.receipt.id}`}>
                                         <Receipt className="h-3 w-3 text-[#D4A72C]" /> Receipt
                                       </Link>
                                     </Button>
@@ -1340,7 +1340,7 @@ export default function CentralBookingsRentalsView({
                                 variant="outline"
                                 className="flex-1 h-8 text-xs border-[#D4A72C]/40 text-[#071426]"
                               >
-                                <Link href={`/receipt/${r.transaction.receipt.id}`} target="_blank">
+                                <Link href={`/receipt/${r.transaction.receipt.id}`}>
                                   <Receipt className="h-3.5 w-3.5 text-[#D4A72C] mr-1" /> Receipt
                                 </Link>
                               </Button>
@@ -1685,7 +1685,7 @@ export default function CentralBookingsRentalsView({
             </Button>
             {viewRentalTarget?.transaction?.receipt?.id && (
               <Button asChild className="bg-[#071426] hover:bg-[#0B1E38] text-white font-semibold text-xs gap-1.5">
-                <Link href={`/receipt/${viewRentalTarget.transaction.receipt.id}`} target="_blank">
+                <Link href={`/receipt/${viewRentalTarget.transaction.receipt.id}`}>
                   <Receipt className="h-3.5 w-3.5 text-[#D4A72C]" /> View Official Receipt
                 </Link>
               </Button>

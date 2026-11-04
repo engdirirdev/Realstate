@@ -100,6 +100,13 @@ export class OpenAIProvider implements AIProvider {
     this.model = modelOverride || OPENAI_CONFIG.CHAT_MODEL;
   }
 
+  public getEffectiveModel(): string {
+    if (!this.model || this.model === "gpt-6-luna") {
+      return "gpt-4o-mini";
+    }
+    return this.model;
+  }
+
   public isConfigured(): boolean {
     return isOpenAIConfigured();
   }
@@ -125,7 +132,7 @@ export class OpenAIProvider implements AIProvider {
     if (!client) {
       return {
         provider: this.id,
-        model: this.model,
+        model: this.getEffectiveModel(),
         latencyMs: 0,
         understanding: this.buildFallbackUnderstanding(input),
         success: false,
@@ -179,7 +186,7 @@ CRITICAL RESPONSIBILITIES:
 
       const response = await client.chat.completions.create(
         {
-          model: this.model,
+          model: this.getEffectiveModel(),
           temperature: OPENAI_CONFIG.UNDERSTANDING_TEMPERATURE,
           messages: [
             { role: "system", content: systemPrompt },
@@ -215,7 +222,7 @@ CRITICAL RESPONSIBILITIES:
       const parsed: AIStructuredUnderstanding = JSON.parse(content);
       return {
         provider: this.id,
-        model: this.model,
+        model: this.getEffectiveModel(),
         latencyMs,
         understanding: parsed,
         success: true,
@@ -230,7 +237,7 @@ CRITICAL RESPONSIBILITIES:
 
       return {
         provider: this.id,
-        model: this.model,
+        model: this.getEffectiveModel(),
         latencyMs,
         understanding: this.buildFallbackUnderstanding(input),
         success: false,
@@ -248,7 +255,7 @@ CRITICAL RESPONSIBILITIES:
     if (!client) {
       return {
         provider: this.id,
-        model: this.model,
+        model: this.getEffectiveModel(),
         latencyMs: 0,
         replyText: "",
         success: false,
@@ -317,7 +324,7 @@ STRICT GROUNDING & ANTI-HALLUCINATION RULES:
 
       const response = await client.chat.completions.create(
         {
-          model: this.model,
+          model: this.getEffectiveModel(),
           temperature: OPENAI_CONFIG.GENERATION_TEMPERATURE,
           messages: [
             { role: "system", content: systemPrompt },
@@ -340,7 +347,7 @@ STRICT GROUNDING & ANTI-HALLUCINATION RULES:
 
       return {
         provider: this.id,
-        model: this.model,
+        model: this.getEffectiveModel(),
         latencyMs,
         replyText,
         success: replyText.length > 0,
@@ -355,7 +362,7 @@ STRICT GROUNDING & ANTI-HALLUCINATION RULES:
 
       return {
         provider: this.id,
-        model: this.model,
+        model: this.getEffectiveModel(),
         latencyMs,
         replyText: "",
         success: false,
@@ -382,7 +389,7 @@ STRICT GROUNDING & ANTI-HALLUCINATION RULES:
         type: "TEXT_RESPONSE",
         replyText: "",
         latencyMs: 0,
-        model: this.model,
+        model: this.getEffectiveModel(),
         success: false,
         error: "OPENAI_API_KEY_NOT_CONFIGURED",
       };
@@ -394,7 +401,7 @@ STRICT GROUNDING & ANTI-HALLUCINATION RULES:
     }, OPENAI_CONFIG.CHAT_TIMEOUT_MS);
 
     try {
-      const systemPrompt = `You are OpenAI GPT-6 Luna, serving as AIDA — the conversational AI Real Estate Assistant for Kiro-Maal in Somalia.
+      const systemPrompt = `You are AIDA, the dedicated, friendly, professional conversational AI Real Estate Assistant for Kiro-Maal in Somalia, powered by OpenAI.
 
 CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
 1. You are the conversational and natural language understanding authority when acting as AIDA.
@@ -443,9 +450,13 @@ CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
         }
       }
       if (input.activeResultSet && input.activeResultSet.length > 0) {
-        const propSummaries = input.activeResultSet.slice(0, 5).map((p, idx) =>
-          `#${p.rank || idx + 1} ID:${p.id} ${p.title} (${p.city || ''}${p.location ? ', ' + p.location : ''}) $${p.price} | Beds:${p.bedrooms ?? 'N/A'} | Furnished:${p.furnished === true ? 'Yes' : p.furnished === false ? 'No' : 'Unknown'} | Parking:${p.parking === true ? 'Yes' : p.parking === false ? 'No' : 'Unknown'}`
-        ).join("; ");
+        const propSummaries = input.activeResultSet.slice(0, 5).map((p, idx) => {
+          const isLand = String(p.type).toUpperCase() === "LAND";
+          if (isLand) {
+            return `#${p.rank || idx + 1} ID:${p.id} ${p.title} (${p.city || ''}${p.location ? ', ' + p.location : ''}) ${p.price} | Type:LAND | Plot Area:${p.area || (p as any).areaSize} m²`;
+          }
+          return `#${p.rank || idx + 1} ID:${p.id} ${p.title} (${p.city || ''}${p.location ? ', ' + p.location : ''}) ${p.price} | Beds:${p.bedrooms ?? 'N/A'} | Baths:${p.bathrooms ?? 'N/A'} | Furnished:${p.furnished === true ? 'Yes' : p.furnished === false ? 'No' : 'Unknown'} | Parking:${p.parking === true ? 'Yes' : p.parking === false ? 'No' : 'Unknown'}`;
+        }).join("; ");
         ctx.push(`Active Properties: [${propSummaries}]`);
       }
 
@@ -461,7 +472,7 @@ CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
 
       const response = await client.chat.completions.create(
         {
-          model: this.model,
+          model: this.getEffectiveModel(),
           temperature: 0.2,
           messages,
           tools: [OPENAI_PROPERTY_SEARCH_TOOL],
@@ -493,7 +504,7 @@ CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
             args: parsedArgs as GeminiPropertySearchArgs,
           },
           latencyMs,
-          model: this.model,
+          model: this.getEffectiveModel(),
           success: true,
         };
       }
@@ -516,7 +527,7 @@ CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
         replyText: rawReply,
         contextUpdates,
         latencyMs,
-        model: this.model,
+        model: this.getEffectiveModel(),
         success: rawReply.length > 0,
       };
     } catch (err: any) {
@@ -532,7 +543,7 @@ CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
         replyText: "",
         contextUpdates: undefined,
         latencyMs,
-        model: this.model,
+        model: this.getEffectiveModel(),
         success: false,
         error: errorMsg,
       };

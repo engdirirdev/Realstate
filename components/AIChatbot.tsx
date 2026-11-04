@@ -20,7 +20,8 @@ import {
   MapPin,
   BedDouble,
   Bath,
-  ExternalLink,
+  SquareStack,
+  Eye,
   Heart,
   Share2,
   AlertCircle,
@@ -404,17 +405,24 @@ export default function AIChatbot() {
                             </div>
 
                             {/* Property Specifications */}
-                            <div className="grid grid-cols-3 gap-1 py-1.5 px-2 bg-[#F7F3EA] rounded-xl text-[10px] text-slate-700 border border-[#E8E1D4]">
-                              <span className="flex items-center gap-1 truncate">
-                                <BedDouble className="h-3 w-3 text-[#C89B3C]" />{" "}
-                                {p.bedrooms} Beds
-                              </span>
-                              <span className="flex items-center gap-1 truncate">
-                                <Bath className="h-3 w-3 text-[#C89B3C]" />{" "}
-                                {p.bathrooms} Baths
-                              </span>
-                              <span className="truncate">{p.areaSize} m²</span>
-                            </div>
+                            {String(p.type).toUpperCase() === "LAND" || String(p.typeLabel).toUpperCase() === "LAND" ? (
+                              <div className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-[#F7F3EA] rounded-xl text-[11px] font-semibold text-[#07111F] border border-[#E8E1D4]">
+                                <SquareStack className="h-3.5 w-3.5 text-[#C89B3C]" />
+                                <span>Land Plot Area: <strong className="font-bold">{p.areaSize || (p as any).area || (p as any).landSize || 400} m²</strong></span>
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-3 gap-1 py-1.5 px-2 bg-[#F7F3EA] rounded-xl text-[10px] text-slate-700 border border-[#E8E1D4]">
+                                <span className="flex items-center gap-1 truncate">
+                                  <BedDouble className="h-3 w-3 text-[#C89B3C]" />{" "}
+                                  {p.bedrooms} Beds
+                                </span>
+                                <span className="flex items-center gap-1 truncate">
+                                  <Bath className="h-3 w-3 text-[#C89B3C]" />{" "}
+                                  {p.bathrooms} Baths
+                                </span>
+                                <span className="truncate">{p.areaSize || (p as any).area} m²</span>
+                              </div>
+                            )}
 
                             {/* Actions */}
                             <div className="grid grid-cols-2 gap-1.5 pt-1">
@@ -422,7 +430,7 @@ export default function AIChatbot() {
                                 href={`/properties/${p.id}`}
                                 className="col-span-2 inline-flex items-center justify-center gap-1 py-1.5 bg-[#C89B3C] hover:bg-[#B88924] text-[#07111F] rounded-xl text-xs font-bold shadow-xs transition-colors"
                               >
-                                <ExternalLink className="h-3 w-3" /> View Details
+                                <Eye className="h-3.5 w-3.5" /> View Details
                               </Link>
                               <button
                                 type="button"

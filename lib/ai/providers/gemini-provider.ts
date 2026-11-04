@@ -163,8 +163,8 @@ export class GeminiProvider implements AIProvider {
   }
 
   public getEffectiveModel(): string {
-    if (this.model === "gemini-3.8-flash") {
-      return "gemini-1.5-flash";
+    if (this.model === "gemini-3.8-flash" || this.model === "gemini-1.5-flash" || !this.model) {
+      return "gemini-3.5-flash-lite";
     }
     return this.model;
   }
@@ -544,9 +544,13 @@ CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
         }
       }
       if (input.activeResultSet && input.activeResultSet.length > 0) {
-        const propSummaries = input.activeResultSet.slice(0, 5).map((p, idx) =>
-          `#${p.rank || idx + 1} ID:${p.id} ${p.title} (${p.city || ''}${p.location ? ', ' + p.location : ''}) $${p.price} | Beds:${p.bedrooms ?? 'N/A'} | Furnished:${p.furnished === true ? 'Yes' : p.furnished === false ? 'No' : 'Unknown'} | Parking:${p.parking === true ? 'Yes' : p.parking === false ? 'No' : 'Unknown'}`
-        ).join("; ");
+        const propSummaries = input.activeResultSet.slice(0, 5).map((p, idx) => {
+          const isLand = String(p.type).toUpperCase() === "LAND";
+          if (isLand) {
+            return `#${p.rank || idx + 1} ID:${p.id} ${p.title} (${p.city || ''}${p.location ? ', ' + p.location : ''}) ${p.price} | Type:LAND | Plot Area:${p.area || (p as any).areaSize} m²`;
+          }
+          return `#${p.rank || idx + 1} ID:${p.id} ${p.title} (${p.city || ''}${p.location ? ', ' + p.location : ''}) ${p.price} | Beds:${p.bedrooms ?? 'N/A'} | Baths:${p.bathrooms ?? 'N/A'} | Furnished:${p.furnished === true ? 'Yes' : p.furnished === false ? 'No' : 'Unknown'} | Parking:${p.parking === true ? 'Yes' : p.parking === false ? 'No' : 'Unknown'}`;
+        }).join("; ");
         ctx.push(`Active Properties: [${propSummaries}]`);
       }
 

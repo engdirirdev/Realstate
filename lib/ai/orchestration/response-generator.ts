@@ -49,8 +49,9 @@ export async function generateGroundedAIDAResponse(
   }
 
   // 2. Select primary provider: Gemini 3.8 Flash is AIDA's primary conversational intelligence
-  const primaryProvider = geminiReady ? geminiProvider : openAIProvider;
-  const secondaryProvider = (geminiReady && openAIReady) ? openAIProvider : null;
+  const preferGemini = process.env.AI_PROVIDER !== "openai";
+  const primaryProvider = preferGemini && geminiReady ? geminiProvider : (openAIReady ? openAIProvider : geminiProvider);
+  const secondaryProvider = primaryProvider === geminiProvider ? (openAIReady ? openAIProvider : null) : (geminiReady ? geminiProvider : null);
 
   let aiResult: AIGenerationResult | null = null;
 

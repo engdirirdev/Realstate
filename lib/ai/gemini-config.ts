@@ -11,7 +11,7 @@ export const GEMINI_CONFIG = {
    * Upgraded from legacy models to state-of-the-art production gemini-3.8-flash.
    * Can be overridden at runtime via GEMINI_MODEL or GOOGLE_AI_MODEL in .env
    */
-  CHAT_MODEL: process.env.GEMINI_MODEL || process.env.GOOGLE_AI_MODEL || "gemini-3.8-flash",
+  CHAT_MODEL: process.env.GEMINI_MODEL || process.env.GOOGLE_AI_MODEL || "gemini-3.5-flash-lite",
 
   /**
    * Vector Embedding Model
@@ -24,7 +24,7 @@ export const GEMINI_CONFIG = {
   /**
    * Maximum allowed response time before falling back to deterministic engine (milliseconds)
    */
-  CHAT_TIMEOUT_MS: process.env.GEMINI_TIMEOUT_MS ? Number(process.env.GEMINI_TIMEOUT_MS) : 4000,
+  CHAT_TIMEOUT_MS: process.env.GEMINI_TIMEOUT_MS ? Number(process.env.GEMINI_TIMEOUT_MS) : 8000,
   EMBEDDING_TIMEOUT_MS: 3500,
 
   /**

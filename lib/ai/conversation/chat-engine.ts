@@ -427,26 +427,30 @@ export async function processConversationalTurn(
 
   let activeDecision: GeminiConversationalDecision | null = null;
 
-  // Attempt Primary Provider: Gemini 3.8 Flash
-  try {
-    const geminiDecision = await geminiProvider.decideConversationalAction(turnContext);
-    if (geminiDecision.success) {
-      activeDecision = geminiDecision;
-    } else {
-      console.warn(`[AIDA][AI] Gemini failed: ${geminiDecision.error || "decision unsuccessful"}`);
+  // Provider Priority: Google Gemini is Primary
+  const preferGemini = process.env.AI_PROVIDER !== "openai";
+
+  if (preferGemini && geminiProvider.isConfigured()) {
+    try {
+      console.log("[AIDA][AI] Calling Primary Provider: Google Gemini (gemini-1.5-flash)");
+      const geminiDecision = await geminiProvider.decideConversationalAction(turnContext);
+      if (geminiDecision.success) {
+        activeDecision = geminiDecision;
+      } else {
+        console.warn(`[AIDA][AI] Gemini failed: ${geminiDecision.error || "decision unsuccessful"}`);
+      }
+    } catch (err: any) {
+      console.warn(`[AIDA][AI] Gemini failed with exception: ${err?.message || "error"}`);
     }
-  } catch (err: any) {
-    console.warn(`[AIDA][AI] Gemini failed with exception: ${err?.message || "error"}`);
   }
 
-  // Attempt Secondary Fallback Provider: OpenAI GPT-6 Luna only when Gemini fails
+  // Fallback: If Gemini is unavailable or not configured, try OpenAI
   if (!activeDecision && openAIProvider.isConfigured()) {
-    console.log("[AIDA][AI] Falling back to OpenAI GPT-6 Luna");
     try {
+      console.log("[AIDA][AI] Calling Fallback Provider: OpenAI");
       const openAIDecision = await openAIProvider.decideConversationalAction(turnContext);
       if (openAIDecision.success) {
         activeDecision = openAIDecision;
-        console.log("[AIDA][AI] OpenAI fallback succeeded");
       } else {
         console.warn(`[AIDA][AI] OpenAI fallback failed: ${openAIDecision.error || "decision unsuccessful"}`);
       }
@@ -455,9 +459,9 @@ export async function processConversationalTurn(
     }
   }
 
-  // Last Resort: If both providers fail, use safe generic technical notice
+  // Last Resort: If all AI providers fail or none configured, use deterministic fallback
   if (!activeDecision) {
-    console.warn("[AIDA][AI] Both Gemini and OpenAI failed. Using safe generic technical fallback.");
+    console.warn("[AIDA][AI] No active AI provider decision. Using safe deterministic fallback.");
     activeDecision = geminiProvider.safeGenericTechnicalFallback(turnContext, Date.now());
   }
 

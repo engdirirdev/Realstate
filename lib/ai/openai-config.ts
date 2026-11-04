@@ -12,7 +12,7 @@ export const OPENAI_CONFIG = {
    * Configured as gpt-6-luna (secondary fallback provider for AIDA).
    * Can be overridden at runtime via OPENAI_MODEL in .env
    */
-  CHAT_MODEL: process.env.OPENAI_MODEL || "gpt-6-luna",
+  CHAT_MODEL: process.env.OPENAI_MODEL || "gpt-4o-mini",
 
   /**
    * Timeouts in milliseconds

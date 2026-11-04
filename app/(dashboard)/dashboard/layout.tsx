@@ -27,17 +27,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
       {/* ─── Sidebar (Kiro-Maal Master Deep Navy) ─── */}
       <aside suppressHydrationWarning className="hidden lg:flex w-64 flex-col bg-[#07111F] border-r border-[#C89B3C]/20 fixed inset-y-0 left-0 z-30 shadow-2xl">
         {/* Brand Logo */}
-        <div suppressHydrationWarning className="h-18 px-6 border-b border-[#C89B3C]/20 flex items-center bg-[#07111F]">
+        <div suppressHydrationWarning className="h-18 px-6 border-b border-[#C89B3C]/20 flex items-center bg-[#07111F] shrink-0">
           <BrandLogo variant="dark" />
         </div>
 
-        {/* Navigation */}
-        <div suppressHydrationWarning className="flex-1 overflow-y-auto scrollbar-hide py-4">
+        {/* Navigation (Scrollable if screen is scaled or low height) */}
+        <div suppressHydrationWarning className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-[#1B2738] hover:scrollbar-thumb-[#C89B3C]/50 py-4">
           <DashboardSidebarNav />
         </div>
 
         {/* Bottom User & Sign Out */}
-        <div suppressHydrationWarning className="p-4 border-t border-[#C89B3C]/20 space-y-2 bg-[#050C16]">
+        <div suppressHydrationWarning className="p-4 border-t border-[#C89B3C]/20 space-y-2 bg-[#050C16] shrink-0">
           <div suppressHydrationWarning className="flex items-center gap-3 px-2 py-1">
             <div suppressHydrationWarning className="w-8 h-8 rounded-xl bg-[#C89B3C]/15 border border-[#C89B3C]/30 flex items-center justify-center flex-shrink-0">
               <User className="h-4 w-4 text-[#D9B45B]" />
@@ -65,7 +65,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           unreadCount={unreadCount}
         />
 
-        <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 bg-[#F7F3EA]">
+        <main className="flex-1 min-w-0 p-3 sm:p-5 lg:p-6 bg-[#F7F3EA]">
           {children}
         </main>
       </div>

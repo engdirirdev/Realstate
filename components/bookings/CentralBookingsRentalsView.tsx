@@ -662,34 +662,34 @@ export default function CentralBookingsRentalsView({
               <>
                 {/* ─── DESKTOP & TABLET: HORIZONTAL SCROLL TABLE (Section 8-21) ─── */}
                 <div className="hidden md:block w-full max-w-full overflow-x-auto">
-                  <table className="w-full min-w-[1140px] text-left border-collapse text-xs">
+                  <table className="w-full min-w-[960px] lg:min-w-0 text-left border-collapse text-xs">
                     <thead className="bg-[#F8FAFC] border-b border-[#E5E7EB]">
                       <tr>
-                        <th className="py-3 px-4 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[130px]">
+                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[130px]">
                           Booking ID
                         </th>
-                        <th className="py-3 px-4 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[260px]">
+                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] min-w-[170px] max-w-[210px]">
                           Property
                         </th>
-                        <th className="py-3 px-4 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[220px]">
+                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] min-w-[130px] max-w-[170px]">
                           Customer
                         </th>
-                        <th className="py-3 px-4 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[180px]">
+                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] min-w-[120px]">
                           Rental Period
                         </th>
-                        <th className="py-3 px-4 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[120px]">
+                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[120px]">
                           Total Amount
                         </th>
-                        <th className="py-3 px-4 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[140px]">
+                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[140px]">
                           Booking Status
                         </th>
-                        <th className="py-3 px-4 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[150px]">
+                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[150px]">
                           Payment Status
                         </th>
-                        <th className="py-3 px-4 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[110px]">
+                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[110px]">
                           Created Date
                         </th>
-                        <th className="py-3 px-4 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[130px] text-right">
+                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[130px] text-right">
                           Actions
                         </th>
                       </tr>
@@ -900,7 +900,7 @@ export default function CentralBookingsRentalsView({
                         <div className="bg-[#F8FAFC] rounded-lg p-2.5 text-xs space-y-1.5 border border-[#F1F5F9]">
                           <div className="flex justify-between">
                             <span className="text-[#64748B]">Customer:</span>
-                            <span className="font-semibold text-[#0F172A] truncate max-w-[180px]">
+                            <span className="font-semibold text-[#0F172A] truncate max-min-w-[120px]">
                               {b.customer?.name}
                             </span>
                           </div>
@@ -1093,34 +1093,34 @@ export default function CentralBookingsRentalsView({
               <>
                 {/* ─── DESKTOP & TABLET: HORIZONTAL SCROLL TABLE (Section 8-21) ─── */}
                 <div className="hidden md:block w-full max-w-full overflow-x-auto">
-                  <table className="w-full min-w-[1140px] text-left border-collapse text-xs">
+                  <table className="w-full min-w-[960px] lg:min-w-0 text-left border-collapse text-xs">
                     <thead className="bg-[#F8FAFC] border-b border-[#E5E7EB]">
                       <tr>
-                        <th className="py-3 px-4 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[140px]">
+                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[140px]">
                           Rental Agreement #
                         </th>
-                        <th className="py-3 px-4 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[110px]">
+                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[110px]">
                           Booking Ref
                         </th>
-                        <th className="py-3 px-4 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[260px]">
+                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] min-w-[170px] max-w-[210px]">
                           Property
                         </th>
-                        <th className="py-3 px-4 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[220px]">
+                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] min-w-[130px] max-w-[170px]">
                           Customer
                         </th>
-                        <th className="py-3 px-4 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[180px]">
+                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] min-w-[120px]">
                           Rental Period
                         </th>
-                        <th className="py-3 px-4 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[120px]">
+                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[120px]">
                           Total Rent
                         </th>
-                        <th className="py-3 px-4 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[140px]">
+                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[140px]">
                           Payment
                         </th>
-                        <th className="py-3 px-4 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[130px]">
+                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[130px]">
                           Rental Status
                         </th>
-                        <th className="py-3 px-4 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[120px] text-right">
+                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[120px] text-right">
                           Actions
                         </th>
                       </tr>
@@ -1300,7 +1300,7 @@ export default function CentralBookingsRentalsView({
                         <div className="bg-[#F8FAFC] rounded-lg p-2.5 text-xs space-y-1.5 border border-[#F1F5F9]">
                           <div className="flex justify-between">
                             <span className="text-[#64748B]">Tenant:</span>
-                            <span className="font-semibold text-[#0F172A] truncate max-w-[180px]">
+                            <span className="font-semibold text-[#0F172A] truncate max-min-w-[120px]">
                               {r.customer?.name}
                             </span>
                           </div>

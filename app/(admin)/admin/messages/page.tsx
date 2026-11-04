@@ -26,7 +26,7 @@ export default async function AdminMessagesPage() {
   const unread = messages.filter((m) => !m.isRead).length;
 
   return (
-    <div className="space-y-6 bg-[#F7F3EA] min-h-screen p-6 sm:p-8">
+    <div className="space-y-5 w-full min-w-0">
       <div>
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FCFBF7] border border-[#C89B3C]/30 text-[#A97918] text-xs font-semibold uppercase tracking-wider mb-2 shadow-xs">
           <Sparkles className="w-3.5 h-3.5 text-[#C89B3C]" /> Client Communications

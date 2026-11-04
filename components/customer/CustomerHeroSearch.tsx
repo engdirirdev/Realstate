@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 
@@ -11,13 +11,35 @@ export default function CustomerHeroSearch() {
   const [city, setCity] = useState("");
   const [propertyType, setPropertyType] = useState("");
   const [priceRange, setPriceRange] = useState("");
+  const [availableCities, setAvailableCities] = useState<string[]>([
+    "Abudwak",
+    "Berbera",
+    "Bosaso",
+    "Burao",
+    "Garowe",
+    "Hargeisa",
+    "Kismayo",
+    "Mogadishu",
+  ]);
+
+  useEffect(() => {
+    fetch("/api/locations", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.cities) && data.cities.length > 0) {
+          setAvailableCities(data.cities);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const params = new URLSearchParams();
 
     // Strict listing type filter
-    params.set("listingType", dealType === "RENT" ? "FOR_RENT" : "FOR_SALE");
+    const effectiveListingType = propertyType === "LAND" ? "FOR_SALE" : (dealType === "RENT" ? "FOR_RENT" : "FOR_SALE");
+    params.set("listingType", effectiveListingType);
 
     if (keyword.trim()) params.set("q", keyword.trim());
     if (city && city !== "All Cities") params.set("city", city);
@@ -50,9 +72,12 @@ export default function CustomerHeroSearch() {
         </button>
         <button
           type="button"
+          disabled={propertyType === "LAND"}
           onClick={() => {
-            setDealType("RENT");
-            setPriceRange("");
+            if (propertyType !== "LAND") {
+              setDealType("RENT");
+              setPriceRange("");
+            }
           }}
           className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
             dealType === "RENT"
@@ -89,11 +114,11 @@ export default function CustomerHeroSearch() {
           className="w-full bg-transparent text-xs font-semibold text-[#07111F] focus:outline-none cursor-pointer"
         >
           <option value="">All Cities</option>
-          <option value="Mogadishu">Mogadishu</option>
-          <option value="Hargeisa">Hargeisa</option>
-          <option value="Garowe">Garowe</option>
-          <option value="Bosaso">Bosaso</option>
-          <option value="Kismayo">Kismayo</option>
+          {availableCities.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
         </select>
       </div>
 
@@ -104,7 +129,13 @@ export default function CustomerHeroSearch() {
         </label>
         <select
           value={propertyType}
-          onChange={(e) => setPropertyType(e.target.value)}
+          onChange={(e) => {
+            const val = e.target.value;
+            setPropertyType(val);
+            if (val === "LAND") {
+              setDealType("BUY");
+            }
+          }}
           className="w-full bg-transparent text-xs font-semibold text-[#07111F] focus:outline-none cursor-pointer"
         >
           <option value="">All Types</option>
@@ -129,28 +160,30 @@ export default function CustomerHeroSearch() {
           <option value="">Any Price</option>
           {dealType === "RENT" ? (
             <>
-              <option value="300">Under $300/mo</option>
-              <option value="600">Under $600/mo</option>
-              <option value="1200">Under $1,200/mo</option>
-              <option value="2500">Under $2,500/mo</option>
+              <option value="300">Under $300 / mo</option>
+              <option value="600">Under $600 / mo</option>
+              <option value="1200">Under $1,200 / mo</option>
+              <option value="2500">Under $2,500 / mo</option>
+              <option value="5000">Under $5,000 / mo</option>
             </>
           ) : (
             <>
-              <option value="50000">Under $50,000</option>
-              <option value="100000">Under $100,000</option>
-              <option value="250000">Under $250,000</option>
-              <option value="500000">Under $500,000</option>
+              <option value="50000">Under $50k</option>
+              <option value="100000">Under $100k</option>
+              <option value="250000">Under $250k</option>
+              <option value="500000">Under $500k</option>
+              <option value="1000000">Under $1M</option>
             </>
           )}
         </select>
       </div>
 
-      {/* Submit Button */}
+      {/* Search Button */}
       <button
         type="submit"
-        className="w-full md:w-auto bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] hover:brightness-105 text-[#07111F] px-5 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-[#C89B3C]/20 border border-[#A97918]/30 flex-shrink-0 cursor-pointer"
+        className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] hover:brightness-105 text-[#07111F] px-5 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-[#C89B3C]/20 border-0 cursor-pointer h-10 flex-shrink-0"
       >
-        <Search className="h-4 w-4" />
+        <Search className="h-3.5 w-3.5" />
         <span>Search</span>
       </button>
     </form>

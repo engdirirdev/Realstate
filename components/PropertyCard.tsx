@@ -13,6 +13,10 @@ export interface PropertyCardData {
   id: string;
   title: string;
   price: number;
+  basePrice?: number | null;
+  companyServiceFee?: number | null;
+  legalTransferFee?: number | null;
+  brokerCommission?: number | null;
   location: string;
   city: string;
   type: string;
@@ -52,6 +56,10 @@ function PropertyCard({
   const [savingFav, setSavingFav] = useState(false);
 
   const isRent = property.listingType ? property.listingType === "FOR_RENT" : property.price < 5000;
+  const totalPurchasePrice =
+    typeof property.basePrice === "number" && property.basePrice > 0
+      ? property.basePrice + (property.companyServiceFee || 0) + (property.legalTransferFee || 0)
+      : property.price;
   const isAvailable = !property.status || property.status === "APPROVED" || property.status === "PUBLISHED";
   const isLand = String(property.type).toUpperCase() === "LAND";
   const rentUnit = property.rentPeriod?.toLowerCase().replace("ly", "").replace("dai", "day") || "month";
@@ -186,9 +194,14 @@ function PropertyCard({
 
         <div className="mt-3 pt-3 border-t border-[#E8E1D4]">
           <div className="flex items-baseline justify-between mb-3">
-            <div className="text-lg font-extrabold text-[#07111F]">
-              <span className="text-[#C89B3C]">$</span>{property.price?.toLocaleString()}
-              {isRent && <span className="text-xs font-normal text-[#6B7280]"> /{rentUnit}</span>}
+            <div>
+              <div className="text-lg font-extrabold text-[#07111F]">
+                <span className="text-[#C89B3C]">$</span>{totalPurchasePrice?.toLocaleString()}
+                {isRent && <span className="text-xs font-normal text-[#6B7280]"> /{rentUnit}</span>}
+              </div>
+              <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider block mt-0.5">
+                {isRent ? "Rental Rate" : "Total Purchase Price"}
+              </span>
             </div>
             <span className="text-[11px] font-bold text-[#A97918] uppercase tracking-wider bg-[#F7F3EA] px-2 py-0.5 rounded-md border border-[#E8E1D4]">
               {property.type}

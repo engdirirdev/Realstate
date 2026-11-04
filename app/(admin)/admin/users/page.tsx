@@ -185,7 +185,7 @@ function UsersDirectoryContent() {
   };
 
   return (
-    <div className="space-y-6 bg-[#F7F3EA] min-h-screen p-6 sm:p-8">
+    <div className="space-y-5 w-full min-w-0">
       {/* Header with Create Button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

@@ -96,6 +96,10 @@ export async function PATCH(
       title,
       description,
       price,
+      basePrice,
+      companyServiceFee,
+      legalTransferFee,
+      brokerCommission,
       location,
       city,
       address,
@@ -131,7 +135,45 @@ export async function PATCH(
 
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
-    if (price !== undefined) updateData.price = Number(price);
+    if (basePrice !== undefined && basePrice !== null && basePrice !== "") {
+      const numBase = Number(basePrice);
+      if (isNaN(numBase) || numBase <= 0) {
+        return NextResponse.json({ success: false, error: "Property Base Price must be greater than zero." }, { status: 400 });
+      }
+      updateData.basePrice = numBase;
+    }
+    if (companyServiceFee !== undefined && companyServiceFee !== null && companyServiceFee !== "") {
+      const numCompany = Number(companyServiceFee);
+      if (isNaN(numCompany) || numCompany < 0) {
+        return NextResponse.json({ success: false, error: "Company Service Fee cannot be negative." }, { status: 400 });
+      }
+      updateData.companyServiceFee = numCompany;
+    }
+    if (legalTransferFee !== undefined && legalTransferFee !== null && legalTransferFee !== "") {
+      const numLegal = Number(legalTransferFee);
+      if (isNaN(numLegal) || numLegal < 0) {
+        return NextResponse.json({ success: false, error: "Legal Transfer & Notarization Fee cannot be negative." }, { status: 400 });
+      }
+      updateData.legalTransferFee = numLegal;
+    }
+    if (brokerCommission !== undefined && brokerCommission !== null && brokerCommission !== "") {
+      const numBroker = Number(brokerCommission);
+      if (isNaN(numBroker) || numBroker < 0) {
+        return NextResponse.json({ success: false, error: "Broker Commission cannot be negative." }, { status: 400 });
+      }
+      updateData.brokerCommission = numBroker;
+    }
+
+    // Keep price aligned as total purchase price (base + company + legal)
+    const effectiveBase = updateData.basePrice !== undefined ? updateData.basePrice : existing.basePrice;
+    const effectiveCompany = updateData.companyServiceFee !== undefined ? updateData.companyServiceFee : (existing.companyServiceFee ?? 300);
+    const effectiveLegal = updateData.legalTransferFee !== undefined ? updateData.legalTransferFee : (existing.legalTransferFee ?? 200);
+
+    if (effectiveBase !== null && effectiveBase !== undefined) {
+      updateData.price = Number(effectiveBase) + Number(effectiveCompany) + Number(effectiveLegal);
+    } else if (price !== undefined) {
+      updateData.price = Number(price);
+    }
     if (location !== undefined) updateData.location = location || city;
     if (city !== undefined) updateData.city = city;
     if (address !== undefined) updateData.address = address || null;
@@ -139,6 +181,14 @@ export async function PATCH(
     if (longitude !== undefined) updateData.longitude = longitude !== null && longitude !== "" ? Number(longitude) : null;
     if (type !== undefined) updateData.type = type;
     if (listingType !== undefined) updateData.listingType = listingType;
+
+    const targetType = updateData.type || existing.type;
+    if (String(targetType).toUpperCase() === "LAND") {
+      updateData.listingType = "FOR_SALE";
+      updateData.rentPeriod = null;
+      updateData.securityDeposit = null;
+      updateData.bedrooms = 0;
+    }
     if (currency !== undefined) updateData.currency = String(currency).trim().toUpperCase().slice(0, 8);
     if (isNegotiable !== undefined) updateData.isNegotiable = Boolean(isNegotiable);
     if (rentPeriod !== undefined) updateData.rentPeriod = rentPeriod;

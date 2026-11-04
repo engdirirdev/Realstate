@@ -223,9 +223,7 @@
 
   /* GPU Compositing for Smooth Modal & Table Scrolling */
   .gpu-accelerated {
-    transform: translateZ(0);
     backface-visibility: hidden;
-    perspective: 1000px;
   }
 }
 

@@ -333,17 +333,17 @@ export default function CentralTransactionsView({
               <>
                 {/* ─── DESKTOP & TABLET: HORIZONTAL SCROLL TABLE (Matching Bookings) ─── */}
                 <div className="hidden md:block w-full max-w-full overflow-x-auto">
-                  <table className={cn("w-full text-left border-collapse text-xs", isAdmin ? "min-w-[1160px]" : "min-w-[1020px]")}>
+                  <table className={cn("w-full text-left border-collapse text-xs", isAdmin ? "min-w-[980px] lg:min-w-0" : "min-w-[880px] lg:min-w-0")}>
                     <thead className="bg-[#FAF6EC] text-[#475569] uppercase text-[10px] font-bold tracking-wider border-b border-[#E8E1D4]">
                       <tr>
-                        <th className="py-3.5 pl-4 pr-3 w-[140px]">Transaction Ref</th>
-                        <th className="py-3.5 px-3 w-[240px]">Property Listing</th>
-                        <th className="py-3.5 px-3 w-[200px]">{isAdmin ? "Client / Buyer" : "Client / Tenant"}</th>
-                        {isAdmin && <th className="py-3.5 px-3 w-[150px]">Assigned Advisor</th>}
-                        <th className="py-3.5 px-3 w-[125px]">Settlement Amount</th>
-                        <th className="py-3.5 px-3 w-[120px]">Payment Method</th>
-                        <th className="py-3.5 px-3 w-[110px]">Escrow Status</th>
-                        <th className="py-3.5 px-3 w-[110px]">Date</th>
+                        <th className="py-2.5 pl-3 pr-2.5 w-[140px]">Transaction Ref</th>
+                        <th className="py-2.5 px-2.5 w-[240px]">Property Listing</th>
+                        <th className="py-2.5 px-2.5 w-[200px]">{isAdmin ? "Client / Buyer" : "Client / Tenant"}</th>
+                        {isAdmin && <th className="py-2.5 px-2.5 w-[150px]">Assigned Advisor</th>}
+                        <th className="py-2.5 px-2.5 w-[125px]">Settlement Amount</th>
+                        <th className="py-2.5 px-2.5 w-[120px]">Payment Method</th>
+                        <th className="py-2.5 px-2.5 w-[110px]">Escrow Status</th>
+                        <th className="py-2.5 px-2.5 w-[110px]">Date</th>
                         <th className="py-3.5 pl-3 pr-4 text-right w-[125px]">Action</th>
                       </tr>
                     </thead>
@@ -351,7 +351,7 @@ export default function CentralTransactionsView({
                       {paymentsData.payments.map((p) => (
                         <tr key={p.id} className="hover:bg-[#FAF6EC]/70 transition-colors align-middle">
                           {/* Transaction Ref */}
-                          <td className="py-3.5 pl-4 pr-3 align-middle w-[140px] whitespace-nowrap">
+                          <td className="py-2.5 pl-3 pr-2.5 align-middle w-[140px] whitespace-nowrap">
                             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#07111F]/5 border border-[#E8E1D4] text-[#07111F] font-mono font-bold text-xs tracking-tight shadow-2xs">
                               <CreditCard className="h-3 w-3 text-[#C89B3C] shrink-0" />
                               <span>{p.transactionRef}</span>
@@ -359,7 +359,7 @@ export default function CentralTransactionsView({
                           </td>
 
                           {/* Property Listing */}
-                          <td className="py-3.5 px-3 align-middle w-[240px]">
+                          <td className="py-2.5 px-2.5 align-middle w-[240px]">
                             <div className="flex items-center gap-3">
                               <div className="relative h-11 w-11 rounded-xl overflow-hidden bg-gradient-to-br from-[#07111F] to-[#1E293B] border border-[#E8E1D4] shrink-0 flex items-center justify-center shadow-2xs">
                                 {p.property?.images?.[0]?.url ? (
@@ -397,7 +397,7 @@ export default function CentralTransactionsView({
                           </td>
 
                           {/* Client */}
-                          <td className="py-3.5 px-3 align-middle w-[200px]">
+                          <td className="py-2.5 px-2.5 align-middle w-[200px]">
                             <div className="flex items-center gap-2.5">
                               <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-[#07111F] to-[#1E293B] text-[#D9B45B] border border-[#C89B3C]/30 flex items-center justify-center font-bold text-[11px] shrink-0 shadow-2xs">
                                 {getInitials(p.customer?.name)}
@@ -421,7 +421,7 @@ export default function CentralTransactionsView({
 
                           {/* Assigned Advisor (Admin only) */}
                           {isAdmin && (
-                            <td className="py-3.5 px-3 align-middle w-[150px]">
+                            <td className="py-2.5 px-2.5 align-middle w-[150px]">
                               <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#FAF6EC] border border-[#E8E1D4] text-[11px] font-medium text-[#07111F] max-w-[140px]">
                                 <User className="h-3 w-3 text-[#C89B3C] shrink-0" />
                                 <span className="truncate">{p.manager?.name || "Kiro-Maal Concierge"}</span>
@@ -430,7 +430,7 @@ export default function CentralTransactionsView({
                           )}
 
                           {/* Settlement Amount */}
-                          <td className="py-3.5 px-3 whitespace-nowrap align-middle w-[125px]">
+                          <td className="py-2.5 px-2.5 whitespace-nowrap align-middle w-[125px]">
                             <p className="font-serif font-black text-sm text-[#07111F] tracking-tight">
                               {formatPrice(p.amount)}
                             </p>
@@ -438,19 +438,19 @@ export default function CentralTransactionsView({
                           </td>
 
                           {/* Payment Method */}
-                          <td className="py-3.5 px-3 whitespace-nowrap align-middle w-[120px]">
+                          <td className="py-2.5 px-2.5 whitespace-nowrap align-middle w-[120px]">
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#FAF6EC] border border-[#E8E1D4] text-[11px] font-medium text-[#07111F]">
                               {p.paymentMethod || "Direct Settlement"}
                             </span>
                           </td>
 
                           {/* Escrow Status */}
-                          <td className="py-3.5 px-3 whitespace-nowrap align-middle w-[110px]">
+                          <td className="py-2.5 px-2.5 whitespace-nowrap align-middle w-[110px]">
                             <StatusBadge status={p.status} />
                           </td>
 
                           {/* Date */}
-                          <td className="py-3.5 px-3 whitespace-nowrap align-middle w-[110px]">
+                          <td className="py-2.5 px-2.5 whitespace-nowrap align-middle w-[110px]">
                             <div className="flex items-center gap-1.5 text-xs font-semibold text-[#07111F]">
                               <Calendar className="h-3 w-3 text-[#C89B3C] shrink-0" />
                               <span>{fmt(p.createdAt)}</span>
@@ -715,18 +715,18 @@ export default function CentralTransactionsView({
               <>
                 {/* ─── DESKTOP & TABLET: HORIZONTAL SCROLL TABLE (Matching Bookings) ─── */}
                 <div className="hidden md:block w-full max-w-full overflow-x-auto">
-                  <table className={cn("w-full text-left border-collapse text-xs", isAdmin ? "min-w-[1180px]" : "min-w-[1040px]")}>
+                  <table className={cn("w-full text-left border-collapse text-xs", isAdmin ? "min-w-[980px] lg:min-w-0" : "min-w-[880px] lg:min-w-0")}>
                     <thead className="bg-[#FAF6EC] text-[#475569] uppercase text-[10px] font-bold tracking-wider border-b border-[#E8E1D4]">
                       <tr>
-                        <th className="py-3.5 pl-4 pr-3 w-[140px]">Txn No</th>
-                        {isAdmin && <th className="py-3.5 px-3 w-[95px]">Type</th>}
-                        <th className="py-3.5 px-3 w-[240px]">Property Listing</th>
-                        <th className="py-3.5 px-3 w-[190px]">{isAdmin ? "Customer" : "Tenant"}</th>
-                        {isAdmin && <th className="py-3.5 px-3 w-[150px]">Assigned Advisor</th>}
-                        <th className="py-3.5 px-3 w-[120px]">Amount</th>
-                        <th className="py-3.5 px-3 w-[110px]">Deal Status</th>
-                        <th className="py-3.5 px-3 w-[115px]">Payment</th>
-                        <th className="py-3.5 px-3 w-[110px]">Date</th>
+                        <th className="py-2.5 pl-3 pr-2.5 w-[140px]">Txn No</th>
+                        {isAdmin && <th className="py-2.5 px-2.5 w-[95px]">Type</th>}
+                        <th className="py-2.5 px-2.5 w-[240px]">Property Listing</th>
+                        <th className="py-2.5 px-2.5 w-[190px]">{isAdmin ? "Customer" : "Tenant"}</th>
+                        {isAdmin && <th className="py-2.5 px-2.5 w-[150px]">Assigned Advisor</th>}
+                        <th className="py-2.5 px-2.5 w-[120px]">Amount</th>
+                        <th className="py-2.5 px-2.5 w-[110px]">Deal Status</th>
+                        <th className="py-2.5 px-2.5 w-[115px]">Payment</th>
+                        <th className="py-2.5 px-2.5 w-[110px]">Date</th>
                         <th className="py-3.5 pl-3 pr-4 text-right w-[115px]">Receipt</th>
                       </tr>
                     </thead>
@@ -736,7 +736,7 @@ export default function CentralTransactionsView({
                         return (
                           <tr key={t.id} className="hover:bg-[#FAF6EC]/70 transition-colors align-middle">
                             {/* Txn No */}
-                            <td className="py-3.5 pl-4 pr-3 align-middle w-[140px] whitespace-nowrap">
+                            <td className="py-2.5 pl-3 pr-2.5 align-middle w-[140px] whitespace-nowrap">
                               <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#07111F]/5 border border-[#E8E1D4] text-[#07111F] font-mono font-bold text-xs tracking-tight shadow-2xs">
                                 <FileText className="h-3 w-3 text-[#C89B3C] shrink-0" />
                                 <span>{t.txnNo}</span>
@@ -745,7 +745,7 @@ export default function CentralTransactionsView({
 
                             {/* Type (Admin only) */}
                             {isAdmin && (
-                              <td className="py-3.5 px-3 align-middle w-[95px] whitespace-nowrap">
+                              <td className="py-2.5 px-2.5 align-middle w-[95px] whitespace-nowrap">
                                 <span
                                   className={cn(
                                     "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider inline-flex items-center gap-1 shadow-2xs",
@@ -760,7 +760,7 @@ export default function CentralTransactionsView({
                             )}
 
                             {/* Property Listing */}
-                            <td className="py-3.5 px-3 align-middle w-[240px]">
+                            <td className="py-2.5 px-2.5 align-middle w-[240px]">
                               <div className="flex items-center gap-3">
                                 <div className="relative h-11 w-11 rounded-xl overflow-hidden bg-gradient-to-br from-[#07111F] to-[#1E293B] border border-[#E8E1D4] shrink-0 flex items-center justify-center shadow-2xs">
                                   {t.property?.images?.[0]?.url ? (
@@ -802,7 +802,7 @@ export default function CentralTransactionsView({
                             </td>
 
                             {/* Customer */}
-                            <td className="py-3.5 px-3 align-middle w-[190px]">
+                            <td className="py-2.5 px-2.5 align-middle w-[190px]">
                               <div className="flex items-center gap-2.5">
                                 <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-[#07111F] to-[#1E293B] text-[#D9B45B] border border-[#C89B3C]/30 flex items-center justify-center font-bold text-[11px] shrink-0 shadow-2xs">
                                   {getInitials(t.customer?.name)}
@@ -826,7 +826,7 @@ export default function CentralTransactionsView({
 
                             {/* Assigned Advisor (Admin only) */}
                             {isAdmin && (
-                              <td className="py-3.5 px-3 align-middle w-[150px]">
+                              <td className="py-2.5 px-2.5 align-middle w-[150px]">
                                 <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#FAF6EC] border border-[#E8E1D4] text-[11px] font-medium text-[#07111F] max-w-[140px]">
                                   <User className="h-3 w-3 text-[#C89B3C]" />
                                   <span className="truncate">{t.manager?.name || "Platform Direct"}</span>
@@ -835,7 +835,7 @@ export default function CentralTransactionsView({
                             )}
 
                             {/* Amount */}
-                            <td className="py-3.5 px-3 whitespace-nowrap align-middle w-[120px]">
+                            <td className="py-2.5 px-2.5 whitespace-nowrap align-middle w-[120px]">
                               <p className="font-serif font-black text-sm text-[#07111F] tracking-tight">
                                 {formatPrice(t.amount)}
                               </p>
@@ -843,12 +843,12 @@ export default function CentralTransactionsView({
                             </td>
 
                             {/* Deal Status */}
-                            <td className="py-3.5 px-3 whitespace-nowrap align-middle w-[110px]">
+                            <td className="py-2.5 px-2.5 whitespace-nowrap align-middle w-[110px]">
                               <StatusBadge status={t.status} />
                             </td>
 
                             {/* Payment */}
-                            <td className="py-3.5 px-3 whitespace-nowrap align-middle w-[115px]">
+                            <td className="py-2.5 px-2.5 whitespace-nowrap align-middle w-[115px]">
                               {payment ? (
                                 <div className="space-y-1">
                                   <StatusBadge status={payment.status} />
@@ -862,7 +862,7 @@ export default function CentralTransactionsView({
                             </td>
 
                             {/* Date */}
-                            <td className="py-3.5 px-3 whitespace-nowrap align-middle w-[110px]">
+                            <td className="py-2.5 px-2.5 whitespace-nowrap align-middle w-[110px]">
                               <div className="flex items-center gap-1.5 text-xs font-semibold text-[#07111F]">
                                 <Calendar className="h-3 w-3 text-[#C89B3C]" />
                                 <span>{fmt(t.createdAt)}</span>

@@ -210,6 +210,10 @@ model Property {
   title           String
   description     String         @db.Text
   price           Float
+  basePrice       Float          @default(0)
+  companyServiceFee Float        @default(0)
+  legalTransferFee Float         @default(0)
+  brokerCommission Float         @default(0)
   location        String
   city            String
   address         String?
@@ -433,6 +437,9 @@ model PurchaseRequest {
   propertyId   String
   managerId    String?
   salePrice    Float
+  useBroker    Boolean       @default(false)
+  brokerFee    Float         @default(0)
+  totalPrice   Float?
   currency     String        @default("USD")
   status       RequestStatus @default(PENDING)
   notes        String?       @db.Text

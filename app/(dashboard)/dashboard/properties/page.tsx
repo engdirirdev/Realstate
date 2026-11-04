@@ -162,17 +162,17 @@ export default async function ManagerPropertiesPage({
       <div className="w-full max-w-full bg-[#FCFBF7] rounded-2xl shadow-sm border border-[#E8E1D4] overflow-hidden">
         {/* Desktop Table View */}
         <div className="hidden md:block w-full max-w-full overflow-x-auto">
-          <table className="w-full text-sm min-w-[1060px]">
+          <table className="w-full text-sm">
             <thead className="bg-[#F7F3EA] border-b border-[#E8E1D4]">
               <tr>
-                <th className="text-left px-5 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">Property</th>
-                <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">Type &amp; Listing</th>
-                <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">Manager</th>
-                <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">Price</th>
-                <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">Approval</th>
-                <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">Availability</th>
-                <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">Listed Date</th>
-                <th className="text-right px-5 py-3.5 font-bold uppercase tracking-wider text-xs text-[#07111F]">Actions</th>
+                <th className="text-left px-3.5 py-3 font-bold uppercase tracking-wider text-[11px] text-[#07111F]">Property</th>
+                <th className="text-left px-2.5 py-3 font-bold uppercase tracking-wider text-[11px] text-[#07111F]">Type & Listing</th>
+                <th className="text-left px-2.5 py-3 font-bold uppercase tracking-wider text-[11px] text-[#07111F]">Manager</th>
+                <th className="text-left px-2.5 py-3 font-bold uppercase tracking-wider text-[11px] text-[#07111F]">Price</th>
+                <th className="text-left px-2.5 py-3 font-bold uppercase tracking-wider text-[11px] text-[#07111F]">Approval</th>
+                <th className="text-left px-2.5 py-3 font-bold uppercase tracking-wider text-[11px] text-[#07111F]">Availability</th>
+                <th className="text-left px-2.5 py-3 font-bold uppercase tracking-wider text-[11px] text-[#07111F]">Listed Date</th>
+                <th className="text-right px-3.5 py-3 font-bold uppercase tracking-wider text-[11px] text-[#07111F]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E8E1D4]">
@@ -191,9 +191,9 @@ export default async function ManagerPropertiesPage({
                   return (
                     <tr key={p.id} className="hover:bg-[#F7F3EA]/50 transition-colors">
                       {/* Property */}
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-3">
-                          <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-[#F7F3EA] border border-[#E8E1D4] shrink-0">
+                      <td className="px-3.5 py-2.5">
+                        <div className="flex items-center gap-2.5">
+                          <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-[#F7F3EA] border border-[#E8E1D4] shrink-0">
                             {img ? (
                               <Image src={img} alt={p.title} fill sizes="48px" className="object-cover" />
                             ) : (
@@ -206,12 +206,16 @@ export default async function ManagerPropertiesPage({
                             <Link
                               href={`/properties/${p.id}`}
                               target="_blank"
-                              className="font-semibold text-[#07111F] text-sm hover:text-[#C89B3C] max-w-[200px] truncate block"
+                              className="font-semibold text-[#07111F] text-xs hover:text-[#C89B3C] max-w-[170px] truncate block"
                               title={p.title}
                             >
                               {p.title}
                             </Link>
-                            <p className="text-xs text-[#6B7280]">{p.city} · {p.bedrooms} bed</p>
+                            <p className="text-[11px] text-[#6B7280] truncate max-w-[170px]">
+                              {p.city}
+                              {p.type !== "LAND" && p.bedrooms > 0 ? ` · ${p.bedrooms} bed${p.bedrooms > 1 ? "s" : ""}` : ""}
+                              {(p.type === "LAND" || p.bedrooms === 0) && p.area ? ` · ${p.area} m²` : ""}
+                            </p>
                           </div>
                         </div>
                       </td>
@@ -233,17 +237,15 @@ export default async function ManagerPropertiesPage({
                       </td>
 
                       {/* Manager */}
-                      <td className="px-4 py-3.5 text-xs">
-                        <p className="font-medium text-[#07111F]">
-                          {p.manager?.name || session.user.name || "Assigned Manager"}
+                      <td className="px-2.5 py-2.5 text-xs whitespace-nowrap">
+                        <p className="font-medium text-[#07111F] text-xs truncate max-w-[110px]">{p.manager?.name || session.user.name || "Assigned Manager"}
                         </p>
-                        <p className="text-[10px] text-[#6B7280]">
-                          {p.manager?.email || session.user.email || ""}
+                        <p className="text-[10px] text-[#6B7280] truncate max-w-[110px]">{p.manager?.email || session.user.email || ""}
                         </p>
                       </td>
 
                       {/* Price */}
-                      <td className="px-4 py-3.5 font-bold text-[#07111F] text-sm whitespace-nowrap">
+                      <td className="px-2.5 py-2.5 font-bold text-[#07111F] text-xs sm:text-sm whitespace-nowrap">
                         {formatPrice(p.price)}
                         {p.listingType === "FOR_RENT" && (
                           <span className="text-[10px] font-normal text-[#6B7280]">
@@ -253,7 +255,7 @@ export default async function ManagerPropertiesPage({
                       </td>
 
                       {/* Approval */}
-                      <td className="px-4 py-3.5 whitespace-nowrap">
+                      <td className="px-2.5 py-2.5 whitespace-nowrap">
                         {isRented ? (
                           <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-stone-100 text-stone-700 border border-stone-300">
                             RENTED
@@ -285,7 +287,7 @@ export default async function ManagerPropertiesPage({
                       </td>
 
                       {/* Availability */}
-                      <td className="px-4 py-3.5 whitespace-nowrap">
+                      <td className="px-2.5 py-2.5 whitespace-nowrap">
                         <span
                           className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
                             isSold
@@ -304,7 +306,7 @@ export default async function ManagerPropertiesPage({
                       </td>
 
                       {/* Listed Date */}
-                      <td suppressHydrationWarning className="px-4 py-3.5 text-[#6B7280] text-xs whitespace-nowrap">
+                      <td suppressHydrationWarning className="px-2.5 py-2.5 text-[#6B7280] text-[11px] whitespace-nowrap">
                         {new Date(p.createdAt).toLocaleDateString("en-US", {
                           month: "short",
                           day: "numeric",
@@ -313,28 +315,28 @@ export default async function ManagerPropertiesPage({
                       </td>
 
                       {/* Actions */}
-                      <td className="px-5 py-3.5 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1.5">
+                      <td className="px-3.5 py-2.5 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1">
                           <Link
                             href={`/properties/${p.id}`}
                             target="_blank"
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-[#6B7280] hover:text-[#07111F] bg-[#FCFBF7] border border-[#E8E1D4] hover:bg-[#F7F3EA]"
+                            className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-xs font-semibold text-[#6B7280] hover:text-[#07111F] bg-[#FCFBF7] border border-[#E8E1D4] hover:bg-[#F7F3EA]"
                             title="View Public Listing"
                           >
                             <Eye className="h-3.5 w-3.5" />
                           </Link>
                           <Link
                             href={`/dashboard/properties/${p.id}/edit`}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold text-[#07111F] bg-[#FCFBF7] border border-[#C89B3C]/40 hover:bg-[#F7F3EA] hover:border-[#C89B3C] shadow-2xs"
+                            className="inline-flex items-center justify-center h-7 px-2 rounded-lg text-[11px] font-bold text-[#07111F] bg-[#FCFBF7] border border-[#C89B3C]/40 hover:bg-[#F7F3EA] hover:border-[#C89B3C] shadow-2xs gap-1"
                             title="Edit Property"
                           >
-                            <Pencil className="h-3.5 w-3.5 text-[#C89B3C]" /> Edit
+                            <Pencil className="h-3 w-3 text-[#C89B3C]" /> Edit
                           </Link>
 
                           {p.listingType === "FOR_RENT" ? (
                             <Link
                               href="/dashboard/bookings?tab=rentals"
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold text-[#07111F] bg-[#F7F3EA] border border-[#E8E1D4] hover:border-[#C89B3C] shadow-2xs"
+                              className="inline-flex items-center justify-center h-7 px-2 rounded-lg text-[11px] font-bold text-[#07111F] bg-[#F7F3EA] border border-[#E8E1D4] hover:border-[#C89B3C] shadow-2xs"
                               title="Manage Rentals"
                             >
                               Rentals
@@ -342,7 +344,7 @@ export default async function ManagerPropertiesPage({
                           ) : (
                             <Link
                               href="/dashboard/transactions"
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold text-[#07111F] bg-[#F7F3EA] border border-[#E8E1D4] hover:border-[#C89B3C] shadow-2xs"
+                              className="inline-flex items-center justify-center h-7 px-2 rounded-lg text-[11px] font-bold text-[#07111F] bg-[#F7F3EA] border border-[#E8E1D4] hover:border-[#C89B3C] shadow-2xs"
                               title="View Deals & Transactions"
                             >
                               Deals
@@ -421,7 +423,11 @@ export default async function ManagerPropertiesPage({
                       >
                         {p.title}
                       </Link>
-                      <p className="text-xs text-[#6B7280]">{p.city} · {p.bedrooms} bed</p>
+                      <p className="text-[11px] text-[#6B7280] truncate max-w-[170px]">
+                        {p.city}
+                        {p.type !== "LAND" && p.bedrooms > 0 ? ` · ${p.bedrooms} bed${p.bedrooms > 1 ? "s" : ""}` : ""}
+                        {(p.type === "LAND" || p.bedrooms === 0) && p.area ? ` · ${p.area} m²` : ""}
+                      </p>
                       <p className="font-serif font-black text-sm text-[#07111F] mt-0.5">
                         {formatPrice(p.price)}
                         {p.listingType === "FOR_RENT" && (

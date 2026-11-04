@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Building2,
+  Receipt,
   MapPin,
   Sparkles,
   Send,
@@ -114,8 +115,8 @@ export default function DynamicPropertyForm({
     async function loadData() {
       try {
         const [catRes, locRes] = await Promise.all([
-          fetch("/api/categories"),
-          fetch("/api/locations"),
+          fetch("/api/categories", { cache: "no-store" }),
+          fetch("/api/locations", { cache: "no-store" }),
         ]);
         const catData = await catRes.json();
         const locData = await locRes.json();
@@ -165,12 +166,18 @@ export default function DynamicPropertyForm({
           }
         }
 
-        if (locData.success && Array.isArray(locData.cities)) {
-          setCities(locData.cities);
-          if (locData.cities.length > 0) {
+        if (locData.success) {
+          const loadedCities: string[] = Array.isArray(locData.cities) && locData.cities.length > 0
+            ? locData.cities
+            : Array.isArray(locData.locations)
+            ? locData.locations.map((l: any) => l.city.trim().charAt(0).toUpperCase() + l.city.trim().slice(1))
+            : [];
+          if (loadedCities.length > 0) {
+            const uniqueCities = Array.from(new Set(loadedCities)).sort((a, b) => a.localeCompare(b));
+            setCities(uniqueCities);
             setCommon((prev) => {
-              if (!prev.city || !locData.cities.includes(prev.city)) {
-                return { ...prev, city: locData.cities[0] };
+              if (!prev.city || !uniqueCities.includes(prev.city)) {
+                return { ...prev, city: uniqueCities[0] };
               }
               return prev;
             });
@@ -191,6 +198,9 @@ export default function DynamicPropertyForm({
     setSelectedCategoryName(cat.name);
     const mappedType = mapCategoryToPropertyType(cat.name, cat.slug);
     handleTypeChange(mappedType);
+    if (mappedType === "LAND") {
+      setListingType("FOR_SALE");
+    }
   };
 
   // Form State
@@ -198,7 +208,7 @@ export default function DynamicPropertyForm({
     (initialData?.type as PropertyTypeCode) || "HOUSE"
   );
   const [listingType, setListingType] = useState<"FOR_SALE" | "FOR_RENT">(
-    initialData?.listingType || "FOR_SALE"
+    initialData?.type === "LAND" ? "FOR_SALE" : (initialData?.listingType || "FOR_SALE")
   );
 
   // Common Fields
@@ -206,6 +216,18 @@ export default function DynamicPropertyForm({
     title: initialData?.title || "",
     description: initialData?.description || "",
     price: initialData?.price ? String(initialData.price) : "",
+    basePrice: initialData?.basePrice !== undefined && initialData?.basePrice !== null
+      ? String(initialData.basePrice)
+      : (initialData?.price ? String(Math.max(0, Number(initialData.price) - 500)) : ""),
+    companyServiceFee: initialData?.companyServiceFee !== undefined && initialData?.companyServiceFee !== null
+      ? String(initialData.companyServiceFee)
+      : "300",
+    legalTransferFee: initialData?.legalTransferFee !== undefined && initialData?.legalTransferFee !== null
+      ? String(initialData.legalTransferFee)
+      : "200",
+    brokerCommission: initialData?.brokerCommission !== undefined && initialData?.brokerCommission !== null
+      ? String(initialData.brokerCommission)
+      : "500",
     city: initialData?.city || "Mogadishu",
     location: initialData?.location || "",
     address: initialData?.address || "",
@@ -270,12 +292,30 @@ export default function DynamicPropertyForm({
   // Sync state if initialData is passed or updated
   useEffect(() => {
     if (initialData) {
-      if (initialData.type) setSelectedType(initialData.type as PropertyTypeCode);
-      if (initialData.listingType) setListingType(initialData.listingType);
+      if (initialData.type) {
+        setSelectedType(initialData.type as PropertyTypeCode);
+        if (initialData.type === "LAND") {
+          setListingType("FOR_SALE");
+        } else if (initialData.listingType) {
+          setListingType(initialData.listingType);
+        }
+      }
       setCommon({
         title: initialData.title || "",
         description: initialData.description || "",
         price: initialData.price !== undefined ? String(initialData.price) : "",
+        basePrice: initialData.basePrice !== undefined && initialData.basePrice !== null
+          ? String(initialData.basePrice)
+          : (initialData.price !== undefined ? String(Math.max(0, Number(initialData.price) - 500)) : ""),
+        companyServiceFee: initialData.companyServiceFee !== undefined && initialData.companyServiceFee !== null
+          ? String(initialData.companyServiceFee)
+          : "300",
+        legalTransferFee: initialData.legalTransferFee !== undefined && initialData.legalTransferFee !== null
+          ? String(initialData.legalTransferFee)
+          : "200",
+        brokerCommission: initialData.brokerCommission !== undefined && initialData.brokerCommission !== null
+          ? String(initialData.brokerCommission)
+          : "500",
         city: initialData.city || "Mogadishu",
         location: initialData.location || "",
         address: initialData.address || "",
@@ -328,6 +368,16 @@ export default function DynamicPropertyForm({
   // Reset or initialize type-specific fields when Property Type changes
   const handleTypeChange = (newType: PropertyTypeCode) => {
     setSelectedType(newType);
+    if (newType === "LAND") {
+      setListingType("FOR_SALE");
+      setCommon((prev) => ({
+        ...prev,
+        bedrooms: "0",
+        bathrooms: "0",
+        rentPeriod: "MONTHLY",
+        securityDeposit: "",
+      }));
+    }
 
     // Initialize clean type-specific details
     let defaultDetails: Record<string, any> = {};
@@ -649,12 +699,30 @@ export default function DynamicPropertyForm({
     if (stepNumber === 2) {
       const step2Errors: Record<string, string> = {};
       if (errors.title) step2Errors.title = errors.title;
-      if (errors.price) step2Errors.price = errors.price;
       if (errors.city) step2Errors.city = errors.city;
       if (errors.description) step2Errors.description = errors.description;
+
+      const numBase = Number(common.basePrice);
+      const numCompany = Number(common.companyServiceFee);
+      const numLegal = Number(common.legalTransferFee);
+      const numBroker = common.brokerCommission !== "" ? Number(common.brokerCommission) : null;
+
+      if (!common.basePrice || isNaN(numBase) || numBase <= 0) {
+        step2Errors.basePrice = "Property Base Price is required and must be greater than 0.";
+      }
+      if (common.companyServiceFee === "" || isNaN(numCompany) || numCompany < 0) {
+        step2Errors.companyServiceFee = "Company Service Fee is required and cannot be negative.";
+      }
+      if (common.legalTransferFee === "" || isNaN(numLegal) || numLegal < 0) {
+        step2Errors.legalTransferFee = "Legal Transfer & Notarization Fee is required and cannot be negative.";
+      }
+      if (numBroker !== null && (isNaN(numBroker) || numBroker < 0)) {
+        step2Errors.brokerCommission = "Broker Commission cannot be negative.";
+      }
+
       if (Object.keys(step2Errors).length > 0) {
         setValidationErrors(step2Errors);
-        toast({ title: "Incomplete Details", description: "Please complete required basic fields.", variant: "destructive" });
+        toast({ title: "Incomplete Details", description: "Please complete required basic and cost fields.", variant: "destructive" });
         return false;
       }
     }
@@ -725,20 +793,30 @@ export default function DynamicPropertyForm({
 
     setSubmitting(submitForReview ? "PENDING" : "DRAFT");
     try {
+      const numBasePrice = Number(common.basePrice || 0);
+      const numCompanyFee = Number(common.companyServiceFee || 0);
+      const numLegalFee = Number(common.legalTransferFee || 0);
+      const numBrokerCommission = common.brokerCommission !== "" ? Number(common.brokerCommission) : 0;
+      const totalPurchasePrice = numBasePrice + numCompanyFee + numLegalFee;
+
       const payload = {
         title: common.title,
         description: common.description,
-        price: Number(common.price),
+        price: totalPurchasePrice > 0 ? totalPurchasePrice : Number(common.price),
+        basePrice: numBasePrice,
+        companyServiceFee: numCompanyFee,
+        legalTransferFee: numLegalFee,
+        brokerCommission: numBrokerCommission,
         city: common.city,
         location: common.location || common.city,
         address: common.address || null,
         latitude: common.latitude ? Number(common.latitude) : null,
         longitude: common.longitude ? Number(common.longitude) : null,
         type: selectedType,
-        listingType,
-        isNegotiable: listingType === "FOR_SALE" ? common.isNegotiable : false,
-        rentPeriod: listingType === "FOR_RENT" ? common.rentPeriod : null,
-        securityDeposit: listingType === "FOR_RENT" && common.securityDeposit ? Number(common.securityDeposit) : null,
+        listingType: selectedType === "LAND" ? "FOR_SALE" : listingType,
+        isNegotiable: (selectedType === "LAND" || listingType === "FOR_SALE") ? common.isNegotiable : false,
+        rentPeriod: selectedType !== "LAND" && listingType === "FOR_RENT" ? common.rentPeriod : null,
+        securityDeposit: selectedType !== "LAND" && listingType === "FOR_RENT" && common.securityDeposit ? Number(common.securityDeposit) : null,
         bedrooms: ["LAND", "SHOP", "WAREHOUSE", "OFFICE", "COMMERCIAL"].includes(selectedType)
           ? 0
           : Number(common.bedrooms) || 0,
@@ -1003,30 +1081,39 @@ export default function DynamicPropertyForm({
             </div>
 
             {/* Listing Type Toggle (For Sale vs For Rent) */}
-            <div className="flex items-center p-1 bg-[#F7F3EA] rounded-2xl border border-[#E8E1D4] self-start sm:self-auto">
-              <button
-                type="button"
-                onClick={() => setListingType("FOR_SALE")}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  listingType === "FOR_SALE"
-                    ? "bg-[#07111F] text-[#FCFBF7] shadow-xs"
-                    : "text-[#6B7280] hover:text-[#07111F]"
-                }`}
-              >
-                For Sale
-              </button>
-              <button
-                type="button"
-                onClick={() => setListingType("FOR_RENT")}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  listingType === "FOR_RENT"
-                    ? "bg-[#07111F] text-[#FCFBF7] shadow-xs"
-                    : "text-[#6B7280] hover:text-[#07111F]"
-                }`}
-              >
-                For Rent
-              </button>
-            </div>
+            {selectedType === "LAND" ? (
+              <div className="flex items-center gap-2 p-2 px-3.5 bg-[#C89B3C]/10 rounded-2xl border border-[#C89B3C]/40 self-start sm:self-auto">
+                <span className="w-2 h-2 rounded-full bg-[#C89B3C] animate-pulse shrink-0" />
+                <span className="text-xs font-bold text-[#07111F]">
+                  For Sale Only <span className="text-[10px] text-[#A97918] font-normal">(Land plots are for sale only)</span>
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center p-1 bg-[#F7F3EA] rounded-2xl border border-[#E8E1D4] self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setListingType("FOR_SALE")}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    listingType === "FOR_SALE"
+                      ? "bg-[#07111F] text-[#FCFBF7] shadow-xs"
+                      : "text-[#6B7280] hover:text-[#07111F]"
+                  }`}
+                >
+                  For Sale
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setListingType("FOR_RENT")}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    listingType === "FOR_RENT"
+                      ? "bg-[#07111F] text-[#FCFBF7] shadow-xs"
+                      : "text-[#6B7280] hover:text-[#07111F]"
+                  }`}
+                >
+                  For Rent
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="space-y-4">
@@ -1060,7 +1147,7 @@ export default function DynamicPropertyForm({
             </div>
 
             {/* Listing Terms: dynamic by listing type */}
-            {listingType === "FOR_RENT" ? (
+            {selectedType !== "LAND" && listingType === "FOR_RENT" ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl border border-[#E8E1D4] bg-[#F7F3EA]">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold text-[#07111F]">Rent Period (price below is per period)</Label>
@@ -1102,32 +1189,193 @@ export default function DynamicPropertyForm({
               </label>
             )}
 
-            {/* Price & Location */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-bold text-[#07111F]">
-                    {listingType === "FOR_RENT" ? `Rent per ${common.rentPeriod.toLowerCase().replace("ly", "").replace("dai", "day")} (USD)` : "Listing Price (USD)"} <span className="text-[#C89B3C]">*</span>
-                  </Label>
-                  {validationErrors.price && (
-                    <span className="text-[11px] text-red-600 font-semibold">{validationErrors.price}</span>
-                  )}
+            {/* ── Property Cost Settings ── */}
+            <div className="p-5 sm:p-6 rounded-2xl border border-[#E8E1D4] bg-[#F7F3EA] space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E8E1D4] pb-3">
+                <div>
+                  <h3 className="text-sm font-bold font-serif text-[#07111F] flex items-center gap-2">
+                    <Receipt className="h-4 w-4 text-[#C89B3C]" /> Property Cost Settings
+                  </h3>
+                  <p className="text-[11px] text-[#6B7280]">
+                    Configure base selling price, company service fee, legal transfer fee, and optional broker commission.
+                  </p>
                 </div>
-                <div className="relative">
-                  <span className="absolute left-3 top-3 text-sm font-bold text-[#C89B3C]">$</span>
-                  <Input
-                    name="price"
-                    type="number"
-                    value={common.price}
-                    onChange={(e) => setCommon((p) => ({ ...p, price: e.target.value }))}
-                    onBlur={handleDuplicateCheck}
-                    placeholder="75000"
-                    className="h-11 pl-7 border-[#E8E1D4] bg-[#FCFBF7] rounded-xl text-sm font-bold"
-                    required
-                  />
+                <div className="flex items-center gap-2 text-xs font-bold text-[#07111F]">
+                  <span className="text-[#6B7280]">Total Purchase Price:</span>
+                  <span className="text-base font-extrabold text-[#C89B3C] font-serif">
+                    ${(
+                      Number(common.basePrice || 0) +
+                      Number(common.companyServiceFee || 0) +
+                      Number(common.legalTransferFee || 0)
+                    ).toLocaleString()}
+                  </span>
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* 1. Property Base Price * */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-bold text-[#07111F]">
+                      Property Base Price *
+                    </Label>
+                    {validationErrors.basePrice && (
+                      <span className="text-[10px] text-red-600 font-semibold">{validationErrors.basePrice}</span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3 top-3 text-sm font-bold text-[#C89B3C]">$</span>
+                    <Input
+                      name="basePrice"
+                      type="number"
+                      min="0"
+                      value={common.basePrice}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCommon((p) => {
+                          const b = Number(val || 0);
+                          const c = Number(p.companyServiceFee || 0);
+                          const l = Number(p.legalTransferFee || 0);
+                          return { ...p, basePrice: val, price: String(b + c + l) };
+                        });
+                      }}
+                      onBlur={handleDuplicateCheck}
+                      placeholder="10000"
+                      className="h-11 pl-7 border-[#E8E1D4] bg-[#FCFBF7] rounded-xl text-sm font-bold"
+                      required
+                    />
+                  </div>
+                  <p className="text-[10px] text-[#6B7280]">Original selling price of the property.</p>
+                </div>
+
+                {/* 2. Company Service Fee * */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-bold text-[#07111F]">
+                      Company Service Fee *
+                    </Label>
+                    {validationErrors.companyServiceFee && (
+                      <span className="text-[10px] text-red-600 font-semibold">{validationErrors.companyServiceFee}</span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3 top-3 text-sm font-bold text-[#C89B3C]">$</span>
+                    <Input
+                      name="companyServiceFee"
+                      type="number"
+                      min="0"
+                      value={common.companyServiceFee}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCommon((p) => {
+                          const b = Number(p.basePrice || 0);
+                          const c = Number(val || 0);
+                          const l = Number(p.legalTransferFee || 0);
+                          return { ...p, companyServiceFee: val, price: String(b + c + l) };
+                        });
+                      }}
+                      placeholder="300"
+                      className="h-11 pl-7 border-[#E8E1D4] bg-[#FCFBF7] rounded-xl text-sm font-bold"
+                      required
+                    />
+                  </div>
+                  <p className="text-[10px] text-[#6B7280]">Platform administration fee.</p>
+                </div>
+
+                {/* 3. Legal Transfer & Notarization Fee * */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-bold text-[#07111F]">
+                      Legal Transfer Fee *
+                    </Label>
+                    {validationErrors.legalTransferFee && (
+                      <span className="text-[10px] text-red-600 font-semibold">{validationErrors.legalTransferFee}</span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3 top-3 text-sm font-bold text-[#C89B3C]">$</span>
+                    <Input
+                      name="legalTransferFee"
+                      type="number"
+                      min="0"
+                      value={common.legalTransferFee}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCommon((p) => {
+                          const b = Number(p.basePrice || 0);
+                          const c = Number(p.companyServiceFee || 0);
+                          const l = Number(val || 0);
+                          return { ...p, legalTransferFee: val, price: String(b + c + l) };
+                        });
+                      }}
+                      placeholder="200"
+                      className="h-11 pl-7 border-[#E8E1D4] bg-[#FCFBF7] rounded-xl text-sm font-bold"
+                      required
+                    />
+                  </div>
+                  <p className="text-[10px] text-[#6B7280]">Ownership transfer & legal notary.</p>
+                </div>
+
+                {/* 4. Broker Commission (Optional) */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-bold text-[#07111F]">
+                      Broker Commission (Optional)
+                    </Label>
+                    {validationErrors.brokerCommission && (
+                      <span className="text-[10px] text-red-600 font-semibold">{validationErrors.brokerCommission}</span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <span className="absolute left-3 top-3 text-sm font-bold text-[#C89B3C]">$</span>
+                    <Input
+                      name="brokerCommission"
+                      type="number"
+                      min="0"
+                      value={common.brokerCommission}
+                      onChange={(e) => setCommon((p) => ({ ...p, brokerCommission: e.target.value }))}
+                      placeholder="500"
+                      className="h-11 pl-7 border-[#E8E1D4] bg-[#FCFBF7] rounded-xl text-sm font-bold"
+                    />
+                  </div>
+                  <p className="text-[10px] text-[#6B7280]">Only charged if buyer selects broker.</p>
+                </div>
+              </div>
+
+              {/* Live Totals Bar */}
+              <div className="p-3 bg-[#FCFBF7] border border-[#E8E1D4] rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-4">
+                  <div>
+                    <span className="text-[#6B7280]">Total Purchase Price (Never includes broker): </span>
+                    <strong className="text-[#07111F] font-serif text-sm">
+                      ${(
+                        Number(common.basePrice || 0) +
+                        Number(common.companyServiceFee || 0) +
+                        Number(common.legalTransferFee || 0)
+                      ).toLocaleString()}
+                    </strong>
+                  </div>
+                  <div className="hidden sm:block text-[#E8E1D4]">|</div>
+                  <div>
+                    <span className="text-[#6B7280]">Final Purchase Price (with Broker): </span>
+                    <strong className="text-[#C89B3C] font-serif text-sm">
+                      ${(
+                        Number(common.basePrice || 0) +
+                        Number(common.companyServiceFee || 0) +
+                        Number(common.legalTransferFee || 0) +
+                        Number(common.brokerCommission || 0)
+                      ).toLocaleString()}
+                    </strong>
+                  </div>
+                </div>
+                <span className="text-[11px] text-[#6B7280] italic">
+                  Broker fee is excluded by default until buyer chooses representation.
+                </span>
+              </div>
+            </div>
+
+            {/* Location (City & Neighborhood) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-[#07111F]">
                   Municipality / City <span className="text-[#C89B3C]">*</span>
@@ -2231,13 +2479,13 @@ export default function DynamicPropertyForm({
 
               {media.imageUrl ? (
                 <div className="space-y-3">
-                  <div className="aspect-16/9 max-w-md rounded-2xl overflow-hidden border-2 border-[#C89B3C]/50 bg-[#F7F3EA] relative shadow-sm group">
+                  <div className="aspect-video w-full max-w-md min-h-[180px] rounded-2xl overflow-hidden border-2 border-[#C89B3C]/50 bg-[#F7F3EA] relative shadow-sm group">
                     <img
                       src={media.imageUrl}
                       alt="Primary Showcase"
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        (e.target as any).style.display = "none";
+                        (e.currentTarget as HTMLImageElement).src = "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800";
                       }}
                     />
                     <span className="absolute top-2.5 left-2.5 bg-[#07111F]/85 backdrop-blur-xs text-[#D9B45B] text-[10px] font-bold px-2.5 py-1 rounded-md shadow-xs">
@@ -2419,14 +2667,14 @@ export default function DynamicPropertyForm({
                     {galleryImages.map((img, idx) => (
                       <div
                         key={`${img}-${idx}`}
-                        className="aspect-4/3 rounded-xl overflow-hidden border border-[#E8E1D4] bg-[#F7F3EA] relative group shadow-2xs"
+                        className="aspect-[4/3] min-h-[100px] rounded-xl overflow-hidden border border-[#E8E1D4] bg-[#F7F3EA] relative group shadow-2xs"
                       >
                         <img
                           src={img}
                           alt={`Gallery ${idx + 1}`}
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            (e.target as any).style.display = "none";
+                            (e.currentTarget as HTMLImageElement).src = "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800";
                           }}
                         />
                         <span className="absolute bottom-1.5 left-1.5 bg-[#07111F]/70 backdrop-blur-xs text-[#FCFBF7] text-[9px] font-bold px-1.5 py-0.5 rounded-md">
@@ -2684,7 +2932,7 @@ export default function DynamicPropertyForm({
                     {selectedCategoryName || getPropertyTypeLabel(selectedType)}
                   </span>
                   <span className="bg-[#C89B3C]/20 text-[#A97918] px-2.5 py-0.5 rounded-lg text-xs font-bold">
-                    {listingType === "FOR_SALE" ? "For Sale" : "For Rent"}
+                    {(selectedType === "LAND" || listingType === "FOR_SALE") ? "For Sale" : "For Rent"}
                   </span>
                 </div>
                 <h3 className="font-serif font-black text-xl text-[#07111F]">
@@ -2703,10 +2951,13 @@ export default function DynamicPropertyForm({
               </div>
 
               <div className="text-left sm:text-right">
-                <span className="text-xs text-[#6B7280]">Asking Price</span>
+                <span className="text-xs text-[#6B7280]">Total Purchase Price</span>
                 <p className="text-2xl font-black text-[#07111F]">
                   <span className="text-[#C89B3C]">$</span>
                   {Number(common.price || 0).toLocaleString()}
+                </p>
+                <p className="text-[10px] text-[#6B7280] mt-0.5">
+                  Base: ${Number(common.basePrice || 0).toLocaleString()} • Company: ${Number(common.companyServiceFee || 0).toLocaleString()} • Legal: ${Number(common.legalTransferFee || 0).toLocaleString()}
                 </p>
               </div>
             </div>

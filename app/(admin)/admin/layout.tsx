@@ -29,17 +29,17 @@ export default async function AdminLayout({
       {/* ─── Sidebar (Dark Navy #0B1523 Matching Reference) ─── */}
       <aside suppressHydrationWarning className="hidden lg:flex w-64 flex-col bg-[#0B1523] border-r border-[#1B2738] fixed inset-y-0 left-0 z-30 shadow-2xl">
         {/* Top Kiro-Maal Logo Brand Header */}
-        <div suppressHydrationWarning className="h-[72px] min-h-[72px] px-5 border-b border-[#1B2738] flex items-center bg-[#0B1523]">
+        <div suppressHydrationWarning className="h-[72px] min-h-[72px] px-5 border-b border-[#1B2738] flex items-center bg-[#0B1523] shrink-0">
           <BrandLogo variant="dark" href="/admin" size="md" />
         </div>
 
-        {/* Navigation Items */}
-        <div suppressHydrationWarning className="flex-1 overflow-y-auto scrollbar-hide py-3">
+        {/* Navigation Items (Scrollable if screen is scaled or low height) */}
+        <div suppressHydrationWarning className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-[#1B2738] hover:scrollbar-thumb-[#C89B3C]/50 py-3">
           <AdminSidebarNav />
         </div>
 
         {/* Bottom User & Sign Out (Matching Screenshot) */}
-        <div suppressHydrationWarning className="p-4 border-t border-[#1B2738] space-y-2 bg-[#09111D]">
+        <div suppressHydrationWarning className="p-4 border-t border-[#1B2738] space-y-2 bg-[#09111D] shrink-0">
           <div suppressHydrationWarning className="flex items-center justify-between gap-3 px-1 py-1">
             <div suppressHydrationWarning className="flex items-center gap-2.5 min-w-0">
               <div suppressHydrationWarning className="w-9 h-9 rounded-full bg-[#C99126] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-sm">
@@ -79,7 +79,7 @@ export default async function AdminLayout({
           unreadCount={unreadCount || 5}
         />
 
-        <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 bg-[#F5EFEB]">
+        <main className="flex-1 min-w-0 p-3 sm:p-5 lg:p-6 bg-[#F5EFEB]">
           {children}
         </main>
       </div>

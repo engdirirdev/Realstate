@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { invalidateCacheTags } from "@/lib/cache";
+
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
@@ -21,17 +25,29 @@ export async function POST(request: NextRequest) {
     const { city, region, country } = await request.json();
     if (!city || !region) return NextResponse.json({ error: "City and Region required" }, { status: 400 });
 
+    const trimmedCity = String(city).trim();
+    const formattedCity = trimmedCity.charAt(0).toUpperCase() + trimmedCity.slice(1);
+    const trimmedRegion = String(region).trim();
+    const formattedRegion = trimmedRegion.charAt(0).toUpperCase() + trimmedRegion.slice(1);
+
     const location = await prisma.location.create({
       data: {
-        city: String(city).trim(),
-        region: String(region).trim(),
+        city: formattedCity,
+        region: formattedRegion,
         country: country ? String(country).trim() : "Somalia",
       },
     });
 
+    try {
+      await invalidateCacheTags(["locations"]);
+      revalidateTag("locations");
+      revalidatePath("/admin/locations");
+      revalidatePath("/properties");
+    } catch {}
+
     return NextResponse.json({ success: true, location });
   } catch (error) {
-    return NextResponse.json({ error: "Location already exists" }, { status: 400 });
+    return NextResponse.json({ error: "Location already exists or invalid" }, { status: 400 });
   }
 }
 
@@ -47,14 +63,26 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Location ID, City, and Region are required" }, { status: 400 });
     }
 
+    const trimmedCity = String(city).trim();
+    const formattedCity = trimmedCity.charAt(0).toUpperCase() + trimmedCity.slice(1);
+    const trimmedRegion = String(region).trim();
+    const formattedRegion = trimmedRegion.charAt(0).toUpperCase() + trimmedRegion.slice(1);
+
     const location = await prisma.location.update({
       where: { id },
       data: {
-        city: String(city).trim(),
-        region: String(region).trim(),
+        city: formattedCity,
+        region: formattedRegion,
         country: country ? String(country).trim() : "Somalia",
       },
     });
+
+    try {
+      await invalidateCacheTags(["locations"]);
+      revalidateTag("locations");
+      revalidatePath("/admin/locations");
+      revalidatePath("/properties");
+    } catch {}
 
     return NextResponse.json({ success: true, location });
   } catch (error) {
@@ -74,9 +102,16 @@ export async function DELETE(request: NextRequest) {
     if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
 
     await prisma.location.delete({ where: { id } });
+
+    try {
+      await invalidateCacheTags(["locations"]);
+      revalidateTag("locations");
+      revalidatePath("/admin/locations");
+      revalidatePath("/properties");
+    } catch {}
+
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json({ error: "Failed to delete location" }, { status: 500 });
   }
 }
-

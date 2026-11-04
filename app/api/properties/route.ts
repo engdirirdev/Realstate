@@ -11,6 +11,10 @@ const PROPERTY_CARD_SELECT = {
   id: true,
   title: true,
   price: true,
+  basePrice: true,
+  companyServiceFee: true,
+  legalTransferFee: true,
+  brokerCommission: true,
   currency: true,
   city: true,
   location: true,
@@ -241,6 +245,10 @@ export async function POST(request: NextRequest) {
       title,
       description,
       price,
+      basePrice,
+      companyServiceFee,
+      legalTransferFee,
+      brokerCommission,
       location,
       city,
       address,
@@ -279,13 +287,35 @@ export async function POST(request: NextRequest) {
     const isAdmin = user.role === "ADMIN";
     const status = submitForReview ? (isAdmin ? "APPROVED" : "PENDING") : "DRAFT";
 
-    const effectiveListingType = listingType === "FOR_RENT" ? "FOR_RENT" : "FOR_SALE";
+    const isLand = String(type).toUpperCase() === "LAND";
+    const effectiveListingType = isLand ? "FOR_SALE" : (listingType === "FOR_RENT" ? "FOR_RENT" : "FOR_SALE");
     const effectiveRentPeriod =
-      effectiveListingType === "FOR_RENT" && ["MONTHLY", "WEEKLY", "DAILY"].includes(String(rentPeriod).toUpperCase())
+      !isLand && effectiveListingType === "FOR_RENT" && ["MONTHLY", "WEEKLY", "DAILY"].includes(String(rentPeriod).toUpperCase())
         ? String(rentPeriod).toUpperCase()
-        : effectiveListingType === "FOR_RENT"
+        : !isLand && effectiveListingType === "FOR_RENT"
         ? "MONTHLY"
         : null;
+    const numBase = basePrice !== undefined && basePrice !== null && basePrice !== "" ? Number(basePrice) : null;
+    const numCompany = companyServiceFee !== undefined && companyServiceFee !== null && companyServiceFee !== "" ? Number(companyServiceFee) : 300;
+    const numLegal = legalTransferFee !== undefined && legalTransferFee !== null && legalTransferFee !== "" ? Number(legalTransferFee) : 200;
+    const numBroker = brokerCommission !== undefined && brokerCommission !== null && brokerCommission !== "" ? Number(brokerCommission) : 500;
+
+    if (numBase !== null && (isNaN(numBase) || numBase <= 0)) {
+      return NextResponse.json({ success: false, error: "Property Base Price must be greater than zero." }, { status: 400 });
+    }
+    if (isNaN(numCompany) || numCompany < 0) {
+      return NextResponse.json({ success: false, error: "Company Service Fee cannot be negative." }, { status: 400 });
+    }
+    if (isNaN(numLegal) || numLegal < 0) {
+      return NextResponse.json({ success: false, error: "Legal Transfer and Notarization Fee cannot be negative." }, { status: 400 });
+    }
+    if (isNaN(numBroker) || numBroker < 0) {
+      return NextResponse.json({ success: false, error: "Broker Commission cannot be negative." }, { status: 400 });
+    }
+
+    const effectiveBasePrice = numBase ?? Math.max(500, (Number(price) || 1000) - numCompany - numLegal);
+    const effectiveTotalPrice = effectiveBasePrice + numCompany + numLegal;
+
     if (Number(price) <= 0 || isNaN(Number(price))) {
       return NextResponse.json({ success: false, error: "Price must be greater than zero." }, { status: 400 });
     }
@@ -350,7 +380,11 @@ export async function POST(request: NextRequest) {
       data: {
         title,
         description,
-        price: Number(price),
+        price: effectiveTotalPrice,
+        basePrice: effectiveBasePrice,
+        companyServiceFee: numCompany,
+        legalTransferFee: numLegal,
+        brokerCommission: numBroker,
         location: location || city,
         city,
         address: address || null,
@@ -362,7 +396,7 @@ export async function POST(request: NextRequest) {
         isNegotiable: effectiveListingType === "FOR_SALE" ? Boolean(isNegotiable) : false,
         rentPeriod: effectiveRentPeriod,
         securityDeposit:
-          effectiveListingType === "FOR_RENT" && securityDeposit !== undefined && securityDeposit !== null && securityDeposit !== ""
+          !isLand && effectiveListingType === "FOR_RENT" && securityDeposit !== undefined && securityDeposit !== null && securityDeposit !== ""
             ? Number(securityDeposit)
             : null,
         typeDetails: parsedTypeDetails ? JSON.stringify(parsedTypeDetails) : null,

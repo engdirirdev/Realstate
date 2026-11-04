@@ -499,6 +499,10 @@ export default async function PropertyDetailPage({ params }: Props) {
           {/* Halal Property Cost Summary & Investment Returns (Preserved) */}
           <PropertyCostSummary
             propertyPrice={property.price}
+            basePrice={property.basePrice}
+            companyServiceFee={property.companyServiceFee}
+            legalTransferFee={property.legalTransferFee}
+            brokerCommission={property.brokerCommission}
             propertyType={property.type}
             city={property.city}
           />
@@ -577,6 +581,10 @@ export default async function PropertyDetailPage({ params }: Props) {
                 propertyId={property.id}
                 propertyTitle={property.title}
                 propertyPrice={property.price}
+                basePrice={property.basePrice}
+                companyServiceFee={property.companyServiceFee}
+                legalTransferFee={property.legalTransferFee}
+                brokerCommission={property.brokerCommission}
                 listingType={property.listingType}
                 status={property.status}
                 availabilityStatus={property.availabilityStatus}

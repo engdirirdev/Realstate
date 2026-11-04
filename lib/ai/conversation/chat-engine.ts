@@ -359,7 +359,6 @@ export async function processConversationalTurn(
   }
   state.language = activeLanguage;
 
-<<<<<<< HEAD
   // 2b. Strict Pure Greeting Interceptor
   // When a user simply says "hi", "hello", "asc", "salaam", etc., NEVER show property cards!
   if (isPureConversationalGreeting(message)) {
@@ -417,13 +416,8 @@ export async function processConversationalTurn(
     }
   }
 
-  // 3. GEMINI IS THE CONVERSATIONAL & NATURAL LANGUAGE AUTHORITY
-  // Raw user message reaches Gemini with full history, context data, and active property inventory.
-  const geminiDecision = await geminiProvider.decideConversationalAction({
-=======
   // 3. AI PROVIDER STRATEGY: GEMINI 3.8 FLASH (PRIMARY) -> OPENAI GPT-6 LUNA (FALLBACK) -> TECHNICAL NOTICE (LAST RESORT)
   const turnContext = {
->>>>>>> 6c6e7eb10c5300d02a9bb417411d18beeeedc37b
     userMessage: message,
     conversationHistory: history.map((h) => ({ role: h.role, content: h.content })),
     contextSlots: state.slots,
@@ -549,12 +543,8 @@ export async function processConversationalTurn(
       state = attachActiveResultSet(state, returnedProperties);
     }
 
-<<<<<<< HEAD
-    // Return verified database results to Gemini to generate the grounded natural response
+// Return verified database results to AI to generate the grounded natural response
     const targetLocName = state.slots.city || toolArgs.city || "Somalia";
-=======
-    // Return verified database results to AI to generate the grounded natural response
->>>>>>> 6c6e7eb10c5300d02a9bb417411d18beeeedc37b
     const fallbackReply = returnedProperties.length > 0
       ? (activeLanguage === "en"
           ? (toolArgs.prioritizeBest || message.includes("best")

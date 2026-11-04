@@ -184,10 +184,15 @@ export default function RelatedPropertiesSection({
                 <div className="p-4 flex flex-col flex-1 justify-between gap-3">
                   <div>
                     <div className="flex items-baseline justify-between gap-2 mb-1">
-                      <p className="text-base font-extrabold text-[#07111F]">
-                        <span className="text-[#C89B3C]">$</span>
-                        {item.price?.toLocaleString()}
-                      </p>
+                      <div>
+                        <p className="text-base font-extrabold text-[#07111F]">
+                          <span className="text-[#C89B3C]">$</span>
+                          {item.price?.toLocaleString()}
+                        </p>
+                        <span className="text-[9px] font-bold text-[#6B7280] uppercase tracking-wider block">
+                          Total Purchase Price
+                        </span>
+                      </div>
                       <span className="text-[10px] text-[#6B7280] font-medium">
                         {item.area ? `$${Math.round(item.price / item.area).toLocaleString()}/m²` : ""}
                       </span>
@@ -204,20 +209,30 @@ export default function RelatedPropertiesSection({
                   </div>
 
                   {/* Specs */}
-                  <div className="pt-2 border-t border-[#E8E1D4] grid grid-cols-3 gap-1 text-[10px] text-[#6B7280]">
-                    <div className="flex items-center gap-1 truncate" title={`${item.bedrooms} Bedrooms`}>
-                      <BedDouble className="h-3 w-3 text-[#C89B3C]" />
-                      <span>{item.bedrooms} Bed</span>
+                  {item.bedrooms === 0 ? (
+                    <div className="pt-2 border-t border-[#E8E1D4] flex items-center justify-between text-[11px] text-[#6B7280]">
+                      <span className="font-semibold text-[#07111F]">{item.bathrooms > 0 ? `${item.bathrooms} Bath` : "Commercial / Land"}</span>
+                      <div className="flex items-center gap-1 font-semibold text-[#07111F]">
+                        <SquareStack className="h-3 w-3 text-[#C89B3C]" />
+                        <span>{item.area} m²</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 truncate" title={`${item.bathrooms} Bathrooms`}>
-                      <Bath className="h-3 w-3 text-[#C89B3C]" />
-                      <span>{item.bathrooms} Bath</span>
+                  ) : (
+                    <div className="pt-2 border-t border-[#E8E1D4] grid grid-cols-3 gap-1 text-[10px] text-[#6B7280]">
+                      <div className="flex items-center gap-1 truncate" title={`${item.bedrooms} Bedrooms`}>
+                        <BedDouble className="h-3 w-3 text-[#C89B3C]" />
+                        <span>{item.bedrooms} Bed{item.bedrooms > 1 ? "s" : ""}</span>
+                      </div>
+                      <div className="flex items-center gap-1 truncate" title={`${item.bathrooms} Bathrooms`}>
+                        <Bath className="h-3 w-3 text-[#C89B3C]" />
+                        <span>{item.bathrooms} Bath{item.bathrooms > 1 ? "s" : ""}</span>
+                      </div>
+                      <div className="flex items-center gap-1 truncate" title={`${item.area} m²`}>
+                        <SquareStack className="h-3 w-3 text-[#C89B3C]" />
+                        <span>{item.area} m²</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 truncate" title={`${item.area} m²`}>
-                      <SquareStack className="h-3 w-3 text-[#C89B3C]" />
-                      <span>{item.area} m²</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </Link>
             );

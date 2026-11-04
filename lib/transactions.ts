@@ -114,7 +114,7 @@ async function hasRentalOverlap(tx: Tx, propertyId: string, start: Date, end: Da
 // CREATE REQUESTS
 // ----------------------------------------------------------------
 
-export async function createPurchaseRequest(customerId: string, propertyId: string, notes?: string) {
+export async function createPurchaseRequest(customerId: string, propertyId: string, notes?: string, useBroker: boolean = false) {
   return prisma.$transaction(async (tx) => {
     const property = await lockProperty(tx, propertyId);
 
@@ -141,13 +141,23 @@ export async function createPurchaseRequest(customerId: string, propertyId: stri
       if (activeManager) assignedManagerId = activeManager.id;
     }
 
+    const numBase = property.basePrice ?? Math.max(500, property.price - 500);
+    const numCompany = property.companyServiceFee ?? 300;
+    const numLegal = property.legalTransferFee ?? 200;
+    const totalPurchasePrice = numBase + numCompany + numLegal;
+    const resolvedBrokerFee = property.brokerCommission ?? 500;
+    const finalTotalPrice = totalPurchasePrice + (useBroker ? resolvedBrokerFee : 0);
+
     const request = await tx.purchaseRequest.create({
       data: {
         requestNo: genNo("PUR"),
         customerId,
         propertyId,
         managerId: assignedManagerId,
-        salePrice: property.price,
+        salePrice: totalPurchasePrice,
+        useBroker: Boolean(useBroker),
+        brokerFee: useBroker ? resolvedBrokerFee : 0,
+        totalPrice: finalTotalPrice,
         currency: property.currency,
         notes: notes?.trim() || null,
       },

@@ -129,7 +129,7 @@ export default function AdminLocationsPage() {
   };
 
   return (
-    <div className="space-y-6 bg-[#F7F3EA] min-h-screen p-6 sm:p-8">
+    <div className="space-y-5 w-full min-w-0">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FCFBF7] border border-[#C89B3C]/30 text-[#A97918] text-xs font-semibold uppercase tracking-wider mb-2 shadow-xs">

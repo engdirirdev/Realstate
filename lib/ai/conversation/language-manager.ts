@@ -502,44 +502,50 @@ export function detectConversationalLanguage(
   let indonesianScore = (lower.match(/\b(saya|ingin|mencari|rumah|sewa|beli|kamar|harga|murah|apartemen)\b/g) || []).length;
 
   let englishScore = 0;
-  const englishMatches = lower.match(/\b(i|want|need|looking|for|house|bedroom|villa|apartment|under|with|parking|in|cheaper|second|first|show|more|price)\b/g);
+  const englishMatches = lower.match(/\b(the|a|an|is|are|was|were|do|does|did|you|have|has|i|we|my|your|in|on|at|to|for|of|with|what|where|which|who|how|many|much|any|all|total|contemporary|luxury|modern|spacious|family|villa|house|apartment|office|land|rent|sale|buy|under|price|show|find|list|please|plz|properties|property)\b/g);
   if (englishMatches) {
     englishScore = englishMatches.length;
   }
 
-  // Location resolver signal: Any Somali recognized city boosts Somali evidence when not clearly another language
+  // Location resolver signal: Any Somali recognized city boosts Somali evidence ONLY when there are no English/Swahili words
   const loc = resolveLocation(normalized);
   if (loc && swahiliScore === 0 && englishScore === 0 && spanishScore === 0 && frenchScore === 0 && oromoScore === 0 && italianScore === 0) {
     somaliScore += 1;
   }
 
-  // 4. Strict Conversation Language Inheritance for Short Turns
-  // Short messages (e.g. "caabudwaaq", "3", "80k", "haa", "maya", "kan labaad", "500 dollar bishii", "wax walba ii raadi")
-  // MUST inherit conversation language unless there is strong counter-language evidence (>= 2 distinct words)
-  const tokenCount = normalized.split(/\s+/).filter(Boolean).length;
-  const isShortMessage = normalized.length <= 40 || tokenCount <= 5;
-
-  if (currentPreference && isShortMessage && englishScore < 2 && swahiliScore === 0 && explicitPreference === undefined) {
-    // If user previously spoke Somali/Arabic/Swahili/etc. and this short message doesn't explicitly speak English:
-    if (currentPreference !== "en") {
-      return {
-        language: currentPreference,
-        confidence: 0.95,
-        isCodeSwitching: false,
-        script: "Latn",
-        explicitPreferenceDetected: undefined,
-      };
-    }
-  }
-
-  // Code-switching detection (Somali + English)
-  if (somaliScore >= 1 && englishScore >= 1 && tokenCount > 4) {
+  // 4. Strict Language Dominance: English vs. Somali vs. Swahili
+  if (englishScore > somaliScore) {
     return {
-      language: "mixed",
-      confidence: 0.90,
-      isCodeSwitching: true,
+      language: "en",
+      confidence: 0.98,
+      isCodeSwitching: false,
       script: "Latn",
       explicitPreferenceDetected: explicitPreference,
+    };
+  }
+
+  if (somaliScore > englishScore) {
+    return {
+      language: "so",
+      confidence: 0.98,
+      isCodeSwitching: false,
+      script: "Latn",
+      explicitPreferenceDetected: explicitPreference,
+    };
+  }
+
+  // Strict Conversation Language Inheritance for Short Ambiguous Turns
+  // Short messages (e.g. "caabudwaaq", "3", "80k", "5000", "haa", "maya")
+  const tokenCount = normalized.split(/\s+/).filter(Boolean).length;
+  const isShortMessage = normalized.length <= 40 || tokenCount <= 4;
+
+  if (currentPreference && isShortMessage && explicitPreference === undefined) {
+    return {
+      language: currentPreference,
+      confidence: 0.95,
+      isCodeSwitching: false,
+      script: "Latn",
+      explicitPreferenceDetected: undefined,
     };
   }
 

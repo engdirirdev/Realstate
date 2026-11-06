@@ -52,7 +52,7 @@ export function validateGrounding(
     return { isValid: true };
   }
 
-  const activeProp = targetProperty || verifiedProperties[0];
+  const activeProp = targetProperty || (verifiedProperties.length === 1 ? verifiedProperties[0] : undefined);
 
   // 1. SWIMMING POOL VALIDATION
   const assertsPool =

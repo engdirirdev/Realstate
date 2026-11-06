@@ -365,7 +365,16 @@ DOMAIN KNOWLEDGE & RULES:
     let timer: NodeJS.Timeout | null = null;
 
     try {
+      const langInstruction =
+        input.language === "en"
+          ? "MANDATORY LANGUAGE RULE: The user is communicating in ENGLISH. You MUST write your entire response in 100% natural, fluent ENGLISH. Do NOT use any Somali or Arabic words or sentences."
+          : input.language === "ar"
+          ? "متطلب اللغة الإلزامي: المستخدم يتحدث باللغة العربية. يجب أن تكتب إجابتك بالكامل باللغة العربية الفصحى بنسبة 100%."
+          : "SHARCI ADAG OO AF-SOOMAALI AH: Isticmaaluhu wuxuu ku hadlayaa AF-SOOMAALI. Waa inaad jawaabtaada oo dhan ku qortaa 100% AF-SOOMAALI dabiici ah oo hufan. Ha ku darin wax jumlado Ingiriisi ah.";
+
       const systemInstruction = `You are Gemini 3.8 Flash, acting as AIDA — the AI Real Estate Assistant for Kiro-Maal (Somalia's premier real estate platform).
+
+${langInstruction}
 
 ABOUT KIRO-MAAL & OUR SERVICES:
 - Kiro-Maal is Somalia's leading digital real estate marketplace connecting property seekers, tenants, and buyers with thoroughly verified property inventory.
@@ -378,7 +387,7 @@ ABOUT KIRO-MAAL & OUR SERVICES:
 DOMAIN & DATA GROUNDING (CRITICAL):
 - The verified properties provided in promptData are the authoritative source of truth: DATABASE > MODEL MEMORY > ASSUMPTION.
 - NEVER invent properties, prices, locations, bedrooms, bathrooms, amenities, or contact details.
-- If verified properties are returned, explain them accurately and answer user questions based on the verified facts.
+- If verified properties are returned, explain them accurately and report the exact total count of matching properties provided in [TOTAL MATCHING VERIFIED PROPERTIES IN DATABASE].
 - If no properties match or if the user excludes an area, respect the factual database reality honestly.`;
 
       const genModel = client.getGenerativeModel({
@@ -396,9 +405,11 @@ DOMAIN & DATA GROUNDING (CRITICAL):
       }));
 
       // Grounded context strictly from verified database records
-      let groundedContext = "";
+      let groundedContext = `[STRICT LANGUAGE DIRECTIVE]: ${langInstruction}\n`;
       if (input.verifiedProperties && input.verifiedProperties.length > 0) {
-        groundedContext += `[VERIFIED KIRO-MAAL PROPERTIES IN DATABASE]:\n` +
+        const total = (input as any).totalMatches || input.verifiedProperties.length;
+        groundedContext += `[TOTAL MATCHING VERIFIED PROPERTIES IN DATABASE]: ${total}\n`;
+        groundedContext += `[VERIFIED KIRO-MAAL PROPERTIES IN DATABASE (${input.verifiedProperties.length} records listed below)]:\n` +
           input.verifiedProperties.map((p) =>
             `#${p.rank || 1} "${p.title}": Price $${p.price} (${p.city}${(p as any).location ? ', ' + (p as any).location : ''}), ` +
             `${p.bedrooms || 0} bedrooms, ${p.bathrooms || 0} baths, ` +
@@ -572,8 +583,18 @@ CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
         ctx.push(`Active Properties: [${propSummaries}]`);
       }
 
+      const activeLang = input.preferredLanguage || "en";
+      const turnLangDirective =
+        activeLang === "en"
+          ? "[MANDATORY LANGUAGE: ENGLISH ONLY — Do NOT use Somali]"
+          : activeLang === "ar"
+          ? "[اللغة المطلوبة: العربية فقط]"
+          : "[MANDATORY LANGUAGE: SOMALI ONLY — Do NOT use English]";
+
       if (ctx.length > 0) {
-        promptText = `[KNOWN CONVERSATION CONTEXT: ${ctx.join(" | ")}]\nUser Message: ${input.userMessage}`;
+        promptText = `${turnLangDirective}\n[KNOWN CONVERSATION CONTEXT: ${ctx.join(" | ")}]\nUser Message: ${input.userMessage}`;
+      } else {
+        promptText = `${turnLangDirective}\nUser Message: ${input.userMessage}`;
       }
 
       const contents = [

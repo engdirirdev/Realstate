@@ -391,7 +391,7 @@ async function executePropertySearchTool(
   });
 
   scoredProps.sort((a, b) => b.score - a.score);
-  const finalProps = scoredProps.slice(0, 5).map((entry, idx) => {
+  const finalProps = scoredProps.slice(0, 15).map((entry, idx) => {
     const dynamicScore = Math.min(99, Math.max(82, Math.round(94 + entry.score * 1.2 - idx * 2)));
     return {
       ...entry.item,
@@ -404,7 +404,7 @@ async function executePropertySearchTool(
 
   return {
     properties: finalProps,
-    totalMatches: finalProps.length,
+    totalMatches: validatedProps.length,
     shouldRenderPropertyCards: finalProps.length > 0,
     responseType: finalProps.length > 0 ? "PROPERTY_RESULTS" : "NO_RESULTS",
   };
@@ -478,10 +478,87 @@ export async function processConversationalTurn(
     };
   }
 
+  // 2b-2. Direct Coverage & Location List Interceptor
+  // When user asks which locations Kiro-Maal operates in or to list locations, answer directly and accurately!
+  const isCoverageQuestion =
+    /\b(which locations|list (your|you) locations|what locations|where do you (work|operate|cover)|locations do you|meelahee ka shaqeysaan|magaalooyinkee ka shaqeysaan|goobaha aad ka shaqeysaan|cities do you cover|where are your offices)\b/i.test(message) ||
+    /^(which locations do you have to work|list you locations|list your locations)\b/i.test(message.trim());
+
+  if (isCoverageQuestion) {
+    const coverageReply =
+      activeLanguage === "en"
+        ? `Kiro-Maal operates across major cities in Somalia and Somaliland, with verified property listings in:
+* **Mogadishu** (Hodan, Wadajir/Medina, Waberi, Taleex, Abdiaziz, Hamar Weyne, Dayniile, etc.)
+* **Hargeisa** (Jigjiga Yar, 26 June, Ibrahim Koodbuur, Ga'an Libaax)
+* **Garowe**, **Kismayo**, **Bosaso**, **Burao**, **Berbera**, and **Baidoa**
+
+Which city or neighborhood would you like to explore properties in?`
+        : activeLanguage === "ar"
+        ? `تعمل كيرو-مال (Kiro-Maal) في جميع المدن الرئيسية في الصومال وأرض الصومال:
+* **مقديشو** (هودان، واداجير/المدينة، وابري، طليح، عبد العزيز، حمروين، دينيلي، إلخ)
+* **هرجيسا** (جيجيجا يار، 26 يونيو، إبراهيم كودبور، غعان ليباح)
+* **غاروي**، **كيسمايو**، **بوساسو**، **برعو**، **بربرة**، و**بيدوا**
+
+في أي مدينة ترغب في استكشاف العقارات؟`
+        : `Kiro-Maal waxay ka shaqeysaa dhammaan magaalooyinka waaweyn ee Soomaaliya iyo Somaliland, oo ay ku jiraan:
+* **Muqdisho** (Hodan, Wadajir/Madiina, Waaberi, Taleex, Cabdicasiis, Xamar Weyne, Dayniile, iwm.)
+* **Hargeysa** (Jigjiga Yar, 26 Juun, Ibraahim Koodbuur, Gacan Libaax)
+* **Garoowe**, **Kismaayo**, **Boosaaso**, **Burco**, **Berbera**, iyo **Baydhabo**
+
+Magaaladee ama goobtee ayaad jeceshahay inaad guryo ama hanti ka raadiso?`;
+
+    state.lastAssistantMessage = coverageReply;
+    state.lastUserMessage = message;
+    state.lastUserRequest = message;
+    state.turnCount += 1;
+    state.updatedAt = new Date().toISOString();
+
+    return {
+      reply: coverageReply,
+      properties: [],
+      intent: "GENERAL_CONVERSATION",
+      topic: state.currentTopic,
+      confidence: 0.98,
+      language: activeLanguage,
+      conversationLanguage: activeLanguage,
+      languageConfidence: 0.98,
+      searchReadiness: "GENERAL_CONVERSATION",
+      missingSlots: [],
+      totalMatches: 0,
+      state,
+      updatedState: state,
+      responseType: "GENERAL_CONVERSATION",
+      shouldRenderPropertyCards: false,
+      shouldRenderCards: false,
+      activeSearchCriteria: state.slots,
+      referencedPropertyIds: [],
+    };
+  }
+
   // 2c. Immediate Deterministic Entity Extraction & Slot Enrichment
   const currentEntities = extractEntities(message);
-  if (currentEntities.purpose && !state.slots.purpose) state.slots.purpose = currentEntities.purpose;
-  if (currentEntities.propertyType && !state.slots.propertyType) state.slots.propertyType = currentEntities.propertyType;
+
+  // Detect broad count, total, or overview inquiries (e.g. "meeqo ayay totalka noqonayaan", "si guud waa meeqo nooc kaste ha ahaadaane", "how many properties are in hargiesa")
+  const isBroadCountOrOverview =
+    /\b(meeqo|meeo|imisa|totalka|total|wadarta|tirada|guud|si guud|nooc kaste|nooc kasta|nooc kasto|wax walba|dhammaan|dhan)\b/i.test(message) ||
+    /\b(how many|count|how much properties|all properties|overall|in general|any type|whatever type|total properties)\b/i.test(message);
+
+  // Clear single-turn keyword queries so they never poison subsequent turns
+  delete (state.slots as any).query;
+
+  if (isBroadCountOrOverview && !currentEntities.propertyType) {
+    // Reset narrow filters from prior turns so we count/show ALL verified inventory in the target location
+    delete state.slots.propertyType;
+    delete state.slots.bedrooms;
+    delete state.slots.maxPrice;
+    delete state.slots.minPrice;
+    delete state.slots.purpose;
+    delete state.referencedPropertyId;
+    state.activeResultSet = [];
+  }
+
+  if (currentEntities.purpose) state.slots.purpose = currentEntities.purpose;
+  if (currentEntities.propertyType) state.slots.propertyType = currentEntities.propertyType;
   if (currentEntities.price) {
     if (typeof currentEntities.price === "number") {
       state.slots.maxPrice = currentEntities.price;
@@ -503,9 +580,14 @@ export async function processConversationalTurn(
     const newCity = explicitLoc.canonicalCity;
     if (state.slots.city && state.slots.city.toLowerCase() !== newCity.toLowerCase()) {
       delete state.slots.district;
+      delete state.slots.propertyType;
+      delete state.slots.bedrooms;
+      delete state.slots.maxPrice;
+      delete state.slots.minPrice;
       state.slots.excludedLocations = [];
       state.activeResultSet = [];
       delete state.referencedPropertyId;
+      if (currentEntities.propertyType) state.slots.propertyType = currentEntities.propertyType;
     }
     state.slots.city = newCity;
     if (explicitLoc.district) {
@@ -602,11 +684,13 @@ export async function processConversationalTurn(
     const cu = conversationalDecision.contextUpdates;
     if (cu.city !== undefined && cu.city !== null) state.slots.city = cu.city;
     if (cu.district !== undefined && cu.district !== null) state.slots.district = cu.district;
-    if (typeof cu.maxPrice === "number") state.slots.maxPrice = cu.maxPrice;
-    if (typeof cu.minPrice === "number") state.slots.minPrice = cu.minPrice;
-    if (cu.purpose !== undefined && cu.purpose !== null) state.slots.purpose = cu.purpose;
-    if (cu.propertyType !== undefined && cu.propertyType !== null) state.slots.propertyType = cu.propertyType;
-    if (typeof cu.bedrooms === "number") state.slots.bedrooms = cu.bedrooms;
+    if (typeof cu.maxPrice === "number" && !isBroadCountOrOverview) state.slots.maxPrice = cu.maxPrice;
+    if (typeof cu.minPrice === "number" && !isBroadCountOrOverview) state.slots.minPrice = cu.minPrice;
+    if (cu.purpose !== undefined && cu.purpose !== null && !isBroadCountOrOverview) state.slots.purpose = cu.purpose;
+    if (cu.propertyType !== undefined && cu.propertyType !== null && (!isBroadCountOrOverview || Boolean(currentEntities.propertyType))) {
+      state.slots.propertyType = cu.propertyType;
+    }
+    if (typeof cu.bedrooms === "number" && !isBroadCountOrOverview) state.slots.bedrooms = cu.bedrooms;
     if (cu.pricePeriod !== undefined && cu.pricePeriod !== null) state.slots.pricePeriod = cu.pricePeriod;
     if (cu.furnished !== undefined && cu.furnished !== null) state.slots.furnished = cu.furnished;
     if (cu.parking !== undefined && cu.parking !== null) state.slots.parking = cu.parking;
@@ -632,10 +716,9 @@ export async function processConversationalTurn(
     }
   }
 
-  // 4b. Automatic Search Upgrade for Property Inquiries:
-  // If the user asked whether a property or type of property exists ("do you have...", "is there...", "ma haysaan...")
-  // and the AI returned text rather than a tool call, ensure search_properties is executed!
+  // 4b. Automatic Search Upgrade for Property Inquiries & Broad Count/Overview Questions:
   const isAvailabilityInquiry =
+    isBroadCountOrOverview ||
     /\b(do you have|is there|are there|any|ma haysaan|ma jiraa|ma leedihiin|haysaa|ma heshaa)\b/i.test(message) ||
     Boolean((state.slots.city || conversationalDecision.contextUpdates?.city) && (state.slots.propertyType || conversationalDecision.contextUpdates?.propertyType) && !message.match(/\b(locations|cities|where do you work|offices)\b/i));
 
@@ -650,8 +733,10 @@ export async function processConversationalTurn(
       args: {
         city: conversationalDecision.contextUpdates?.city || state.slots.city,
         district: conversationalDecision.contextUpdates?.district || state.slots.district,
-        propertyType: (conversationalDecision.contextUpdates?.propertyType || state.slots.propertyType) as any,
-        query: message,
+        propertyType: (isBroadCountOrOverview && !currentEntities.propertyType)
+          ? undefined
+          : ((conversationalDecision.contextUpdates?.propertyType || state.slots.propertyType) as any),
+        query: isBroadCountOrOverview ? undefined : message,
       },
     };
   }
@@ -663,6 +748,21 @@ export async function processConversationalTurn(
     // AI decided that verified property inventory is needed to answer.
     // -------------------------------------------------------------------------
     const toolArgs = conversationalDecision.toolCall.args;
+
+    // If user asked a general count/overview question without specifying a type, clear narrow filters on toolArgs
+    if (isBroadCountOrOverview && !currentEntities.propertyType) {
+      delete toolArgs.propertyType;
+      delete toolArgs.preferredBedrooms;
+      delete toolArgs.maxPrice;
+      delete toolArgs.minPrice;
+      delete toolArgs.purpose;
+      delete (toolArgs as any).query;
+      delete state.slots.propertyType;
+      delete state.slots.bedrooms;
+      delete state.slots.maxPrice;
+      delete state.slots.minPrice;
+      delete state.slots.purpose;
+    }
 
     // Sync state slots with tool arguments
     if (toolArgs.city) state.slots.city = toolArgs.city;
@@ -688,10 +788,12 @@ export async function processConversationalTurn(
     const extracted = extractEntities(message);
     const readiness = evaluateSearchReadiness(state, message, extracted, activeLanguage);
     const hasSpecificInquiry = Boolean(
+      isBroadCountOrOverview ||
       (toolArgs as any).query ||
       toolArgs.city ||
       toolArgs.propertyType ||
-      message.match(/\b(contemporary|luxury|villa|apartment|townhouse|penthouse|compound|hargeisa|hargiesa|mogadishu|muqdisho|do you have|ma haysaan)\b/i)
+      state.slots.city ||
+      message.match(/\b(contemporary|luxury|villa|apartment|townhouse|penthouse|compound|hargeisa|hargiesa|mogadishu|muqdisho|do you have|ma haysaan|how many|meeqo|imisa|totalka|si guud)\b/i)
     );
     if (!readiness.isReady && readiness.clarificationQuestion && !hasSpecificInquiry) {
       return {
@@ -726,18 +828,18 @@ export async function processConversationalTurn(
       state = attachActiveResultSet(state, returnedProperties);
     }
 
-// Return verified database results to AI to generate the grounded natural response
+    // Return verified database results to AI to generate the grounded natural response
     const targetLocName = state.slots.city || toolArgs.city || "Somalia";
     const fallbackReply = returnedProperties.length > 0
       ? (activeLanguage === "en"
           ? (toolArgs.prioritizeBest || message.includes("best")
               ? `I found the best matching properties in ${targetLocName} within your budget ($${state.slots.maxPrice || 500}). Here are the top verified options:`
-              : `I found ${returnedProperties.length} verified ${returnedProperties.length === 1 ? "property" : "properties"} in ${targetLocName} matching your criteria:`)
+              : `There ${totalMatches === 1 ? "is" : "are"} ${totalMatches} verified ${totalMatches === 1 ? "property" : "properties"} in ${targetLocName} matching your inquiry:`)
           : activeLanguage === "ar"
-          ? `وجدت لك ${returnedProperties.length} من العقارات المؤكدة في ${targetLocName}:`
+          ? `وجدت لك ${totalMatches} من العقارات المؤكدة في ${targetLocName}:`
           : (toolArgs.prioritizeBest || message.includes("ugu fiican")
               ? `Waxaan kuu helay guryaha ugu fiican ee ku jira miisaaniyaddaada ($${state.slots.maxPrice || 500}). Halkan ka eeg xulashooyinka ugu dhow shuruudahaaga:`
-              : `Waxaan kuu helay ${returnedProperties.length} guri oo ku yaal ${targetLocName} oo buuxiya shuruudahaaga:`))
+              : `Waxaan ku haynaa wadar ahaan ${totalMatches} guri oo la xaqiijiyay oo ku yaal ${targetLocName}:`))
       : (activeLanguage === "en"
           ? (state.slots.excludedLocations && state.slots.excludedLocations.length > 0
               ? `I checked listings in ${targetLocName} within your budget. Since you excluded ${state.slots.excludedLocations.join(", ")}, no listings matched all criteria. Would you like to adjust your budget or explore other areas?`
@@ -746,7 +848,7 @@ export async function processConversationalTurn(
           ? `بحثت في قاعدة بياناتنا المؤكدة، لكن لم أجد عقارات في ${targetLocName} تطابق معاييرك حالياً.`
           : (state.slots.excludedLocations && state.slots.excludedLocations.length > 0
               ? `Waxaan hubiyey guryaha ${targetLocName} ee miisaaniyaddaada ($${state.slots.maxPrice || 500}). Maadaama aad ${state.slots.excludedLocations.join(", ")} ka saartay, ma helin guri buuxiya dhammaan shuruudahaas oo ku jira miisaaniyaddaada. Ma rabtaa inaan miisaaniyadda wax yar kor u qaadno mise goobo kale ayaan eegnaa?`
-              : `Waxaan hubiyey guryaha ${targetLocName}, laakiin kuma helin guri buuxiya dhammaan shuruudahaaga ($${state.slots.maxPrice || 500}). Ma rabtaa inaan kordhino baaritaanka mise goobo kale ayaan eegnaa?`));
+              : `Waxaan hubiyey guryaha ${targetLocName}, laakiin kuma helin guri buuxiya dhammaan shuruudahaaga. Ma rabtaa inaan kordhino baaritaanka mise goobo kale ayaan eegnaa?`));
 
     if (returnedProperties.length === 0) {
       reply = fallbackReply;
@@ -757,10 +859,11 @@ export async function processConversationalTurn(
           language: activeLanguage,
           intent: "REAL_ESTATE_SEARCH",
           verifiedProperties: returnedProperties,
+          totalMatches,
           contextSlots: state.slots,
           lastAssistantMessage: lastAssistantMsg,
           conversationHistory: history.map((h) => ({ role: h.role, content: h.content })),
-        },
+        } as any,
         fallbackReply
       );
       reply = groundedAI?.replyText || fallbackReply;

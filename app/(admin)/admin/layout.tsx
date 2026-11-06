@@ -7,6 +7,7 @@ import AdminHeader from "@/components/admin/AdminHeader";
 import SidebarSignOutButton from "@/components/layout/SidebarSignOutButton";
 import BrandLogo from "@/components/layout/BrandLogo";
 import { prisma } from "@/lib/prisma";
+import { dbCache } from "@/lib/cache";
 
 export default async function AdminLayout({
   children,
@@ -17,12 +18,19 @@ export default async function AdminLayout({
   if (!session) redirect("/login");
   if ((session.user as any)?.role !== "ADMIN") redirect("/dashboard");
 
-  // Real unread inquiries count for bell notification
-  const unreadCount = await prisma.contactMessage
-    .count({
-      where: { isRead: false },
-    })
-    .catch(() => 0);
+  // Real unread inquiries count for bell notification cached with 30s TTL to prevent DB hammering on every click
+  const unreadCount = await dbCache.getOrSet(
+    "admin:unread_messages_count",
+    30,
+    async () => {
+      return prisma.contactMessage
+        .count({
+          where: { isRead: false },
+        })
+        .catch(() => 0);
+    },
+    ["admin", "messages"]
+  );
 
   return (
     <div suppressHydrationWarning className="min-h-screen bg-[#F5EFEB] flex font-sans">

@@ -6,6 +6,7 @@ import ManagerHeader from "@/components/manager/ManagerHeader";
 import BrandLogo from "@/components/layout/BrandLogo";
 import SidebarSignOutButton from "@/components/layout/SidebarSignOutButton";
 import { prisma } from "@/lib/prisma";
+import { dbCache } from "@/lib/cache";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -15,11 +16,18 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const userId = session.user?.id;
 
-  // Unread notification count
+  // Unread notification count cached with 30s TTL to prevent DB hammering on every click
   const unreadCount = userId
-    ? await prisma.notification.count({
-        where: { userId, isRead: false },
-      }).catch(() => 0)
+    ? await dbCache.getOrSet(
+        `user:unread_notifications:${userId}`,
+        30,
+        async () => {
+          return prisma.notification.count({
+            where: { userId, isRead: false },
+          }).catch(() => 0);
+        },
+        ["notifications", userId]
+      )
     : 0;
 
   return (

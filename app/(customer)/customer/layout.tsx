@@ -6,6 +6,7 @@ import CustomerHeader from "@/components/customer/CustomerHeader";
 import BrandLogo from "@/components/layout/BrandLogo";
 import SidebarSignOutButton from "@/components/layout/SidebarSignOutButton";
 import { prisma } from "@/lib/prisma";
+import { dbCache } from "@/lib/cache";
 
 export default async function CustomerLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -13,11 +14,18 @@ export default async function CustomerLayout({ children }: { children: React.Rea
 
   const userId = session.user?.id;
 
-  // Real unread notifications count
+  // Real unread notifications count cached with 30s TTL to prevent DB hammering on every click
   const unreadCount = userId
-    ? await prisma.notification.count({
-        where: { userId, isRead: false },
-      }).catch(() => 0)
+    ? await dbCache.getOrSet(
+        `customer:unread_notifications:${userId}`,
+        30,
+        async () => {
+          return prisma.notification.count({
+            where: { userId, isRead: false },
+          }).catch(() => 0);
+        },
+        ["notifications", userId]
+      )
     : 0;
 
   return (

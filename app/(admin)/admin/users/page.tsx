@@ -9,6 +9,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { dbCache } from "@/lib/cache";
 import AdminUsersClient, { UserItem } from "@/components/admin/AdminUsersClient";
 import type { Metadata } from "next";
 
@@ -23,34 +24,41 @@ export default async function AdminUsersPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  const rawUsers = await prisma.user.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 50,
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      phone: true,
-      role: true,
-      isActive: true,
-      createdAt: true,
-      _count: {
+  const initialUsers = await dbCache.getOrSet<UserItem[]>(
+    "admin:users:initial",
+    30,
+    async () => {
+      const rawUsers = await prisma.user.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 50,
         select: {
-          favorites: true,
-          pricePredictions: true,
-          recommendations: true,
-          managedProperties: true,
-          customerBookings: true,
-          customerPayments: true,
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+          isActive: true,
+          createdAt: true,
+          _count: {
+            select: {
+              favorites: true,
+              pricePredictions: true,
+              recommendations: true,
+              managedProperties: true,
+              customerBookings: true,
+              customerPayments: true,
+            },
+          },
         },
-      },
-    },
-  });
+      });
 
-  const initialUsers: UserItem[] = rawUsers.map((u) => ({
-    ...u,
-    createdAt: u.createdAt.toISOString(),
-  }));
+      return rawUsers.map((u) => ({
+        ...u,
+        createdAt: u.createdAt.toISOString(),
+      }));
+    },
+    ["users"]
+  );
 
   return <AdminUsersClient initialUsers={initialUsers} />;
 }

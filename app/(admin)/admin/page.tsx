@@ -9,6 +9,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { dbCache } from "@/lib/cache";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -90,7 +91,7 @@ export default async function AdminPage() {
   const currentYear = new Date().getFullYear();
   const yearStart = new Date(currentYear, 0, 1);
 
-  // Fetch consolidated database metrics concurrently (consolidated aggregations)
+  // Fetch consolidated database metrics concurrently with short TTL cache
   const [
     propertyStatusCounts,
     rentalStatusCounts,
@@ -104,77 +105,83 @@ export default async function AdminPage() {
     paymentsThisYear,
     recentPropertiesList,
     recentCustomersList,
-  ] = await Promise.all([
-    // 1. Property status breakdown (replaces 4 separate count queries)
-    prisma.property.groupBy({
-      by: ["status"],
-      _count: { id: true },
-    }),
-    // 2. Rental request status breakdown (replaces 5 separate count queries)
-    prisma.rentalRequest.groupBy({
-      by: ["status"],
-      _count: { id: true },
-    }),
-    // 3. Payment status breakdown (replaces 2 separate count queries)
-    prisma.payment.groupBy({
-      by: ["status"],
-      _count: { id: true },
-    }),
-    // 4. Users breakdown by role and active status (replaces 2 count queries)
-    prisma.user.groupBy({
-      by: ["role", "isActive"],
-      _count: { id: true },
-    }),
-    // 5. Total Revenue
-    prisma.payment.aggregate({
-      where: { status: "PAID" },
-      _sum: { amount: true },
-    }),
-    // 6. Pending Inquiries & Purchase Proposals
-    prisma.inquiry.count({ where: { status: "NEW" } }),
-    prisma.purchaseRequest.count({ where: { status: { in: ["PENDING", "UNDER_REVIEW"] } } }),
-    // 7. Today's Appointments
-    prisma.booking.count({
-      where: { createdAt: { gte: startOfDay } },
-    }),
-    // 8. Property Types distribution
-    prisma.property.groupBy({
-      by: ["type"],
-      _count: { id: true },
-    }),
-    // 9. Payments for current year
-    prisma.payment.findMany({
-      where: { status: "PAID", createdAt: { gte: yearStart } },
-      select: { amount: true, createdAt: true },
-    }),
-    // 10. Recent Properties (Selective projection: exclude unneeded manager joins and descriptions)
-    prisma.property.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 5,
-      select: {
-        id: true,
-        title: true,
-        city: true,
-        type: true,
-        price: true,
-        status: true,
-        images: { take: 1, orderBy: { order: "asc" }, select: { url: true } },
-      },
-    }),
-    // 11. Recent Customers (Selective projection: exclude password and preferences)
-    prisma.user.findMany({
-      where: { role: "CUSTOMER" },
-      orderBy: { createdAt: "desc" },
-      take: 5,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        image: true,
-        createdAt: true,
-      },
-    }),
-  ]);
+  ] = await dbCache.getOrSet(
+    "admin:overview:metrics",
+    15,
+    () =>
+      Promise.all([
+        // 1. Property status breakdown (replaces 4 separate count queries)
+        prisma.property.groupBy({
+          by: ["status"],
+          _count: { id: true },
+        }),
+        // 2. Rental request status breakdown (replaces 5 separate count queries)
+        prisma.rentalRequest.groupBy({
+          by: ["status"],
+          _count: { id: true },
+        }),
+        // 3. Payment status breakdown (replaces 2 separate count queries)
+        prisma.payment.groupBy({
+          by: ["status"],
+          _count: { id: true },
+        }),
+        // 4. Users breakdown by role and active status (replaces 2 count queries)
+        prisma.user.groupBy({
+          by: ["role", "isActive"],
+          _count: { id: true },
+        }),
+        // 5. Total Revenue
+        prisma.payment.aggregate({
+          where: { status: "PAID" },
+          _sum: { amount: true },
+        }),
+        // 6. Pending Inquiries & Purchase Proposals
+        prisma.inquiry.count({ where: { status: "NEW" } }),
+        prisma.purchaseRequest.count({ where: { status: { in: ["PENDING", "UNDER_REVIEW"] } } }),
+        // 7. Today's Appointments
+        prisma.booking.count({
+          where: { createdAt: { gte: startOfDay } },
+        }),
+        // 8. Property Types distribution
+        prisma.property.groupBy({
+          by: ["type"],
+          _count: { id: true },
+        }),
+        // 9. Payments for current year
+        prisma.payment.findMany({
+          where: { status: "PAID", createdAt: { gte: yearStart } },
+          select: { amount: true, createdAt: true },
+        }),
+        // 10. Recent Properties (Selective projection: exclude unneeded manager joins and descriptions)
+        prisma.property.findMany({
+          orderBy: { createdAt: "desc" },
+          take: 5,
+          select: {
+            id: true,
+            title: true,
+            city: true,
+            type: true,
+            price: true,
+            status: true,
+            images: { take: 1, orderBy: { order: "asc" }, select: { url: true } },
+          },
+        }),
+        // 11. Recent Customers (Selective projection: exclude password and preferences)
+        prisma.user.findMany({
+          where: { role: "CUSTOMER" },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+            createdAt: true,
+          },
+        }),
+      ]),
+    ["properties", "rentals", "payments", "users", "inquiries"]
+  );
 
   // Derived Property Metrics from consolidated groupBy
   const totalProperties = propertyStatusCounts.reduce((acc, curr) => acc + curr._count.id, 0);

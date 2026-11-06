@@ -15,6 +15,7 @@ import {
   CreditCard,
   FileText,
   Users,
+  Heart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -38,6 +39,7 @@ const managerNavGroups: NavGroup[] = [
     items: [
       { href: "/dashboard/properties", label: "All Properties", icon: Building2 },
       { href: "/dashboard/properties/add", label: "Add Property", icon: PlusCircle },
+      { href: "/dashboard/favorites", label: "Favorites & Wishlist", icon: Heart },
     ],
   },
   {

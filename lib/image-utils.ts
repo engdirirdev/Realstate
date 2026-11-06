@@ -56,6 +56,3 @@ export const THUMBNAIL_BLUR_DATA_URL = `data:image/svg+xml;base64,${toBase64(cre
  */
 export const DEFAULT_PROPERTY_IMAGE =
   "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&auto=format&fit=crop&q=80";
-
-export const DEFAULT_FALLBACK_AVATAR =
-  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80";

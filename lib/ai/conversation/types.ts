@@ -254,17 +254,3 @@ export interface LanguageCapability {
   tier: 1 | 2 | 3;
   notes?: string;
 }
-
-export interface ConversationalResponseContext {
-  state: ConversationState;
-  intent: string;
-  topic: ConversationTopic;
-  replyText: string;
-  properties: ResultItem[];
-  resolution?: ReferenceResolution;
-  explanationCodes?: string[];
-  languageUsed: ExtendedLanguage;
-  responseType: ResponseType;
-  shouldRenderPropertyCards: boolean;
-}
-

@@ -23,13 +23,6 @@ export interface RecommendationInput {
   preferredMaxArea?: number;
 }
 
-export interface ScoredProperty {
-  propertyId: string;
-  score: number; // 0 - 100
-  reasons: string[];
-}
-
-
 /**
  * Generate and store personalized recommendations for a user.
  * Combines explicit user preferences, learned behavioral profile,
@@ -112,36 +105,6 @@ export async function generateRecommendations(
 }
 
 /**
- * Fetch existing recommendations for a user from DB.
- */
-export async function getUserRecommendations(userId: string, limit = 6) {
-  const recs = await prisma.recommendation.findMany({
-    where: {
-      userId,
-      property: {
-        status: { in: ["APPROVED", "PUBLISHED"] },
-        availabilityStatus: "AVAILABLE",
-        isActive: true,
-      },
-    },
-    orderBy: { score: "desc" },
-    take: limit,
-    include: {
-      property: {
-        include: { images: { orderBy: { order: "asc" }, take: 1 } },
-      },
-    },
-  });
-
-  return recs.map((r) => ({
-    property: r.property,
-    score: r.score,
-    reasons: JSON.parse(r.reasons) as string[],
-    isViewed: r.isViewed,
-  }));
-}
-
-/**
  * Calculate an objective 0–100 AI Property Quality & Completeness Score
  */
 export function calculatePropertyScore(property: {
@@ -220,61 +183,6 @@ export function calculatePropertyScore(property: {
   else if (finalScore >= 60) label = "Standard Value";
 
   return { score: finalScore, label, breakdown };
-}
-
-/**
- * Fetch top similar approved properties
- */
-export async function getSimilarProperties(propertyId: string, limit = 3) {
-  const current = await prisma.property.findUnique({
-    where: { id: propertyId },
-    select: { id: true, city: true, type: true, price: true, bedrooms: true },
-  });
-
-  if (!current) return [];
-
-  const minPrice = current.price * 0.7;
-  const maxPrice = current.price * 1.35;
-
-  const similar = await prisma.property.findMany({
-    where: {
-      id: { not: propertyId },
-      status: { in: ["APPROVED", "PUBLISHED"] },
-      availabilityStatus: "AVAILABLE",
-      isActive: true,
-      city: current.city,
-      type: current.type,
-      price: { gte: minPrice, lte: maxPrice },
-    },
-    include: {
-      images: { orderBy: { order: "asc" }, take: 1 },
-      reviews: { select: { rating: true } },
-    },
-    take: limit,
-    orderBy: { createdAt: "desc" },
-  });
-
-  // Fallback if not enough identical city/type
-  if (similar.length < limit) {
-    const fallback = await prisma.property.findMany({
-      where: {
-        id: { notIn: [propertyId, ...similar.map((s) => s.id)] },
-        status: { in: ["APPROVED", "PUBLISHED"] },
-        availabilityStatus: "AVAILABLE",
-        isActive: true,
-        city: current.city,
-      },
-      include: {
-        images: { orderBy: { order: "asc" }, take: 1 },
-        reviews: { select: { rating: true } },
-      },
-      take: limit - similar.length,
-      orderBy: { createdAt: "desc" },
-    });
-    return [...similar, ...fallback];
-  }
-
-  return similar;
 }
 
 /**

@@ -65,35 +65,3 @@ export interface ScoredVectorItem<T> {
   item: T;
   similarity: number;
 }
-
-/**
- * Finds top-K items ranked by cosine similarity against a query vector.
- */
-export function rankByCosineSimilarity<T>(
-  queryVector: number[] | Float32Array,
-  items: { item: T; vector: number[] | Float32Array }[],
-  options: {
-    topK?: number;
-    threshold?: number;
-  } = {}
-): ScoredVectorItem<T>[] {
-  const topK = options.topK ?? 10;
-  const threshold = options.threshold ?? 0.0;
-
-  const scored: ScoredVectorItem<T>[] = [];
-
-  for (const entry of items) {
-    const similarity = cosineSimilarity(queryVector, entry.vector);
-    if (similarity >= threshold) {
-      scored.push({
-        item: entry.item,
-        similarity: Math.round(similarity * 10000) / 10000, // 4 decimal places
-      });
-    }
-  }
-
-  // Sort descending by similarity
-  scored.sort((a, b) => b.similarity - a.similarity);
-
-  return scored.slice(0, topK);
-}

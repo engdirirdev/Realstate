@@ -17,6 +17,8 @@ import {
   User,
   Settings,
   Calendar,
+  Star,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +43,7 @@ const customerNavGroups: NavGroup[] = [
     items: [
       { href: "/customer/properties", label: "Browse Properties", icon: Building2 },
       { href: "/customer/favorites", label: "Favorites", icon: Heart },
+      { href: "/customer/saved-searches", label: "Saved Searches", icon: Search },
     ],
   },
   {
@@ -76,6 +79,7 @@ const customerNavGroups: NavGroup[] = [
     title: "ACCOUNT",
     items: [
       { href: "/customer/profile", label: "Profile", icon: User },
+      { href: "/customer/reviews", label: "My Reviews", icon: Star },
       { href: "/customer/settings", label: "Settings", icon: Settings },
     ],
   },

@@ -466,14 +466,6 @@ export function resolveLocation(text: string): ResolvedLocation | null {
 }
 
 /**
- * Normalizes city name into canonical standard form for query filters and validation
- */
-export function normalizeCanonicalCity(cityInput: string): string {
-  const resolved = resolveLocation(cityInput);
-  return resolved ? resolved.canonicalCity : cityInput.trim();
-}
-
-/**
  * Checks whether a given city name has approved property inventory in the platform database
  */
 export function cityHasApprovedInventory(cityName: string): boolean {

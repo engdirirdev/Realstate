@@ -251,35 +251,3 @@ export function canAccessBooking(
   if (normalizedRole === "CUSTOMER" && booking?.customerId === user.id) return true;
   return false;
 }
-
-/**
- * Resource-level authorization: checks if a user has access to an inquiry.
- */
-export function canAccessInquiry(
-  user: { id?: string | null; role?: string | null } | null | undefined,
-  inquiry: { customerId?: string | null; managerId?: string | null } | null | undefined
-): boolean {
-  if (!user || !user.id) return false;
-  const normalizedRole = normalizeRole(user.role);
-  if (normalizedRole === "ADMIN") return true;
-  if (normalizedRole === "USER" && inquiry?.managerId === user.id) return true;
-  if (normalizedRole === "CUSTOMER" && inquiry?.customerId === user.id) return true;
-  return false;
-}
-
-/**
- * Resolves the canonical dashboard/home route path for a given role.
- */
-export function getRoleDefaultPath(role: string | null | undefined): string {
-  const normalized = normalizeRole(role);
-  switch (normalized) {
-    case "ADMIN":
-      return "/admin";
-    case "USER":
-      return "/dashboard";
-    case "CUSTOMER":
-      return "/customer";
-    default:
-      return "/";
-  }
-}

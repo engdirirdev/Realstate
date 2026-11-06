@@ -254,25 +254,6 @@ export async function cachedDbQuery<T>(
 // ── 3. React Request Memoization (Per-Request Deduplication) ──────
 
 /**
- * Deduplicated per-request single property loader.
- * If generateMetadata and PropertyDetailPage both call this with the same ID,
- * only 1 database query is executed during that render cycle.
- */
-export const memoizedGetPropertyById = reactCache(async (id: string) => {
-  return prisma.property.findUnique({
-    where: { id },
-    include: {
-      images: { orderBy: { order: "asc" } },
-      reviews: {
-        include: { user: { select: { name: true, image: true } } },
-        orderBy: { createdAt: "desc" },
-      },
-      documents: { orderBy: { createdAt: "desc" } },
-    },
-  });
-});
-
-/**
  * Deduplicated metadata query for property titles/OG image.
  */
 export const memoizedGetPropertyMetadata = reactCache(async (id: string) => {

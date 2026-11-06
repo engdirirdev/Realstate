@@ -427,15 +427,17 @@ export async function processConversationalTurn(
   }
   const lastAssistantMsg = [...history].reverse().find(m => m.role === "assistant")?.content || state.lastAssistantMessage || "";
 
-  // 2. Multilingual Language Detection & Preference Tracking
-  const convLang = state.explicitLanguagePreference || state.language || "en";
+  // 2. Multilingual Language Detection & Strict Per-Turn Separation
+  const convLang = state.language || "en";
   const langDetails = detectConversationalLanguage(message, convLang);
   if (langDetails.explicitPreferenceDetected) {
     state.explicitLanguagePreference = langDetails.explicitPreferenceDetected;
+  } else if (langDetails.confidence >= 0.7) {
+    state.explicitLanguagePreference = langDetails.language;
   }
-  let activeLanguage: ExtendedLanguage = state.explicitLanguagePreference || langDetails.language;
+  let activeLanguage: ExtendedLanguage = langDetails.language;
   if ((activeLanguage as string) === "mixed") {
-    activeLanguage = (convLang && (convLang as string) !== "mixed") ? convLang : "so";
+    activeLanguage = (convLang && (convLang as string) !== "mixed") ? convLang : "en";
   }
   state.language = activeLanguage;
 
@@ -916,13 +918,16 @@ Magaaladee ama goobtee ayaad jeceshahay inaad guryo ama hanti ka raadiso?`;
     }
   }
 
-  // Grounding validation on text responses if a property was referenced
-  if (state.referencedPropertyId && state.activeResultSet.length > 0) {
+  // Grounding validation on single-property detail responses (PROPERTY_RESULTS are already validated in generateGroundedAIDAResponse)
+  if (responseType !== "PROPERTY_RESULTS" && state.referencedPropertyId && state.activeResultSet.length > 0) {
     const targetProp = state.activeResultSet.find((p) => p.id === state.referencedPropertyId);
     if (targetProp) {
-      const grounding = validateGrounding(reply, state.activeResultSet, targetProp);
+      const grounding = validateGrounding(reply, state.activeResultSet, state.activeResultSet.length === 1 ? targetProp : undefined);
       if (!grounding.isValid) {
-        reply = `Xogta aan ka hayo property-kan kama muuqato xogtaas la xaqiijiyay.`;
+        reply =
+          activeLanguage === "en"
+            ? "That specific detail is not listed in the verified database record for this property."
+            : `Xogta aan ka hayo property-kan kama muuqato xogtaas la xaqiijiyay.`;
       }
     }
   }

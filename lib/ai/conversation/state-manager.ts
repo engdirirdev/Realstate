@@ -647,8 +647,8 @@ export function attachActiveResultSet(
 ): ConversationState {
   return {
     ...state,
-    activeResultSet: properties.slice(0, 5), // Keep top 5 in memory
-    referencedPropertyId: properties[0]?.id,
+    activeResultSet: properties.slice(0, 15), // Keep up to 15 in memory
+    referencedPropertyId: properties.length === 1 ? properties[0]?.id : undefined,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -1775,7 +1775,10 @@ export function evaluateSearchReadiness(
     }
 
     // Conversational continuation without forcing fixed questionnaires or automatic DB search
-    let responseText = "Waa hagaag, shuruudahaaga waan diiwaangeliyay.";
+    let responseText =
+      activeLanguage === "en"
+        ? "Understood, I have noted your requirements. Would you like me to search for matching properties now?"
+        : "Waa hagaag, shuruudahaaga waan diiwaangeliyay.";
     if (activeLanguage === "so") {
       if (lower.includes("3 qol") || lower.includes("qol")) {
         responseText = "Waa hagaag! 3 qol haddii la helo waa mudnaan waan fahmay.";
@@ -1783,6 +1786,10 @@ export function evaluateSearchReadiness(
         responseText = "Waa hagaag, waxaan ku xisaabtamaynaa guri kirro ah.";
       } else if (slots.maxPrice) {
         responseText = `Waayahay walaal, miisaaniyaddaada $${slots.maxPrice} waan diiwaangeliyay.`;
+      }
+    } else if (activeLanguage === "en") {
+      if (slots.maxPrice) {
+        responseText = `Understood, I have recorded your budget of $${slots.maxPrice}.`;
       }
     }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo , memo } from "react";
 import {
   MapPin,
   Compass,
@@ -25,7 +25,6 @@ import {
   ShoppingCart,
   Star,
   MapPinOff,
-  Loader2,
   RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -79,7 +78,7 @@ const RADIUS_OPTIONS = [
   { label: "10 km", value: 10000 },
 ];
 
-export default function PropertyMapSection({
+function PropertyMapSection({
   title,
   city,
   address,
@@ -438,3 +437,5 @@ export default function PropertyMapSection({
     </div>
   );
 }
+
+export default memo(PropertyMapSection);

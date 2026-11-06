@@ -3,21 +3,74 @@
 // ROUTE      : /customer/requests
 // DESCRIPTION: Active and pending rental & purchase requests
 //              Kiro-Maal Real Estate Master Design System
-// ROLE       : CUSTOMER
+// ROLE       : CUSTOMER (Pre-hydrated Server Component for 0ms waterfall)
 // ================================================================
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
 import { FileText, Sparkles } from "lucide-react";
 import CustomerRequestsView from "@/components/customer/CustomerRequestsView";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "My Requests – Customer Portal | Kiro-Maal Real Estate",
+  robots: { index: false, follow: false },
 };
 
 export default async function CustomerRequestsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
+
+  const include = {
+    property: {
+      select: {
+        id: true,
+        title: true,
+        city: true,
+        location: true,
+        status: true,
+        listingType: true,
+        availabilityStatus: true,
+        price: true,
+        images: { take: 1, select: { url: true } },
+      },
+    },
+    customer: { select: { id: true, name: true, email: true, phone: true } },
+    manager: { select: { id: true, name: true, email: true, phone: true } },
+    transaction: {
+      select: {
+        id: true,
+        txnNo: true,
+        status: true,
+        amount: true,
+        currency: true,
+        receipt: { select: { id: true, receiptNo: true } },
+        payments: {
+          select: { id: true, status: true, paymentMethod: true, transactionRef: true, amount: true, paidAt: true },
+          take: 1,
+          orderBy: { createdAt: "desc" as const },
+        },
+      },
+    },
+  };
+
+  const [rentalRequests, purchaseRequests] = await Promise.all([
+    prisma.rentalRequest.findMany({
+      where: {
+        customerId: session.user.id,
+        bookingStatus: { in: ["PENDING", "APPROVED", "CONFIRMED", "REJECTED", "CANCELLED"] },
+      },
+      include,
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    }),
+    prisma.purchaseRequest.findMany({
+      where: { customerId: session.user.id },
+      include,
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    }),
+  ]);
 
   return (
     <div className="space-y-6 max-w-6xl bg-[#F7F3EA] min-h-screen p-5 sm:p-7">
@@ -33,7 +86,10 @@ export default async function CustomerRequestsPage() {
         </p>
       </div>
 
-      <CustomerRequestsView />
+      <CustomerRequestsView
+        initialRentalRequests={JSON.parse(JSON.stringify(rentalRequests))}
+        initialPurchaseRequests={JSON.parse(JSON.stringify(purchaseRequests))}
+      />
     </div>
   );
 }

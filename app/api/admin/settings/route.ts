@@ -11,7 +11,8 @@ export async function GET() {
     });
     return NextResponse.json({ success: true, settings: settingsMap });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to fetch settings" }, { status: 500 });
+    console.error("[GET /api/admin/settings]", error);
+    return NextResponse.json({ success: false, error: "Failed to fetch settings" }, { status: 500 });
   }
 }
 
@@ -19,20 +20,30 @@ export async function POST(request: NextRequest) {
   try {
     const session = await auth();
     if (!session || (session.user as any)?.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
-    for (const [key, value] of Object.entries(body)) {
-      await prisma.systemSetting.upsert({
-        where: { key },
-        update: { value: String(value) },
-        create: { key, value: String(value) },
-      });
+    if (!body || typeof body !== "object") {
+      return NextResponse.json({ success: false, error: "Invalid settings payload" }, { status: 400 });
+    }
+
+    const entries = Object.entries(body);
+    if (entries.length > 0) {
+      await prisma.$transaction(
+        entries.map(([key, value]) =>
+          prisma.systemSetting.upsert({
+            where: { key },
+            update: { value: String(value) },
+            create: { key, value: String(value) },
+          })
+        )
+      );
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to update settings" }, { status: 500 });
+    console.error("[POST /api/admin/settings]", error);
+    return NextResponse.json({ success: false, error: "Failed to update settings" }, { status: 500 });
   }
 }

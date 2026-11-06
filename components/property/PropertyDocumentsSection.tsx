@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState , memo } from "react";
 import {
   FileText,
   Download,
@@ -31,7 +31,7 @@ interface PropertyDocumentsSectionProps {
   floorPlanUrl?: string | null;
 }
 
-export default function PropertyDocumentsSection({
+function PropertyDocumentsSection({
   documents = [],
   floorPlanUrl,
 }: PropertyDocumentsSectionProps) {
@@ -178,3 +178,5 @@ export default function PropertyDocumentsSection({
     </div>
   );
 }
+
+export default memo(PropertyDocumentsSection);

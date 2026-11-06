@@ -1,5 +1,7 @@
 "use client";
 
+import { memo } from "react";
+
 interface PropertyAvailabilityBadgeProps {
   status: string; // "APPROVED" | "CLOSED" | "PENDING" | "RESERVED" | "RENTED" | "REJECTED"
   availabilityStatus?: string | null;
@@ -7,7 +9,7 @@ interface PropertyAvailabilityBadgeProps {
   className?: string;
 }
 
-export default function PropertyAvailabilityBadge({
+function PropertyAvailabilityBadge({
   status,
   availabilityStatus,
   hasActiveBooking = false,
@@ -56,3 +58,5 @@ export default function PropertyAvailabilityBadge({
     </span>
   );
 }
+
+export default memo(PropertyAvailabilityBadge);

@@ -22,6 +22,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Messages – Customer Portal | Kiro-Maal Real Estate",
+  robots: { index: false, follow: false },
 };
 
 export default async function CustomerMessagesPage() {
@@ -30,6 +31,7 @@ export default async function CustomerMessagesPage() {
 
   const inquiries = await prisma.inquiry.findMany({
     where: { customerId: session.user.id },
+    take: 50,
     include: {
       property: {
         select: {

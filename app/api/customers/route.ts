@@ -33,31 +33,48 @@ export async function GET(req: NextRequest) {
       ];
     }
 
-    const customers = await prisma.user.findMany({
-      where,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-        _count: {
-          select: {
-            customerBookings: true,
-            customerPayments: true,
-            customerRentalRequests: true,
-            customerPurchaseRequests: true,
-            customerInquiries: true,
+    const pageParam = searchParams.get("page");
+    const pageSizeParam = searchParams.get("pageSize");
+    const page = Math.max(1, parseInt(pageParam || "1", 10));
+    const pageSize = pageSizeParam ? Math.min(100, Math.max(1, parseInt(pageSizeParam, 10))) : 25;
+    const skip = (page - 1) * pageSize;
+
+    const [customers, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+          isActive: true,
+          createdAt: true,
+          _count: {
+            select: {
+              customerBookings: true,
+              customerPayments: true,
+              customerRentalRequests: true,
+              customerPurchaseRequests: true,
+              customerInquiries: true,
+            },
           },
         },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 200,
-    });
+        orderBy: { createdAt: "desc" },
+        take: pageSize,
+        skip,
+      }),
+      prisma.user.count({ where }),
+    ]);
 
-    return NextResponse.json({ success: true, customers });
+    return NextResponse.json({
+      success: true,
+      customers,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    });
   } catch (error: any) {
     console.error("[GET /api/customers]", error);
     return NextResponse.json({ success: false, error: "Failed to fetch customers" }, { status: 500 });

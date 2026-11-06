@@ -1,5 +1,7 @@
 "use client";
 
+import { memo } from "react";
+
 import { cn } from "@/lib/utils";
 import {
   Clock,
@@ -19,7 +21,7 @@ interface StatusBadgeProps {
   showIcon?: boolean;
 }
 
-export default function StatusBadge({
+function StatusBadge({
   status,
   className,
   showIcon = true,
@@ -127,3 +129,5 @@ export default function StatusBadge({
     </span>
   );
 }
+
+export default memo(StatusBadge);

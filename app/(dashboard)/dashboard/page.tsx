@@ -22,8 +22,20 @@ import {
   PlusCircle,
 } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
-import ManagerCharts from "@/components/manager/ManagerCharts";
+import dynamic from "next/dynamic";
+import { THUMBNAIL_BLUR_DATA_URL } from "@/lib/image-utils";
+
+const ManagerCharts = dynamic(() => import("@/components/manager/ManagerCharts"), {
+  loading: () => (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-pulse">
+      <div className="lg:col-span-2 h-80 bg-[#FCFBF7] rounded-3xl border border-[#E8E1D4]" />
+      <div className="h-80 bg-[#FCFBF7] rounded-3xl border border-[#E8E1D4]" />
+    </div>
+  ),
+});
 import type { Metadata } from "next";
+
+export const revalidate = 30;
 
 export const metadata: Metadata = { title: "Manager Dashboard – Kiro-Maal Real Estate" };
 
@@ -40,12 +52,8 @@ export default async function DashboardPage() {
   const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   const startOfYear = new Date(new Date().getFullYear(), 0, 1);
 
-  // Check if this manager has listings; if none assigned yet, include general listings for rich real data
-  const assignedCount = await prisma.property.count({ where: { managerId: userId } });
-  const propertyFilter = assignedCount > 0 ? { managerId: userId } : {};
-
+  // Manager scope: strictly isolated to the manager's assigned properties in parallel (consolidated)
   const [
-    myPropertiesCount,
     pendingInquiriesCount,
     todayBookingsCount,
     completedDealsCount,
@@ -53,52 +61,54 @@ export default async function DashboardPage() {
     recentListings,
     upcomingBookings,
     paymentsThisYear,
-    pendingRentalsCount,
-    approvedRentalsCount,
-    activeRentalsCount,
-    rejectedRentalsCount,
+    rentalsByStatus,
   ] = await Promise.all([
-    // 1. My Properties
-    prisma.property.count({ where: propertyFilter }),
-    // 2. Pending Inquiries
+    // 1. Pending Inquiries
     prisma.inquiry.count({
       where: {
-        ...(assignedCount > 0 ? { managerId: userId } : {}),
+        managerId: userId,
         status: "NEW",
       },
     }),
-    // 3. Appointments Today
+    // 2. Appointments Today
     prisma.booking.count({
       where: {
-        ...(assignedCount > 0 ? { managerId: userId } : {}),
+        managerId: userId,
         createdAt: { gte: startOfDay },
       },
     }),
-    // 4. Completed Deals
+    // 3. Completed Deals
     prisma.payment.count({
       where: {
-        ...(assignedCount > 0 ? { managerId: userId } : {}),
+        managerId: userId,
         status: "PAID",
       },
     }),
-    // Status breakdown
+    // 4. Status breakdown (also computes total properties)
     prisma.property.groupBy({
       by: ["status"],
-      where: propertyFilter,
+      where: { managerId: userId },
       _count: { id: true },
     }),
-    // Recent properties for table
+    // 5. Recent properties for table (Selective projection: exclude unneeded text fields)
     prisma.property.findMany({
-      where: propertyFilter,
+      where: { managerId: userId },
       orderBy: { createdAt: "desc" },
       take: 5,
-      include: {
-        images: { take: 1, orderBy: { order: "asc" } },
+      select: {
+        id: true,
+        title: true,
+        city: true,
+        type: true,
+        price: true,
+        status: true,
+        createdAt: true,
+        images: { take: 1, orderBy: { order: "asc" }, select: { url: true } },
       },
     }),
-    // Upcoming appointments
+    // 6. Upcoming appointments
     prisma.booking.findMany({
-      where: assignedCount > 0 ? { managerId: userId } : {},
+      where: { managerId: userId },
       orderBy: { createdAt: "desc" },
       take: 4,
       include: {
@@ -106,41 +116,33 @@ export default async function DashboardPage() {
         customer: { select: { id: true, name: true, email: true } },
       },
     }),
-    // Payments for sales bar chart
+    // 7. Payments for sales bar chart (backed by composite index [managerId, status, createdAt])
     prisma.payment.findMany({
       where: {
+        managerId: userId,
         status: "PAID",
         createdAt: { gte: startOfYear },
-        ...(assignedCount > 0 ? { managerId: userId } : {}),
       },
       select: { amount: true, createdAt: true },
     }),
-    // Section 15 Manager Rental Bookings Metrics
-    prisma.rentalRequest.count({
-      where: {
-        ...(assignedCount > 0 ? { managerId: userId } : {}),
-        status: { in: ["PENDING", "UNDER_REVIEW"] },
-      },
-    }),
-    prisma.rentalRequest.count({
-      where: {
-        ...(assignedCount > 0 ? { managerId: userId } : {}),
-        status: "APPROVED",
-      },
-    }),
-    prisma.rentalRequest.count({
-      where: {
-        ...(assignedCount > 0 ? { managerId: userId } : {}),
-        status: "ACTIVE",
-      },
-    }),
-    prisma.rentalRequest.count({
-      where: {
-        ...(assignedCount > 0 ? { managerId: userId } : {}),
-        status: "REJECTED",
-      },
+    // 8. Consolidated Manager Rental Bookings Metrics (replaces 4 count queries)
+    prisma.rentalRequest.groupBy({
+      by: ["status"],
+      where: { managerId: userId },
+      _count: { id: true },
     }),
   ]);
+
+  // Derived properties count from groupBy
+  const myPropertiesCount = propertiesByStatus.reduce((acc, curr) => acc + curr._count.id, 0);
+
+  // Derived rentals counts from consolidated groupBy
+  const pendingRentalsCount = rentalsByStatus
+    .filter((r) => r.status === "PENDING" || r.status === "UNDER_REVIEW")
+    .reduce((acc, curr) => acc + curr._count.id, 0);
+  const approvedRentalsCount = rentalsByStatus.find((r) => r.status === "APPROVED")?._count.id || 0;
+  const activeRentalsCount = rentalsByStatus.find((r) => r.status === "ACTIVE")?._count.id || 0;
+  const rejectedRentalsCount = rentalsByStatus.find((r) => r.status === "REJECTED")?._count.id || 0;
 
   // Bookings & Rental Performance bar chart data (12 months)
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -463,9 +465,17 @@ export default async function DashboardPage() {
                   return (
                     <tr key={p.id} className="hover:bg-[#F7F3EA]/70 transition-colors group">
                       <td className="py-3 pl-2">
-                        <div className="w-12 h-10 rounded-xl overflow-hidden bg-[#F7F3EA] border border-[#E8E1D4] flex-shrink-0">
+                        <div className="w-12 h-10 rounded-xl overflow-hidden bg-[#F7F3EA] border border-[#E8E1D4] flex-shrink-0 relative">
                           {img ? (
-                            <img src={img} alt={p.title} className="w-full h-full object-cover" />
+                            <Image
+                              src={img}
+                              alt={p.title}
+                              fill
+                              sizes="48px"
+                              placeholder="blur"
+                              blurDataURL={THUMBNAIL_BLUR_DATA_URL}
+                              className="object-cover"
+                            />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-[#6B7280]">
                               <Building2 className="h-4 w-4" />

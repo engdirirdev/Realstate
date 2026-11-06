@@ -1073,18 +1073,21 @@ export function generateNaturalDialogResponse(params: {
       const count = params.totalMatches || (params.properties ? params.properties.length : 0);
       const city = params.slots?.city || "magaalada";
       const isRental = params.slots?.purpose === "RENT";
-      const typeStr = isRental
+      const topProp = params.properties && params.properties[0];
+      const isLand = params.slots?.propertyType === "LAND" || (topProp && (topProp.type === "LAND" || topProp.bedrooms === 0));
+      const typeStr = isLand
+        ? "dhul"
+        : isRental
         ? "guri kiro ah"
         : params.slots?.propertyType
         ? params.slots.propertyType.toLowerCase()
         : "guri";
-      const beds = params.slots?.bedrooms ? `${params.slots.bedrooms} qol` : "";
+      const beds = isLand ? "" : params.slots?.bedrooms ? `${params.slots.bedrooms} qol` : "";
       const price = params.slots?.maxPrice
         ? `ilaa $${params.slots.maxPrice.toLocaleString()}${params.slots?.pricePeriod === "month" ? " bishii" : ""}`
         : "";
 
       // Explainable match context for the top result (Master Specification Section 20, 59)
-      const topProp = params.properties && params.properties[0];
       let matchExplanation = "";
       if (topProp) {
         if (lang === "so") {
@@ -1092,13 +1095,15 @@ export function generateNaturalDialogResponse(params: {
           if (topProp.price && params.slots?.maxPrice && topProp.price <= params.slots.maxPrice) {
             reasons.push("wuxuu ku jiraa budget-kaaga");
           }
-          if (topProp.bedrooms) {
+          if (topProp.bedrooms && topProp.type !== "LAND") {
             reasons.push(`${topProp.bedrooms} qol ayuu leeyahay`);
+          } else if (topProp.area && (topProp.type === "LAND" || topProp.bedrooms === 0)) {
+            reasons.push(`bedka dhulku waa ${topProp.area} m²`);
           }
           if (topProp.city) {
             reasons.push(`${topProp.city} ayuu ku yaal`);
           }
-          if (topProp.parking) {
+          if (topProp.parking && topProp.type !== "LAND") {
             reasons.push("parking ayuu leeyahay");
           }
           if (reasons.length > 0) {
@@ -1107,16 +1112,16 @@ export function generateNaturalDialogResponse(params: {
         } else if (lang === "ar") {
           matchExplanation = `\n\nالعقار الأول (${topProp.title}) يناسب ميزانيتك وموقعك المطلوب تماماً.`;
         } else {
-          matchExplanation = `\n\nI recommended Property #1 (${topProp.title}) because it aligns directly with your budget, bedroom count, and desired location.`;
+          matchExplanation = `\n\nI recommended Property #1 (${topProp.title}) because it aligns directly with your budget, ${isLand ? "plot area" : "bedroom count"}, and desired location.`;
         }
       }
 
       if (lang === "so") {
         const specSummary = [typeStr, `ku yaal ${city}`, beds, price].filter(Boolean).join(", ");
-        return `Waayahay — waxaad raadineysaa ${specSummary}. Waxaan helay **${count} ${count === 1 ? "guri" : "guryo"}** oo shuruudahaas buuxinaya.${matchExplanation}\n\nKuwan ayaa ah kuwa ugu dhow waxa aad raadineyso:`;
+        return `Waayahay — waxaad raadineysaa ${specSummary}. Waxaan helay **${count} ${count === 1 ? (isLand ? "dhul" : "guri") : (isLand ? "dhul" : "guryo")}** oo shuruudahaas buuxinaya.${matchExplanation}\n\nKuwan ayaa ah kuwa ugu dhow waxa aad raadineyso:`;
       }
       if (lang === "ar") {
-        const arBeds = params.slots?.bedrooms ? `${params.slots.bedrooms} غرف نوم` : "";
+        const arBeds = !isLand && params.slots?.bedrooms ? `${params.slots.bedrooms} غرف نوم` : "";
         const arPrice = params.slots?.maxPrice ? `بأقل من $${params.slots.maxPrice.toLocaleString()}` : "";
         const specSummary = [params.slots?.city ? `في ${params.slots.city}` : "", arBeds, arPrice].filter(Boolean).join("، ");
         return `وجدت **${count} ${count === 1 ? "عقار" : "عقارات"}** معتمدة ${specSummary ? `(${specSummary})` : ""} تطابق الشروط التي ذكرتها.${matchExplanation}\n\nإليك أفضل الخيارات:`;
@@ -1124,7 +1129,7 @@ export function generateNaturalDialogResponse(params: {
       if (lang === "sw") {
         return `Nimepata **${count} nyumba** zilizoidhinishwa huko ${city} zinazolingana na vigezo vyako.\n\nHizi hapa chaguzi zilizothibitishwa:`;
       }
-      const enBeds = params.slots?.bedrooms ? `${params.slots.bedrooms} bedrooms` : "";
+      const enBeds = !isLand && params.slots?.bedrooms ? `${params.slots.bedrooms} bedrooms` : "";
       const enPrice = params.slots?.maxPrice ? `under $${params.slots.maxPrice.toLocaleString()}` : "";
       const enSpecs = [enBeds, enPrice].filter(Boolean).join(", ");
       return `Understood — looking in **${params.slots?.city || "Somalia"}**${enSpecs ? ` (${enSpecs})` : ""}. I found **${count} approved properties** matching your requirements:${matchExplanation}\n\nHere are the verified listings from our active inventory:`;
@@ -1156,11 +1161,21 @@ export function generateNaturalDialogResponse(params: {
     case "ORDINAL_DETAILS": {
       const p = params.referencedProperty;
       if (!p) return `Could not locate that referenced property in the recent result set.`;
+      const isLand = String(p.type || "").toUpperCase() === "LAND" || p.bedrooms === 0;
       if (lang === "so") {
+        if (isLand) {
+          return `**Xogta Dhulka #${p.rank}: "${p.title}"**\n• **Goobta**: ${p.city}\n• **Qiimaha**: **$${p.price.toLocaleString()}**\n• **Bedka Dhulka**: ${p.area} m²\n• **Nooca**: Dhul / Qandaraas Banaan\n\nMa jeclaan lahayd inaad ballansato booqasho ama aad ogaato qiimeyntiisa suuqa?`;
+        }
         return `**Xogta Guriga #${p.rank}: "${p.title}"**\n• **Goobta**: ${p.city}\n• **Qiimaha**: **$${p.price.toLocaleString()}**\n• **Qolalka**: ${p.bedrooms} qol | **Musqusha**: ${p.bathrooms}\n• **Bedka**: ${p.area} m²\n• **Baarkin**: ${p.parking ? "Haa" : "Maya"}\n• **Alaabta**: ${p.furnished ? "Guri qalabaysan" : "Aan qalabaysnayn"}\n\nMa jeclaan lahayd inaad ballansato booqasho ama aad ogaato qiimeyntiisa suuqa?`;
       }
       if (lang === "ar") {
+        if (isLand) {
+          return `**تفاصيل الأرض رقم #${p.rank}: "${p.title}"**\n• **المدينة**: ${p.city}\n• **السعر**: **$${p.price.toLocaleString()}**\n• **المساحة**: ${p.area} م²\n• **النوع**: أرض للبيع\n\nهل ترغب في جدولة موعد زيارة أو معرفة التقييم السعري لها؟`;
+        }
         return `**تفاصيل العقار رقم #${p.rank}: "${p.title}"**\n• **المدينة**: ${p.city}\n• **السعر**: **$${p.price.toLocaleString()}**\n• **الغرف**: ${p.bedrooms} غرف نوم | **الحمامات**: ${p.bathrooms}\n• **المساحة**: ${p.area} م²\n• **موقف سيارات**: ${p.parking ? "متوفر" : "غير متوفر"}\n• **الفرش**: ${p.furnished ? "مفروش" : "غير مفروش"}\n\nهل ترغب في جدولة موعد زيارة أو معرفة التقييم السعري له؟`;
+      }
+      if (isLand) {
+        return `**Land Plot #${p.rank} Specifications: "${p.title}"**\n• **City**: ${p.city}\n• **Price**: **$${p.price.toLocaleString()}**\n• **Plot Area**: ${p.area} m²\n• **Type**: Land / Plot for Sale\n\nWould you like to schedule an on-site visit or check its market appraisal?`;
       }
       return `**Property #${p.rank} Specifications: "${p.title}"**\n• **City**: ${p.city}\n• **Price**: **$${p.price.toLocaleString()}**\n• **Bedrooms**: ${p.bedrooms} beds | **Bathrooms**: ${p.bathrooms} baths\n• **Area**: ${p.area} m²\n• **Parking**: ${p.parking ? "Available" : "No"}\n• **Furnished**: ${p.furnished ? "Yes" : "Unfurnished"}\n\nWould you like to schedule an in-person viewing or check its ML market appraisal?`;
     }
@@ -1168,13 +1183,17 @@ export function generateNaturalDialogResponse(params: {
     case "CHEAPER_COMPARISON": {
       const p = params.referencedProperty;
       if (!p) return `No properties currently in comparison context.`;
+      const isLand = String(p.type || "").toUpperCase() === "LAND" || p.bedrooms === 0;
       if (lang === "so") {
-        return `Guryaha la soo bandhigay, **"${p.title}"** (Guri #${p.rank}) ayaa ugu jaban, qiimihiisuna waa **$${p.price.toLocaleString()}** (${p.bedrooms} qol oo ku yaal ${p.city}).`;
+        const spec = isLand ? `${p.area} m² oo dhul ah` : `${p.bedrooms} qol`;
+        return `Guryaha la soo bandhigay, **"${p.title}"** (Hanti #${p.rank}) ayaa ugu jaban, qiimihiisuna waa **$${p.price.toLocaleString()}** (${spec} oo ku yaal ${p.city}).`;
       }
       if (lang === "ar") {
-        return `من بين العقارات المعروضة، **"${p.title}"** (العقار رقم #${p.rank}) هو الأرخص بسعر **$${p.price.toLocaleString()}** (${p.bedrooms} غرف نوم في ${p.city}).`;
+        const arSpec = isLand ? `${p.area} م² مساحة` : `${p.bedrooms} غرف نوم`;
+        return `من بين العقارات المعروضة، **"${p.title}"** (العقار رقم #${p.rank}) هو الأرخص بسعر **$${p.price.toLocaleString()}** (${arSpec} في ${p.city}).`;
       }
-      return `Among the displayed options, **"${p.title}"** (Property #${p.rank}) is the most affordable at **$${p.price.toLocaleString()}** with ${p.bedrooms} bedrooms in ${p.city}.`;
+      const enSpec = isLand ? `${p.area} m² plot` : `${p.bedrooms} bedrooms`;
+      return `Among the displayed options, **"${p.title}"** (Property #${p.rank}) is the most affordable at **$${p.price.toLocaleString()}** with ${enSpec} in ${p.city}.`;
     }
 
     case "SIDE_BY_SIDE_COMPARISON": {
@@ -1183,13 +1202,19 @@ export function generateNaturalDialogResponse(params: {
       if (!a || !b) return `Please select two properties to compare.`;
       const diff = Math.abs(a.price - b.price);
       const cheaper = a.price < b.price ? a : b;
+      const aIsLand = String(a.type || "").toUpperCase() === "LAND" || a.bedrooms === 0;
+      const bIsLand = String(b.type || "").toUpperCase() === "LAND" || b.bedrooms === 0;
+      const aSpecSo = aIsLand ? `${a.area} m² dhul ah` : `${a.bedrooms} qol, ${a.area} m²`;
+      const bSpecSo = bIsLand ? `${b.area} m² dhul ah` : `${b.bedrooms} qol, ${b.area} m²`;
+      const aSpecEn = aIsLand ? `${a.area} m² plot` : `${a.bedrooms} beds, ${a.area} m²`;
+      const bSpecEn = bIsLand ? `${b.area} m² plot` : `${b.bedrooms} beds, ${b.area} m²`;
       if (lang === "so") {
-        return `**Isbarbardhigga Guriga #${a.rank} iyo #${b.rank}:**\n• **#${a.rank} ${a.title}**: $${a.price.toLocaleString()} (${a.bedrooms} qol, ${a.area} m²)\n• **#${b.rank} ${b.title}**: $${b.price.toLocaleString()} (${b.bedrooms} qol, ${b.area} m²)\n\n**Farqiga Qiimaha**: Guriga #${cheaper.rank} ayaa ka jaban **$${diff.toLocaleString()}**.`;
+        return `**Isbarbardhigga Hantida #${a.rank} iyo #${b.rank}:**\n• **#${a.rank} ${a.title}**: $${a.price.toLocaleString()} (${aSpecSo})\n• **#${b.rank} ${b.title}**: $${b.price.toLocaleString()} (${bSpecSo})\n\n**Farqiga Qiimaha**: Hantida #${cheaper.rank} ayaa ka jaban **$${diff.toLocaleString()}**.`;
       }
       if (lang === "ar") {
-        return `**مقارنة بين العقار #${a.rank} والعقار #${b.rank}:**\n• **#${a.rank} ${a.title}**: $${a.price.toLocaleString()} (${a.bedrooms} غرف، ${a.area} م²)\n• **#${b.rank} ${b.title}**: $${b.price.toLocaleString()} (${b.bedrooms} غرف، ${b.area} م²)\n\n**الفارق السعري**: العقار #${cheaper.rank} أرخص بمقدار **$${diff.toLocaleString()}**.`;
+        return `**مقارنة بين العقار #${a.rank} والعقار #${b.rank}:**\n• **#${a.rank} ${a.title}**: $${a.price.toLocaleString()} (${aSpecEn})\n• **#${b.rank} ${b.title}**: $${b.price.toLocaleString()} (${bSpecEn})\n\n**الفارق السعري**: العقار #${cheaper.rank} أرخص بمقدار **$${diff.toLocaleString()}**.`;
       }
-      return `**Side-by-Side Comparison (#${a.rank} vs #${b.rank}):**\n• **#${a.rank} ${a.title}**: $${a.price.toLocaleString()} (${a.bedrooms} beds, ${a.area} m²)\n• **#${b.rank} ${b.title}**: $${b.price.toLocaleString()} (${b.bedrooms} beds, ${b.area} m²)\n\n**Price Advantage**: Property #${cheaper.rank} is **$${diff.toLocaleString()} cheaper**.`;
+      return `**Side-by-Side Comparison (#${a.rank} vs #${b.rank}):**\n• **#${a.rank} ${a.title}**: $${a.price.toLocaleString()} (${aSpecEn})\n• **#${b.rank} ${b.title}**: $${b.price.toLocaleString()} (${bSpecEn})\n\n**Price Advantage**: Property #${cheaper.rank} is **$${diff.toLocaleString()} cheaper**.`;
     }
 
     case "SLOT_UPDATE": {

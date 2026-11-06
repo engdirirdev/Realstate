@@ -50,13 +50,11 @@ export async function GET(request: NextRequest) {
     const maxBudget = searchParams.get("maxBudget") ? parseFloat(searchParams.get("maxBudget")!) : undefined;
     const bedrooms = searchParams.get("bedrooms") ? parseInt(searchParams.get("bedrooms")!, 10) : undefined;
 
-    // 1. Fetch user's explicit preferences from database
-    const explicitPrefs = await prisma.userPreference.findUnique({
-      where: { userId },
-    });
-
-    // 2. Fetch or synthesize user's dynamic behavioral preference profile
-    const learnedProfile = await buildUserProfile(userId);
+    // 1 & 2: Fetch explicit preferences and behavioral profile in parallel
+    const [explicitPrefs, learnedProfile] = await Promise.all([
+      prisma.userPreference.findUnique({ where: { userId } }),
+      buildUserProfile(userId),
+    ]);
 
     // 3. Fetch candidate approved properties that are strictly AVAILABLE
     const where: any = {

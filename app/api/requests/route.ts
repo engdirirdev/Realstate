@@ -9,7 +9,10 @@ export async function GET(request: NextRequest) {
   try {
     const user = await requireUser();
     if (!user) return unauthorized();
-    await syncRentalLifecycle();
+    // Execute lifecycle sync non-blockingly so read GET requests are fast and responsive
+    void syncRentalLifecycle().catch((err) => {
+      console.error("Non-blocking rental lifecycle sync error:", err);
+    });
 
     const sp = request.nextUrl.searchParams;
     const kind = sp.get("kind") === "rental" ? "rental" : "purchase";

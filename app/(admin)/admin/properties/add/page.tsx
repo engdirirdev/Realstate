@@ -8,8 +8,17 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Sparkles } from "lucide-react";
-import DynamicPropertyForm from "@/components/property/DynamicPropertyForm";
+import { ArrowLeft, Sparkles, Loader2 } from "lucide-react";
+import dynamic from "next/dynamic";
+
+const DynamicPropertyForm = dynamic(() => import("@/components/property/DynamicPropertyForm"), {
+  loading: () => (
+    <div className="flex flex-col items-center justify-center p-16 space-y-3 bg-[#FCFBF7] rounded-3xl border border-[#E8E1D4]">
+      <Loader2 className="w-8 h-8 animate-spin text-[#C89B3C]" />
+      <p className="text-sm font-medium text-[#6B7280]">Initializing dynamic property form engine...</p>
+    </div>
+  ),
+});
 
 export default function AdminAddPropertyPage() {
   const router = useRouter();

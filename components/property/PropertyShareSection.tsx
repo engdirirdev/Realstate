@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect , memo } from "react";
 import {
   Share2,
   Check,
@@ -20,7 +20,7 @@ interface PropertyShareSectionProps {
   price: number;
 }
 
-export default function PropertyShareSection({
+function PropertyShareSection({
   propertyId,
   propertyTitle,
   city,
@@ -120,3 +120,5 @@ export default function PropertyShareSection({
     </div>
   );
 }
+
+export default memo(PropertyShareSection);

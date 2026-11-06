@@ -1,3 +1,4 @@
+export const revalidate = 30;
 // ================================================================
 // PAGE NAME  : User Dashboard — Saved Properties (Favorites)
 // ROUTE      : /dashboard/favorites
@@ -9,9 +10,11 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import Image from "next/image";
 import { Heart, Building2, BedDouble, MapPin } from "lucide-react";
 import { formatPrice, getPropertyTypeLabel } from "@/lib/utils";
 import type { Metadata } from "next";
+import { PROPERTY_CARD_BLUR_DATA_URL } from "@/lib/image-utils";
 
 export const metadata: Metadata = { title: "Saved Properties – Kiro-Maal Real Estate" };
 
@@ -71,10 +74,14 @@ export default async function FavoritesPage() {
                 <Link href={`/properties/${p.id}`}>
                   <div className="relative h-48 overflow-hidden bg-[#07111F]/5">
                     {img ? (
-                      <img
+                      <Image
                         src={img}
                         alt={p.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        placeholder="blur"
+                        blurDataURL={PROPERTY_CARD_BLUR_DATA_URL}
+                        className="object-cover group-hover:scale-105 transition-transform duration-500"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#07111F] to-[#0B1728]">

@@ -1,166 +1,207 @@
 /**
- * Multi-Tier Distributed Cache Engine & Stampede Shield.
- *
- * Designed for 100 to 100,000+ users:
- * - L1: In-Memory Ultra-Fast Cache (sub-millisecond local node latency)
- * - L2: Distributed Cache Driver Interface (Redis / Upstash / AWS ElastiCache ready)
- * - Cache Stampede Shield: Single-flight request coalescing prevents "thundering herds"
- * - Tag-based distributed invalidation
+ * ================================================================
+ * MULTI-TIER L1 / L2 DISTRIBUTED CACHING ENGINE
+ * ================================================================
+ * Designed for tiered concurrency from 100 to 100,000+ users:
+ * - L1: Local In-Memory LRU Cache (~0.1ms access)
+ * - L2: Cluster-Wide Distributed Cache / Redis Adapter (~2-5ms access)
+ * - SWR: Stale-While-Revalidate background hydration (0ms latency for stale hits)
+ * - Tag Invalidation: Granular invalidation by entity (e.g. "property:123", "city:Mogadishu")
  */
 
-import { singleFlight } from "@/lib/api-scaling";
+import { MemoryCache } from "@/lib/cache";
 
-export interface CacheDriver {
-  get<T>(key: string): Promise<T | null>;
-  set<T>(key: string, value: T, ttlSeconds: number, tags?: string[]): Promise<void>;
-  delete(key: string): Promise<void>;
-  invalidateTag(tag: string): Promise<number>;
-}
-
-// ── L1: Memory Cache Driver ─────────────────────────────────────────
-
-interface MemoryEntry<T> {
+export interface CachePayload<T> {
   value: T;
   expiresAt: number;
-  tags: Set<string>;
+  staleUntil: number;
+  tags: string[];
 }
 
-export class MemoryCacheDriver implements CacheDriver {
-  private store = new Map<string, MemoryEntry<any>>();
+export interface IDistributedCacheAdapter {
+  get<T>(key: string): Promise<CachePayload<T> | null>;
+  set<T>(key: string, payload: CachePayload<T>, ttlSeconds: number): Promise<void>;
+  delete(key: string): Promise<boolean>;
+  deleteByTag(tag: string): Promise<number>;
+}
 
-  async get<T>(key: string): Promise<T | null> {
+/**
+ * In-Memory Distributed Cluster Simulator Adapter.
+ * Serves as reliable standalone L2 layer in development and containerized single/dual instances.
+ * In full production, swap with Upstash/Redis connection string.
+ */
+export class InMemoryClusterCacheAdapter implements IDistributedCacheAdapter {
+  private store = new Map<string, CachePayload<any>>();
+  private tagIndex = new Map<string, Set<string>>();
+
+  async get<T>(key: string): Promise<CachePayload<T> | null> {
     const entry = this.store.get(key);
     if (!entry) return null;
-    if (Date.now() > entry.expiresAt) {
+    if (Date.now() > entry.staleUntil) {
       this.store.delete(key);
       return null;
     }
-    return entry.value as T;
+    return entry as CachePayload<T>;
   }
 
-  async set<T>(key: string, value: T, ttlSeconds: number, tags: string[] = []): Promise<void> {
-    this.store.set(key, {
-      value,
-      expiresAt: Date.now() + ttlSeconds * 1000,
-      tags: new Set(tags),
-    });
-  }
-
-  async delete(key: string): Promise<void> {
-    this.store.delete(key);
-  }
-
-  async invalidateTag(tag: string): Promise<number> {
-    let count = 0;
-    for (const [key, entry] of this.store.entries()) {
-      if (entry.tags.has(tag)) {
-        this.store.delete(key);
-        count++;
+  async set<T>(key: string, payload: CachePayload<T>, ttlSeconds: number): Promise<void> {
+    this.store.set(key, payload);
+    for (const tag of payload.tags) {
+      if (!this.tagIndex.has(tag)) {
+        this.tagIndex.set(tag, new Set());
       }
+      this.tagIndex.get(tag)!.add(key);
     }
+  }
+
+  async delete(key: string): Promise<boolean> {
+    return this.store.delete(key);
+  }
+
+  async deleteByTag(tag: string): Promise<number> {
+    const keys = this.tagIndex.get(tag);
+    if (!keys) return 0;
+    let count = 0;
+    for (const key of keys) {
+      if (this.store.delete(key)) count++;
+    }
+    this.tagIndex.delete(tag);
     return count;
   }
-
-  size(): number {
-    return this.store.size;
-  }
-
-  clear(): void {
-    this.store.clear();
-  }
 }
 
-// ── L2: Pluggable Distributed Redis Driver (Upstash / Redis REST) ───
+/**
+ * Multi-Tier Cache Coordinator (L1 In-Memory + L2 Distributed).
+ */
+export class MultiTierCache {
+  private l1: MemoryCache;
+  private l2: IDistributedCacheAdapter;
+  private l1Hits = 0;
+  private l2Hits = 0;
+  private misses = 0;
 
-export class RedisCacheDriver implements CacheDriver {
-  private l1: MemoryCacheDriver;
-  private redisUrl?: string;
-
-  constructor(l1: MemoryCacheDriver, redisUrl?: string) {
-    this.l1 = l1;
-    this.redisUrl = redisUrl || process.env.REDIS_URL;
-  }
-
-  async get<T>(key: string): Promise<T | null> {
-    // 1. Check L1 Memory first
-    const l1Result = await this.l1.get<T>(key);
-    if (l1Result !== null) return l1Result;
-
-    // 2. Check L2 Redis if configured
-    if (this.redisUrl) {
-      // In real deployment, execute Redis GET
-      // Falls back to null
-    }
-
-    return null;
-  }
-
-  async set<T>(key: string, value: T, ttlSeconds: number, tags: string[] = []): Promise<void> {
-    // Save to L1
-    await this.l1.set(key, value, ttlSeconds, tags);
-
-    // Save to L2 Redis if configured
-    if (this.redisUrl) {
-      // Execute Redis SETEX with tags
-    }
-  }
-
-  async delete(key: string): Promise<void> {
-    await this.l1.delete(key);
-  }
-
-  async invalidateTag(tag: string): Promise<number> {
-    return await this.l1.invalidateTag(tag);
-  }
-}
-
-// ── Unified Distributed Cache Client ────────────────────────────────
-
-export class DistributedCacheEngine {
-  private driver: CacheDriver;
-
-  constructor(driver?: CacheDriver) {
-    const memory = new MemoryCacheDriver();
-    this.driver = driver || new RedisCacheDriver(memory, process.env.REDIS_URL);
+  constructor(l1Capacity = 1000, l2Adapter?: IDistributedCacheAdapter) {
+    this.l1 = new MemoryCache(l1Capacity);
+    this.l2 = l2Adapter || new InMemoryClusterCacheAdapter();
   }
 
   /**
-   * Fetches data with Stampede Protection.
-   * If 50 concurrent requests ask for the same missing key, the database query
-   * executes ONLY ONCE, and all 50 requests receive the result.
+   * Retrieves item following L1 -> L2 resolution hierarchy.
    */
-  async getOrSet<T>(
-    key: string,
-    fetcher: () => Promise<T>,
-    ttlSeconds = 60,
-    tags: string[] = []
-  ): Promise<T> {
-    const cached = await this.driver.get<T>(key);
-    if (cached !== null) {
-      return cached;
+  async get<T>(key: string): Promise<T | null> {
+    // 1. Check L1 In-Memory (~0.1ms)
+    const l1Value = this.l1.get<T>(key);
+    if (l1Value !== null) {
+      this.l1Hits++;
+      return l1Value;
     }
 
-    // Single-flight coalescing prevents cache stampedes
-    return await singleFlight.do(key, async () => {
-      // Double check after acquiring lock
-      const doubleCheck = await this.driver.get<T>(key);
-      if (doubleCheck !== null) return doubleCheck;
+    // 2. Check L2 Distributed (~2-5ms)
+    const l2Entry = await this.l2.get<T>(key);
+    if (l2Entry) {
+      this.l2Hits++;
+      // Warm L1 for subsequent requests
+      const remainingSeconds = Math.max(1, Math.round((l2Entry.expiresAt - Date.now()) / 1000));
+      this.l1.set(key, l2Entry.value, remainingSeconds, l2Entry.tags);
+      return l2Entry.value;
+    }
 
-      const freshData = await fetcher();
-      if (freshData !== null && freshData !== undefined) {
-        await this.driver.set(key, freshData, ttlSeconds, tags);
+    this.misses++;
+    return null;
+  }
+
+  /**
+   * Sets item in both L1 and L2 layers with TTL and tags.
+   */
+  async set<T>(
+    key: string,
+    value: T,
+    ttlSeconds: number,
+    tags: string[] = [],
+    staleGraceSeconds = 120
+  ): Promise<void> {
+    const now = Date.now();
+    const payload: CachePayload<T> = {
+      value,
+      expiresAt: now + ttlSeconds * 1000,
+      staleUntil: now + (ttlSeconds + staleGraceSeconds) * 1000,
+      tags,
+    };
+
+    // Parallel write to L1 and L2
+    this.l1.set(key, value, ttlSeconds, tags);
+    await this.l2.set(key, payload, ttlSeconds + staleGraceSeconds);
+  }
+
+  /**
+   * Stale-While-Revalidate execution helper.
+   * If fresh: returns immediately.
+   * If stale (within grace window): returns stale immediately and updates cache in background.
+   * If missed: awaits origin fetch.
+   */
+  async swr<T>(
+    key: string,
+    fetcher: () => Promise<T>,
+    ttlSeconds: number,
+    tags: string[] = [],
+    staleGraceSeconds = 120
+  ): Promise<T> {
+    const l2Entry = await this.l2.get<T>(key);
+    const now = Date.now();
+
+    if (l2Entry) {
+      // Fresh hit: return immediately
+      if (now < l2Entry.expiresAt) {
+        this.l1.set(key, l2Entry.value, Math.round((l2Entry.expiresAt - now) / 1000), tags);
+        return l2Entry.value;
       }
-      return freshData;
+
+      // Stale hit: background revalidation
+      this.triggerBackgroundRevalidate(key, fetcher, ttlSeconds, tags, staleGraceSeconds);
+      return l2Entry.value;
+    }
+
+    // Miss: Fetch origin
+    const freshValue = await fetcher();
+    await this.set(key, freshValue, ttlSeconds, tags, staleGraceSeconds);
+    return freshValue;
+  }
+
+  private triggerBackgroundRevalidate<T>(
+    key: string,
+    fetcher: () => Promise<T>,
+    ttlSeconds: number,
+    tags: string[],
+    staleGraceSeconds: number
+  ) {
+    // Non-blocking async update
+    Promise.resolve().then(async () => {
+      try {
+        const fresh = await fetcher();
+        await this.set(key, fresh, ttlSeconds, tags, staleGraceSeconds);
+      } catch (err) {
+        console.warn(`[MultiTierCache] Background SWR revalidation failed for ${key}:`, err);
+      }
     });
   }
 
-  async invalidate(key: string): Promise<void> {
-    await this.driver.delete(key);
+  async invalidateTag(tag: string): Promise<void> {
+    this.l1.invalidateTag(tag);
+    await this.l2.deleteByTag(tag);
   }
 
-  async invalidateTag(tag: string): Promise<number> {
-    return await this.driver.invalidateTag(tag);
+  getStats() {
+    const total = this.l1Hits + this.l2Hits + this.misses;
+    const hitRate = total > 0 ? ((this.l1Hits + this.l2Hits) / total) * 100 : 0;
+    return {
+      l1Hits: this.l1Hits,
+      l2Hits: this.l2Hits,
+      misses: this.misses,
+      hitRate: `${hitRate.toFixed(1)}%`,
+    };
   }
 }
 
-export const distributedCache = new DistributedCacheEngine();
+/** Global singleton multi-tier cache instance */
+export const distributedCache = new MultiTierCache(1500);
+

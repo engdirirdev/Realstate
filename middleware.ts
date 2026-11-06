@@ -31,6 +31,12 @@ function applySecurityHeaders(res: NextResponse): NextResponse {
     "camera=(), microphone=(), geolocation=(self)"
   );
   res.headers.set("X-DNS-Prefetch-Control", "on");
+  if (process.env.NODE_ENV === "production") {
+    res.headers.set(
+      "Strict-Transport-Security",
+      "max-age=63072000; includeSubDomains; preload"
+    );
+  }
   return res;
 }
 

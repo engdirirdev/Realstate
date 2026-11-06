@@ -1,152 +1,175 @@
 /**
- * High-Throughput API Scalability & Resilience Engine.
- *
- * Provides:
- * 1. Circuit Breaker Pattern (prevents cascading outages from external AI/payment APIs)
- * 2. Single-Flight Request Coalescing (collapses duplicate concurrent calls into one execution)
- * 3. Scaled Rate Limiting Matrix (adaptive throttling based on user authentication tiers)
+ * ================================================================
+ * API SCALABILITY, RESILIENCE & CIRCUIT BREAKER ENGINE
+ * ================================================================
+ * Designed for graceful degradation under heavy load (100 to 100,000 users):
+ * - Circuit Breaker pattern for external dependencies (AI providers, storage)
+ * - Scaled rate limit allowances by user tier
+ * - Fast-path 304 Not Modified ETag verification
  */
 
-import { logger } from "@/lib/logger";
-
-// ── 1. Circuit Breaker Pattern ──────────────────────────────────────
+import { NextResponse } from "next/server";
 
 export type CircuitState = "CLOSED" | "OPEN" | "HALF_OPEN";
 
 export interface CircuitBreakerOptions {
-  name: string;
-  failureThreshold?: number; // Failures before opening (default: 5)
-  recoveryTimeoutMs?: number; // Time in OPEN state before trying HALF_OPEN (default: 30000)
-  halfOpenSuccessThreshold?: number; // Successes in HALF_OPEN to close (default: 2)
+  failureThreshold?: number; // Failures before tripping open
+  resetTimeoutMs?: number;   // Time in ms before attempting half-open recovery
+  halfOpenSuccesses?: number; // Successful probes needed to close
+  name?: string;
 }
 
-export class CircuitBreakerOpenError extends Error {
-  constructor(public serviceName: string) {
-    super(`Service "${serviceName}" is temporarily unavailable (Circuit Breaker OPEN).`);
-    this.name = "CircuitBreakerOpenError";
-  }
-}
-
+/**
+ * Enterprise Circuit Breaker.
+ * Prevents cascade failure when downstream services (e.g. Gemini, OpenAI, S3) experience outages.
+ */
 export class CircuitBreaker {
   public state: CircuitState = "CLOSED";
-  public failureCount = 0;
-  public successCount = 0;
-  public lastFailureTime = 0;
-  public readonly name: string;
+  private failureCount = 0;
+  private successCount = 0;
+  private lastFailureTime = 0;
+  private options: Required<CircuitBreakerOptions>;
 
-  private readonly failureThreshold: number;
-  private readonly recoveryTimeoutMs: number;
-  private readonly halfOpenSuccessThreshold: number;
-
-  constructor(options: CircuitBreakerOptions) {
-    this.name = options.name;
-    this.failureThreshold = options.failureThreshold || 5;
-    this.recoveryTimeoutMs = options.recoveryTimeoutMs || 30000;
-    this.halfOpenSuccessThreshold = options.halfOpenSuccessThreshold || 2;
+  constructor(options: CircuitBreakerOptions = {}) {
+    this.options = {
+      failureThreshold: options.failureThreshold ?? 5,
+      resetTimeoutMs: options.resetTimeoutMs ?? 30000,
+      halfOpenSuccesses: options.halfOpenSuccesses ?? 2,
+      name: options.name ?? "default-circuit",
+    };
   }
 
-  async execute<T>(action: () => Promise<T>, fallback?: () => Promise<T> | T): Promise<T> {
+  /**
+   * Executes an asynchronous action through the circuit breaker.
+   */
+  async execute<T>(action: () => Promise<T>, fallback?: () => Promise<T>): Promise<T> {
     const now = Date.now();
 
-    // Check if recovery window has passed while OPEN
+    // 1. If OPEN, check if recovery timeout has elapsed to transition to HALF_OPEN
     if (this.state === "OPEN") {
-      if (now - this.lastFailureTime > this.recoveryTimeoutMs) {
+      if (now - this.lastFailureTime > this.options.resetTimeoutMs) {
         this.state = "HALF_OPEN";
         this.successCount = 0;
-        logger.info(`Circuit breaker "${this.name}" entering HALF_OPEN recovery state.`);
       } else {
-        if (fallback) return await fallback();
-        throw new CircuitBreakerOpenError(this.name);
+        if (fallback) {
+          return await fallback();
+        }
+        throw new Error(
+          `[Circuit Breaker: ${this.options.name}] Circuit is OPEN. Fast failing to protect event loop.`
+        );
       }
     }
 
+    // 2. Execute target action
     try {
       const result = await action();
       this.onSuccess();
       return result;
     } catch (err) {
-      this.onFailure(err);
-      if (fallback) return await fallback();
+      this.onFailure();
+      if (fallback) {
+        return await fallback();
+      }
       throw err;
     }
   }
 
-  private onSuccess(): void {
+  private onSuccess() {
+    this.failureCount = 0;
     if (this.state === "HALF_OPEN") {
       this.successCount++;
-      if (this.successCount >= this.halfOpenSuccessThreshold) {
+      if (this.successCount >= this.options.halfOpenSuccesses) {
         this.state = "CLOSED";
-        this.failureCount = 0;
-        this.successCount = 0;
-        logger.info(`Circuit breaker "${this.name}" recovered and CLOSED.`);
       }
-    } else {
-      this.failureCount = 0;
     }
   }
 
-  private onFailure(err: unknown): void {
+  private onFailure() {
     this.lastFailureTime = Date.now();
     this.failureCount++;
 
-    if (this.state === "HALF_OPEN" || this.failureCount >= this.failureThreshold) {
+    if (this.state === "HALF_OPEN" || this.failureCount >= this.options.failureThreshold) {
       this.state = "OPEN";
-      logger.error(`Circuit breaker "${this.name}" tripped OPEN after ${this.failureCount} failures.`, {
-        error: err instanceof Error ? err.message : String(err),
-      });
     }
+  }
+
+  reset() {
+    this.state = "CLOSED";
+    this.failureCount = 0;
+    this.successCount = 0;
+    this.lastFailureTime = 0;
   }
 }
 
-// ── 2. Single-Flight Request Coalescing ──────────────────────────────
+/** Pre-instantiated circuit breakers for core subsystems */
+export const aiCircuitBreaker = new CircuitBreaker({
+  name: "ai-services",
+  failureThreshold: 4,
+  resetTimeoutMs: 20000,
+});
+
+export const storageCircuitBreaker = new CircuitBreaker({
+  name: "storage-services",
+  failureThreshold: 5,
+  resetTimeoutMs: 15000,
+});
 
 /**
- * Coalesces duplicate in-flight requests for the same resource key into a single
- * execution. When 50 concurrent requests arrive for the same expensive calculation,
- * the worker function executes only once, and all 50 callers receive the result.
+ * Returns dynamic rate limit quotas scaled to concurrency tiers and user roles.
  */
-export class SingleFlight {
-  private inFlight = new Map<string, Promise<any>>();
+export function getTieredRateLimit(
+  role: "PUBLIC" | "CUSTOMER" | "MANAGER" | "ADMIN",
+  tierScale: "TIER_100" | "TIER_1K" | "TIER_10K" | "TIER_100K" = "TIER_1K"
+): { limit: number; windowSeconds: number } {
+  const multipliers: Record<typeof tierScale, number> = {
+    TIER_100: 1,
+    TIER_1K: 1.5,
+    TIER_10K: 2.5,
+    TIER_100K: 5,
+  };
 
-  async do<T>(key: string, fn: () => Promise<T>): Promise<T> {
-    const existing = this.inFlight.get(key);
-    if (existing) {
-      return existing as Promise<T>;
-    }
+  const factor = multipliers[tierScale] || 1;
 
-    const promise = fn()
-      .then((res) => {
-        this.inFlight.delete(key);
-        return res;
-      })
-      .catch((err) => {
-        this.inFlight.delete(key);
-        throw err;
-      });
-
-    this.inFlight.set(key, promise);
-    return promise;
-  }
-
-  getInFlightCount(): number {
-    return this.inFlight.size;
+  switch (role) {
+    case "ADMIN":
+      return { limit: Math.round(600 * factor), windowSeconds: 60 };
+    case "MANAGER":
+      return { limit: Math.round(300 * factor), windowSeconds: 60 };
+    case "CUSTOMER":
+      return { limit: Math.round(180 * factor), windowSeconds: 60 };
+    case "PUBLIC":
+    default:
+      return { limit: Math.round(60 * factor), windowSeconds: 60 };
   }
 }
 
-export const singleFlight = new SingleFlight();
+/**
+ * Checks client If-None-Match header against calculated ETag and returns empty 304 if fresh.
+ */
+export function handleConditionalGet(
+  clientEtag: string | null,
+  currentEtag: string,
+  payload: any,
+  headers: Record<string, string> = {}
+): NextResponse {
+  if (clientEtag && clientEtag === currentEtag) {
+    return new NextResponse(null, {
+      status: 304,
+      headers: {
+        ETag: currentEtag,
+        "Cache-Control": headers["Cache-Control"] || "public, max-age=60, stale-while-revalidate=300",
+        ...headers,
+      },
+    });
+  }
 
-// ── 3. Adaptive Rate Limiting Matrix ────────────────────────────────
-
-export interface RateLimitTier {
-  limit: number;
-  windowSeconds: number;
+  return NextResponse.json(payload, {
+    status: 200,
+    headers: {
+      ETag: currentEtag,
+      "Cache-Control": headers["Cache-Control"] || "public, max-age=60, stale-while-revalidate=300",
+      ...headers,
+    },
+  });
 }
 
-export const SCALABILITY_RATE_TIERS: Record<string, RateLimitTier> = {
-  PUBLIC: { limit: 60, windowSeconds: 60 },
-  CUSTOMER: { limit: 180, windowSeconds: 60 },
-  MANAGER: { limit: 300, windowSeconds: 60 },
-  ADMIN: { limit: 600, windowSeconds: 60 },
-  SEARCH: { limit: 120, windowSeconds: 60 },
-  AI_CHAT: { limit: 40, windowSeconds: 60 },
-};

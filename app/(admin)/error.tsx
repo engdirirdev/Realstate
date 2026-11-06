@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { ShieldAlert, RotateCcw, Shield, Activity } from "lucide-react";
 
@@ -25,7 +25,7 @@ export default function AdminError({
         <h2 className="text-2xl font-bold tracking-tight text-foreground mb-1">
           Admin Console Error
         </h2>
-        <p className="text-emerald-600 dark:text-emerald-400 text-sm font-medium mb-3">
+        <p className="text-[#C89B3C] dark:text-[#D9B45B] text-sm font-medium mb-3">
           Cilad ayaa ku timid qeybta maamulka sare (Admin Console)
         </p>
 

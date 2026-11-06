@@ -1,5 +1,7 @@
 "use client";
 
+import { memo } from "react";
+
 import { Eye, Heart, CalendarCheck, Clock, ShieldCheck, Activity } from "lucide-react";
 
 interface PropertyStatsPanelProps {
@@ -10,7 +12,7 @@ interface PropertyStatsPanelProps {
   status: string;
 }
 
-export default function PropertyStatsPanel({
+function PropertyStatsPanel({
   viewCount,
   favoritesCount,
   bookingsCount,
@@ -95,3 +97,5 @@ export default function PropertyStatsPanel({
     </div>
   );
 }
+
+export default memo(PropertyStatsPanel);

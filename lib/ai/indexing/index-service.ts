@@ -126,6 +126,15 @@ export async function deindexProperty(propertyId: string): Promise<boolean> {
 export async function indexAllApprovedProperties(options: { forceReindex?: boolean } = {}): Promise<BatchIndexSummary> {
   const approvedProperties = await prisma.property.findMany({
     where: { status: "APPROVED" },
+    include: {
+      embedding: {
+        select: {
+          id: true,
+          sourceHash: true,
+          model: true,
+        },
+      },
+    },
   });
 
   const summary: BatchIndexSummary = {
@@ -141,9 +150,7 @@ export async function indexAllApprovedProperties(options: { forceReindex?: boole
       const { canonicalText, sourceHash } = buildPropertyCanonicalDocument(property);
 
       if (!options.forceReindex) {
-        const existing = await prisma.propertyEmbedding.findUnique({
-          where: { propertyId: property.id },
-        });
+        const existing = property.embedding;
 
         if (existing && existing.sourceHash === sourceHash && existing.model === EMBEDDING_CONFIG.MODEL_NAME) {
           summary.skipped++;
@@ -153,9 +160,7 @@ export async function indexAllApprovedProperties(options: { forceReindex?: boole
 
       const { embedding, model, dimension } = await generateEmbedding(canonicalText, "document");
 
-      const existingRecord = await prisma.propertyEmbedding.findUnique({
-        where: { propertyId: property.id },
-      });
+      const existingRecord = property.embedding;
 
       await prisma.propertyEmbedding.upsert({
         where: { propertyId: property.id },
@@ -198,18 +203,14 @@ export async function indexAllApprovedProperties(options: { forceReindex?: boole
  * Retrieves diagnostics for embedding coverage and index health.
  */
 export async function getIndexDiagnostics(): Promise<IndexDiagnostics> {
-  const totalApproved = await prisma.property.count({
-    where: { status: "APPROVED" },
-  });
-
-  const indexedEmbeddings = await prisma.propertyEmbedding.findMany({
-    include: { property: { select: { id: true, status: true } } },
-  });
-
-  // Filter to only embeddings whose corresponding property is approved
-  const validIndexedCount = indexedEmbeddings.filter(
-    (e) => e.property && e.property.status === "APPROVED"
-  ).length;
+  const [totalApproved, validIndexedCount] = await Promise.all([
+    prisma.property.count({
+      where: { status: "APPROVED" },
+    }),
+    prisma.propertyEmbedding.count({
+      where: { property: { status: "APPROVED" } },
+    }),
+  ]);
 
   const missing = Math.max(0, totalApproved - validIndexedCount);
 

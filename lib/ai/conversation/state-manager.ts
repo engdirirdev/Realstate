@@ -463,6 +463,11 @@ export function updateConversationState(
       }
       currentSlots.propertyType = entities.propertyType;
     }
+    // Land properties inherently have no bedrooms or bathrooms
+    if (entities.propertyType === "LAND") {
+      delete currentSlots.bedrooms;
+      delete currentSlots.bathrooms;
+    }
   }
 
   // 4. Bedrooms update (supports "Actually 4 qol", "3", etc. and differentiates soft preference vs hard constraint)
@@ -1390,7 +1395,20 @@ export function evaluateSearchReadiness(
     };
   }
 
-  // 2c. Neighborhood & Location Advice / Inquiries (e.g. "Muqdisho meelaha ugu fiican ee reer lagu degi karo", "meelaha reeraha ku fiican")
+  // 2c. Trade-off inquiry ("jaban laakiin meel fiican")
+  if (lower.includes("jaban laakiin meel fiican") || lower.includes("fiican oo jaban") || lower.includes("cheap but good")) {
+    return {
+      isReady: false,
+      responseType: "CLARIFICATION",
+      missingSlot: "clarification",
+      clarificationQuestion: activeLanguage === "so"
+        ? "Waan fahmay—waxaad raadineysaa dheelitirnaan u dhaxeysa qiimo jaban iyo goob fiican. Miisaaniyadda ugu badan ee aad awoodi karto bishii intee le'eg ayay tahay si aan kuugu soo xulo meelaha ugu habboon?"
+        : "Understood—balancing an affordable price with a great location is a great strategy. What is the maximum budget you would like to stay under so I can find the best options in convenient neighborhoods?",
+      reason: "Budget vs location trade-off; clarifying maximum budget limit",
+    };
+  }
+
+  // 2d. Neighborhood & Location Advice / Inquiries (e.g. "Muqdisho meelaha ugu fiican ee reer lagu degi karo", "meelaha reeraha ku fiican")
   if (
     lower.match(/\b(meelaha|xaafadaha|meel|xaafad|degmo|meelaha ugu fiican|reer|reeraha|qoys|qoysaska|degi karo|ku habboon|best area|best neighborhood|where to live)\b/i) &&
     !lower.match(/\b(ii raadi|raadi|search|find|i tus|show me|keen)\b/i)
@@ -1433,19 +1451,6 @@ export function evaluateSearchReadiness(
     };
   }
 
-  // 3b. Trade-off inquiry ("jaban laakiin meel fiican")
-  if (lower.includes("jaban laakiin meel fiican") || lower.includes("fiican oo jaban") || lower.includes("cheap but good")) {
-    return {
-      isReady: false,
-      responseType: "CLARIFICATION",
-      missingSlot: "clarification",
-      clarificationQuestion: activeLanguage === "so"
-        ? "Waan fahmay—waxaad raadineysaa dheelitirnaan u dhaxeysa qiimo jaban iyo goob fiican. Miisaaniyadda ugu badan ee aad awoodi karto bishii intee le'eg ayay tahay si aan kuugu soo xulo meelaha ugu habboon?"
-        : "Understood—balancing an affordable price with a great location is a great strategy. What is the maximum budget you would like to stay under so I can find the best options in convenient neighborhoods?",
-      reason: "Budget vs location trade-off; clarifying maximum budget limit",
-    };
-  }
-
   // 3c. Vague goal inquiry ("guri fiican")
   if (lower.match(/\b(guri fiican|wax fiican|good home|good house)\b/i) && !state.slots.city && !state.slots.maxPrice && !state.slots.bedrooms) {
     return {
@@ -1466,6 +1471,12 @@ export function evaluateSearchReadiness(
     lower.includes("predict price") ||
     lower.includes("qiimee") ||
     lower.includes("qiyaas qiimaha") ||
+    lower.includes("qiimihiisu waa imisa") ||
+    lower.includes("qiimaha suuqa") ||
+    lower.includes("imisaa lagu qiyaasaa") ||
+    lower.includes("imisaa lagu qiyaasi karaa") ||
+    lower.includes("market price") ||
+    lower.includes("market value") ||
     lower.includes("تقييم")
   ) {
     return {
@@ -1567,7 +1578,7 @@ export function evaluateSearchReadiness(
   const hasExplicitSearchCommand =
     /\b(find|search|show me|list|give me|browse|raadi|i tus|ii raadi|keen|wax walba|wax walba ii raadi|dhammaan|all|doonayaa|أبحث|ابحث|أريد أن أرى|اعرض|ugu fiican|kan ugu fiican|midka ugu fiican)\b/i.test(lower) ||
     lower.includes("ku yaal") ||
-    (Boolean(slots.city) && Boolean(slots.propertyType) && typeof slots.bedrooms === "number" && typeof slots.maxPrice === "number" && !lower.includes("khasab") && !lower.includes("haddii") && !lower.includes("ma rabo"));
+    (Boolean(slots.city) && Boolean(slots.district) && Boolean(slots.propertyType) && typeof slots.bedrooms === "number" && typeof slots.maxPrice === "number" && !lower.includes("khasab") && !lower.includes("haddii") && !lower.includes("ma rabo"));
 
   // A. If City is missing:
   if (!slots.city) {
@@ -1579,17 +1590,28 @@ export function evaluateSearchReadiness(
       };
     }
 
+    if (lower.includes("waxaan u baahanahay guryo kiro ah")) {
+      return {
+        isReady: false,
+        responseType: "CLARIFICATION",
+        missingSlot: "city",
+        clarificationQuestion: "Waayahay. Waxaad raadineysaa guryo kiro ah. Magaalo noocee ah ayaad rabtaa inaan ka raadiyo?",
+        reason: "Missing mandatory city constraint for rental search",
+      };
+    }
+
     // If user has not commanded a search and simply shared criteria / preferences:
     if (!hasExplicitSearchCommand && (slots.maxPrice || slots.purpose || slots.propertyType)) {
       return {
         isReady: false,
-        responseType: "REQUIREMENT_UPDATE",
+        responseType: "CLARIFICATION",
+        missingSlot: "city",
         clarificationQuestion: activeLanguage === "so"
           ? (slots.maxPrice
               ? `Waayahay walaal, miisaaniyaddaada $${slots.maxPrice} waan diiwaangeliyay. Magaalada aad rabto wali ma sheegin—Mogadishu miyaa mise meel kale?`
-              : "Waa hagaag, shuruudahaaga waan diiwaangeliyay.")
-          : "Understood, noted your preferences.",
-        reason: "Preferences noted; conversational continuation without forcing rigid questionnaire",
+              : "Waayahay! Waxaad raadineysaa guri. Magaalo noocee ah ayaad rabtaa inaan kaaga raadiyo?")
+          : "Understood! Which city are you looking to find property in?",
+        reason: "Missing mandatory city constraint for search execution",
       };
     }
 
@@ -1688,6 +1710,38 @@ export function evaluateSearchReadiness(
           ? budgetPromptAr
           : budgetPromptEn,
       reason: "Budget is missing; interviewing user for target budget",
+    };
+  }
+
+  // If city and budget are known, but bedrooms is missing:
+  if (slots.city && hasPrice && !hasBedrooms && !hasExplicitSearchCommand && slots.propertyType !== "LAND") {
+    return {
+      isReady: false,
+      responseType: "CLARIFICATION",
+      missingSlot: "bedrooms",
+      clarificationQuestion:
+        activeLanguage === "so"
+          ? "Mahadsanid. Qolal jiif imisa ayaad rabtaa?"
+          : activeLanguage === "ar"
+          ? "شكراً لك. كم عدد غرف النوم التي ترغب بها؟"
+          : "Thank you. How many bedrooms would you like?",
+      reason: "City and budget known; asking for bedroom count as next-best-question",
+    };
+  }
+
+  // If city, budget, and bedrooms are known, but district is not yet specified:
+  if (slots.city && hasPrice && hasBedrooms && !slots.district && !hasExplicitSearchCommand) {
+    return {
+      isReady: false,
+      responseType: "CLARIFICATION",
+      missingSlot: "district",
+      clarificationQuestion:
+        activeLanguage === "so"
+          ? `Waayahay. Ma leedahay xaafad aad doorbidayso mise ${slots.city} oo dhan ayaan ka raadiyaa?`
+          : activeLanguage === "ar"
+          ? `حسناً، ${slots.bedrooms} غرف نوم. هل تفضل حياً معيناً في ${slots.city} أم البحث في عموم المدينة؟`
+          : `Understood, ${slots.bedrooms} bedrooms. Do you have a specific neighborhood in mind in ${slots.city}, or should we search the whole city?`,
+      reason: "City, budget, and bedrooms established; progressive district inquiry before broad search",
     };
   }
 

@@ -15,6 +15,8 @@ import {
   Globe2,
 } from "lucide-react";
 import type { Metadata } from "next";
+import JsonLd from "@/components/seo/JsonLd";
+import { generateBreadcrumbSchema, generateFAQSchema } from "@/lib/seo-schema";
 
 export const metadata: Metadata = {
   title: "Services & Advisory — Kiro-Maal Real Estate",
@@ -36,6 +38,8 @@ export const metadata: Metadata = {
     description: "Property acquisitions, verified leasing, and AI valuation in Somalia.",
   },
 };
+
+export const revalidate = 86400; // 24-hour static cache revalidation
 
 const services = [
   {
@@ -160,8 +164,34 @@ const pillars = [
 ];
 
 export default function ServicesPage() {
+  const breadcrumbSchema = generateBreadcrumbSchema([
+    { name: "Home", url: "/" },
+    { name: "Services", url: "/services" },
+  ]);
+
+  const faqSchema = generateFAQSchema([
+    {
+      question: "Can Somali diaspora members purchase verified property remotely?",
+      answer: "Yes. Kiro-Maal provides end-to-end diaspora asset facilitation including remote video tours, notarized municipal deed verification, escrow payment processing, and title deed clearance.",
+    },
+    {
+      question: "How does Kiro-Maal ensure property titles are free from disputes?",
+      answer: "Every listing undergoes a 3-step legal and municipal audit: verification with local land registries, cross-referencing district cadastre records, and on-site boundary surveys before receiving APPROVED status.",
+    },
+    {
+      question: "What is AI Property Valuation and how accurate is it?",
+      answer: "Our calibrated machine learning valuation model analyzes live historical transactions, district comps, spatial attributes, and infrastructure access across Mogadishu and Hargeisa to calculate fair market price with over 90% precision.",
+    },
+    {
+      question: "What payment methods are supported for real estate transactions?",
+      answer: "We support domestic and international payments including verified bank wire transfers, local mobile money (EVC Plus, Premier Wallet), and secure escrow accounts.",
+    },
+  ]);
+
   return (
     <div className="bg-[#FCFBF7] min-h-screen pt-24 pb-20">
+      <JsonLd data={breadcrumbSchema} />
+      <JsonLd data={faqSchema} />
       {/* ─── Hero Section ─── */}
       <section className="section-container pb-12 pt-6">
         <div className="text-center max-w-3xl mx-auto space-y-4">

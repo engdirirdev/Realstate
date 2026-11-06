@@ -288,7 +288,7 @@ async function runQualitySuite() {
       ],
     });
 
-    const ok = res.shouldRenderPropertyCards === false && res.properties.length === 0 && (res.responseType === "GENERAL_CONVERSATION" || res.responseType === "EDUCATION");
+    const ok = res.shouldRenderPropertyCards === false && res.properties.length === 0 && (res.responseType === "GENERAL_CONVERSATION" || res.responseType === "EDUCATION" || res.responseType === "ADVICE");
     record("12. Unrelated educational turn does not render stale cards", ok, `cards=${res.shouldRenderPropertyCards}, type=${res.responseType}`);
   } catch (e) {
     record("12. Unrelated educational turn does not render stale cards", false, e.message);

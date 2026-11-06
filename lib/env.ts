@@ -42,6 +42,7 @@ export interface EnvValidationReport {
 const INSECURE_DEFAULT_SECRETS = new Set([
   "your-super-secret-auth-secret-here",
   "dev-insecure-secret-replace-in-production",
+  "b140326a76a2785cb7ed14bf60b9f3eb55e7461a74c906f948b4b376e3391acf",
   "secret",
   "changeme",
   "default_secret",
@@ -54,10 +55,13 @@ function validateEnv(): AppEnv {
   const nodeEnv = (process.env.NODE_ENV || "development") as AppEnv["NODE_ENV"];
   const isProduction = nodeEnv === "production";
   const isDevelopment = !isProduction;
+  const isBuildPhase =
+    process.env.NEXT_PHASE === "phase-production-build" ||
+    process.env.NEXT_BUILD === "1";
 
   // 1. Database URL
   const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl && isProduction) {
+  if (!databaseUrl && isProduction && !isBuildPhase) {
     throw new Error(
       "[Security Alert] Missing required DATABASE_URL environment variable in production."
     );
@@ -67,14 +71,25 @@ function validateEnv(): AppEnv {
   const authSecret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
   if (isProduction) {
     if (!authSecret) {
-      throw new Error(
-        "[Security Alert] Missing required AUTH_SECRET environment variable in production. Run `openssl rand -base64 32` to generate one."
-      );
-    }
-    if (INSECURE_DEFAULT_SECRETS.has(authSecret)) {
-      throw new Error(
-        "[Security Alert] AUTH_SECRET is set to an insecure default placeholder. Please generate a cryptographically strong secret."
-      );
+      if (!isBuildPhase) {
+        throw new Error(
+          "[Security Alert] Missing required AUTH_SECRET environment variable in production. Run `openssl rand -base64 32` to generate one."
+        );
+      } else {
+        console.warn(
+          "[Security Notice] AUTH_SECRET is not set during build phase. Ensure it is populated in the deployment container."
+        );
+      }
+    } else if (INSECURE_DEFAULT_SECRETS.has(authSecret)) {
+      if (!isBuildPhase) {
+        throw new Error(
+          "[Security Alert] AUTH_SECRET is set to an insecure default placeholder. Please generate a cryptographically strong secret."
+        );
+      } else {
+        console.warn(
+          "[Security Notice] AUTH_SECRET is set to a development placeholder during build. Ensure a strong random secret is injected at runtime."
+        );
+      }
     }
   }
 

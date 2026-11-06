@@ -1,23 +1,23 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "AI Property Price Prediction & Valuation — Kiro-Maal Real Estate",
+  title: "AI Property Valuation & Price Estimator — Kiro-Maal",
   description:
-    "Estimate property market value in Somalia with machine learning intelligence. Get data-backed price predictions, confidence intervals, and neighborhood market benchmarks for Mogadishu & Hargeisa.",
+    "Instant, data-driven real estate valuations across Somalia. Our calibrated machine learning model calculates market fair value, confidence intervals, and spatial comps for villas, apartments, and land.",
   alternates: {
     canonical: "/price-prediction",
   },
   openGraph: {
-    title: "AI Property Price Prediction & Valuation — Kiro-Maal Real Estate",
+    title: "AI Property Valuation & Price Estimator — Kiro-Maal Somalia",
     description:
-      "Instant machine learning property valuation for villas, apartments, and land across Somalia.",
+      "Instant machine learning property valuations and confidence intervals across Mogadishu, Hargeisa, and Somalia.",
     url: "/price-prediction",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "AI Property Valuation — Kiro-Maal Real Estate Somalia",
-    description: "Instant data-backed real estate valuations in Somalia.",
+    title: "AI Real Estate Price Estimator Somalia",
+    description: "Instant data-driven property valuations and market comps.",
   },
 };
 

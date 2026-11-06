@@ -7,6 +7,8 @@
 import Link from "next/link";
 import { Building2, Users, Bot, Globe, Heart, Zap, CheckCircle2, Star, Sparkles, ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
+import JsonLd from "@/components/seo/JsonLd";
+import { generateBreadcrumbSchema } from "@/lib/seo-schema";
 
 export const metadata: Metadata = {
   title: "About Us — Kiro-Maal Luxury Real Estate & AI Intelligence",
@@ -27,6 +29,8 @@ export const metadata: Metadata = {
     description: "Modernizing property acquisitions, title transparency, and AI valuation in Somalia.",
   },
 };
+
+export const revalidate = 86400; // 24-hour static cache revalidation
 
 const team = [
   { name: "Mohamed Ali Hassan", role: "CEO & Co-Founder", emoji: "👨‍💼" },
@@ -50,8 +54,14 @@ const values = [
 ];
 
 export default function AboutPage() {
+  const breadcrumbSchema = generateBreadcrumbSchema([
+    { name: "Home", url: "/" },
+    { name: "About Us", url: "/about" },
+  ]);
+
   return (
     <div className="overflow-hidden bg-[#F7F3EA] min-h-screen">
+      <JsonLd data={breadcrumbSchema} />
       {/* Hero */}
       <section className="relative bg-[#07111F] py-20 text-center text-white overflow-hidden border-b border-[#C89B3C]/20">
         <div className="absolute inset-0 opacity-15 pointer-events-none bg-[radial-gradient(#C89B3C_1px,transparent_1px)] [background-size:24px_24px]" />

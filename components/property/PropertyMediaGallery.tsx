@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, memo } from "react";
 import Image from "next/image";
 import {
   ChevronLeft,
@@ -19,6 +19,11 @@ import {
   Plane,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  PROPERTY_CARD_BLUR_DATA_URL,
+  THUMBNAIL_BLUR_DATA_URL,
+  DEFAULT_PROPERTY_IMAGE,
+} from "@/lib/image-utils";
 
 interface MediaImage {
   id: string;
@@ -35,7 +40,7 @@ interface PropertyMediaGalleryProps {
   floorPlanUrl?: string | null;
 }
 
-export default function PropertyMediaGallery({
+function PropertyMediaGallery({
   title,
   images = [],
   videoUrl,
@@ -105,8 +110,22 @@ export default function PropertyMediaGallery({
     return null;
   }
 
+  const nextImageUrl = currentList.length > 1 ? currentList[(selectedIndex + 1) % currentList.length]?.url : null;
+  const prevImageUrl = currentList.length > 1 ? currentList[(selectedIndex - 1 + currentList.length) % currentList.length]?.url : null;
+
   return (
     <div className="space-y-4">
+      {/* Background Preloaders for Instant Slide Switching */}
+      {nextImageUrl && (
+        <div className="hidden" aria-hidden="true">
+          <Image src={nextImageUrl} alt="" width={1} height={1} priority={false} loading="eager" unoptimized />
+        </div>
+      )}
+      {prevImageUrl && (
+        <div className="hidden" aria-hidden="true">
+          <Image src={prevImageUrl} alt="" width={1} height={1} priority={false} loading="eager" unoptimized />
+        </div>
+      )}
       {/* ── Media Navigation Tabs ── */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
         <button
@@ -217,11 +236,15 @@ export default function PropertyMediaGallery({
         </div>
       ) : activeMediaTab === "FLOORPLAN" && floorPlanUrl ? (
         <div className="bg-[#FCFBF7] rounded-3xl overflow-hidden border border-[#E8E1D4] p-4 sm:p-6 shadow-sm flex flex-col items-center justify-center">
-          <div className="max-h-[500px] w-full flex items-center justify-center overflow-hidden bg-[#F7F3EA] rounded-2xl p-4">
-            <img
+          <div className="relative h-[360px] sm:h-[460px] w-full flex items-center justify-center overflow-hidden bg-[#F7F3EA] rounded-2xl p-4">
+            <Image
               src={floorPlanUrl}
               alt={`${title} - Architectural Floor Plan`}
-              className="max-h-[460px] w-auto object-contain cursor-zoom-in"
+              fill
+              sizes="(max-width: 1024px) 100vw, 1000px"
+              className="object-contain cursor-zoom-in"
+              placeholder="blur"
+              blurDataURL={PROPERTY_CARD_BLUR_DATA_URL}
               onClick={() => {
                 setLightboxOpen(true);
               }}
@@ -250,6 +273,9 @@ export default function PropertyMediaGallery({
                 alt={currentImage.altText || title}
                 fill
                 priority={selectedIndex === 0}
+                loading={selectedIndex === 0 ? "eager" : "lazy"}
+                placeholder="blur"
+                blurDataURL={PROPERTY_CARD_BLUR_DATA_URL}
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 1200px"
                 className="object-cover cursor-pointer transition-transform duration-500 group-hover:scale-[1.01]"
                 onClick={() => setLightboxOpen(true)}
@@ -333,6 +359,9 @@ export default function PropertyMediaGallery({
                       alt={img.altText || ""}
                       fill
                       sizes="96px"
+                      quality={65}
+                      placeholder="blur"
+                      blurDataURL={THUMBNAIL_BLUR_DATA_URL}
                       className="object-cover"
                       loading="lazy"
                     />
@@ -431,12 +460,16 @@ export default function PropertyMediaGallery({
               </button>
             )}
 
-            <div className="max-w-6xl max-h-[80vh] flex items-center justify-center overflow-hidden">
-              <img
-                src={currentImage?.url}
+            <div className="relative w-full max-w-6xl h-[65vh] sm:h-[75vh] flex items-center justify-center overflow-hidden">
+              <Image
+                src={currentImage?.url || DEFAULT_PROPERTY_IMAGE}
                 alt={currentImage?.altText || title}
+                fill
+                sizes="100vw"
+                quality={90}
                 style={{ transform: `scale(${zoomLevel}) translateZ(0)` }}
-                className="max-h-[75vh] max-w-full object-contain transition-transform duration-200 will-change-transform"
+                className="object-contain transition-transform duration-200 will-change-transform"
+                priority
               />
             </div>
 
@@ -467,7 +500,17 @@ export default function PropertyMediaGallery({
                     idx === selectedIndex ? "border-[#C89B3C] scale-105" : "border-transparent opacity-60 hover:opacity-100"
                   }`}
                 >
-                  <Image src={img.url} alt="" fill sizes="64px" className="object-cover" loading="lazy" />
+                  <Image
+                    src={img.url}
+                    alt=""
+                    fill
+                    sizes="64px"
+                    quality={60}
+                    placeholder="blur"
+                    blurDataURL={THUMBNAIL_BLUR_DATA_URL}
+                    className="object-cover"
+                    loading="lazy"
+                  />
                 </button>
               ))}
             </div>
@@ -477,3 +520,5 @@ export default function PropertyMediaGallery({
     </div>
   );
 }
+
+export default memo(PropertyMediaGallery);

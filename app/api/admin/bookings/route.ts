@@ -15,27 +15,46 @@ export async function GET(request: NextRequest) {
     const whereClause: any = {};
     if (status && status !== "ALL") whereClause.status = status;
 
-    const bookings = await prisma.booking.findMany({
-      where: whereClause,
-      include: {
-        property: {
-          select: {
-            id: true,
-            title: true,
-            city: true,
-            price: true,
-            images: { take: 1, orderBy: { order: "asc" }, select: { url: true } },
-          },
-        },
-        customer: { select: { id: true, name: true, email: true, phone: true } },
-        manager: { select: { id: true, name: true, email: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const pageParam = searchParams.get("page");
+    const pageSizeParam = searchParams.get("pageSize");
+    const page = Math.max(1, parseInt(pageParam || "1", 10));
+    const pageSize = pageSizeParam ? Math.min(100, Math.max(1, parseInt(pageSizeParam, 10))) : 25;
+    const skip = (page - 1) * pageSize;
 
-    return NextResponse.json({ success: true, bookings });
+    const [bookings, total] = await Promise.all([
+      prisma.booking.findMany({
+        where: whereClause,
+        include: {
+          property: {
+            select: {
+              id: true,
+              title: true,
+              city: true,
+              price: true,
+              images: { take: 1, orderBy: { order: "asc" }, select: { url: true } },
+            },
+          },
+          customer: { select: { id: true, name: true, email: true, phone: true } },
+          manager: { select: { id: true, name: true, email: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        take: pageSize,
+        skip,
+      }),
+      prisma.booking.count({ where: whereClause }),
+    ]);
+
+    return NextResponse.json({
+      success: true,
+      bookings,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to fetch bookings" }, { status: 500 });
+    console.error("[GET /api/admin/bookings]", error);
+    return NextResponse.json({ success: false, error: "Failed to fetch bookings" }, { status: 500 });
   }
 }
 

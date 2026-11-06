@@ -1,3 +1,4 @@
+export const revalidate = 30;
 // ================================================================
 // PAGE NAME  : Manager Dashboard — Property Management
 // ROUTE      : /dashboard/properties
@@ -27,6 +28,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "My Properties – Manager Dashboard | Kiro-Maal Real Estate",
+  robots: { index: false, follow: false },
 };
 
 type Status = "APPROVED" | "PENDING" | "REJECTED" | "SOLD" | "RENTED" | undefined;
@@ -60,12 +62,7 @@ export default async function ManagerPropertiesPage({
   const [
     properties,
     totalFiltered,
-    allCount,
-    pendingCount,
-    approvedCount,
-    rentedCount,
-    soldCount,
-    rejectedCount,
+    statusGroupCounts,
   ] = await Promise.all([
     prisma.property.findMany({
       where: whereClause,
@@ -78,23 +75,19 @@ export default async function ManagerPropertiesPage({
       skip: (currentPage - 1) * pageSize,
     }),
     prisma.property.count({ where: whereClause }),
-    prisma.property.count({ where: { managerId } }),
-    prisma.property.count({ where: { managerId, status: "PENDING" } }),
-    prisma.property.count({ where: { managerId, status: { in: ["APPROVED", "PUBLISHED"] } } }),
-    prisma.property.count({
-      where: {
-        managerId,
-        OR: [{ status: "RENTED" }, { availabilityStatus: "RENTED" }],
-      },
+    prisma.property.groupBy({
+      by: ["status", "availabilityStatus"],
+      where: { managerId },
+      _count: { id: true },
     }),
-    prisma.property.count({
-      where: {
-        managerId,
-        OR: [{ status: "SOLD" }, { availabilityStatus: "SOLD" }],
-      },
-    }),
-    prisma.property.count({ where: { managerId, status: "REJECTED" } }),
   ]);
+
+  const allCount = statusGroupCounts.reduce((acc, curr) => acc + curr._count.id, 0);
+  const pendingCount = statusGroupCounts.filter((c) => c.status === "PENDING").reduce((acc, curr) => acc + curr._count.id, 0);
+  const approvedCount = statusGroupCounts.filter((c) => c.status === "APPROVED" || c.status === "PUBLISHED").reduce((acc, curr) => acc + curr._count.id, 0);
+  const rentedCount = statusGroupCounts.filter((c) => c.status === "RENTED" || c.availabilityStatus === "RENTED").reduce((acc, curr) => acc + curr._count.id, 0);
+  const soldCount = statusGroupCounts.filter((c) => c.status === "SOLD" || c.availabilityStatus === "SOLD").reduce((acc, curr) => acc + curr._count.id, 0);
+  const rejectedCount = statusGroupCounts.filter((c) => c.status === "REJECTED").reduce((acc, curr) => acc + curr._count.id, 0);
 
   const totalPages = Math.ceil(totalFiltered / pageSize) || 1;
 

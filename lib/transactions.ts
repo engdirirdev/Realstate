@@ -929,28 +929,56 @@ export async function syncRentalLifecycle(force = false) {
   if (!force && now.getTime() - lastSync < 60_000) return;
   lastSync = now.getTime();
   try {
-    // 1. Expire finished rentals and free the property.
+    // 1. Expire finished rentals and free the property in batched queries
     const expired = await prisma.rentalRequest.findMany({
       where: { status: "ACTIVE", endDate: { lte: now } },
       select: { id: true, propertyId: true, customerId: true, requestNo: true },
     });
-    for (const r of expired) {
-      await prisma.$transaction(async (tx) => {
-        await tx.rentalRequest.update({
-          where: { id: r.id },
+    if (expired.length > 0) {
+      const expiredIds = expired.map((r) => r.id);
+      const expiredPropertyIds = Array.from(new Set(expired.map((r) => r.propertyId)));
+
+      // Batched update of expired requests and transactions
+      await prisma.$transaction([
+        prisma.rentalRequest.updateMany({
+          where: { id: { in: expiredIds } },
           data: { status: "EXPIRED", rentalStatus: "EXPIRED" },
+        }),
+        prisma.transaction.updateMany({
+          where: { rentalRequestId: { in: expiredIds } },
+          data: { status: "EXPIRED" },
+        }),
+      ]);
+
+      // Check which properties still have active rentals
+      const stillActive = await prisma.rentalRequest.findMany({
+        where: {
+          propertyId: { in: expiredPropertyIds },
+          status: "ACTIVE",
+          bookingStatus: { in: ["APPROVED", "CONFIRMED"] },
+          startDate: { lte: now },
+          endDate: { gt: now },
+        },
+        select: { propertyId: true },
+      });
+      const activePropSet = new Set(stillActive.map((s) => s.propertyId));
+      const toFree = expiredPropertyIds.filter((pid) => !activePropSet.has(pid));
+      if (toFree.length > 0) {
+        await prisma.property.updateMany({
+          where: { id: { in: toFree }, status: "RENTED" },
+          data: { status: "APPROVED", availabilityStatus: "AVAILABLE", isActive: true },
         });
-        await tx.transaction.updateMany({ where: { rentalRequestId: r.id }, data: { status: "EXPIRED" } });
-        const stillActive = await tx.rentalRequest.count({
-          where: { propertyId: r.propertyId, status: "ACTIVE", bookingStatus: { in: ["APPROVED", "CONFIRMED"] }, startDate: { lte: now }, endDate: { gt: now } },
-        });
-        if (!stillActive) {
-          await tx.property.updateMany({
-            where: { id: r.propertyId, status: "RENTED" },
-            data: { status: "APPROVED", availabilityStatus: "AVAILABLE", isActive: true },
-          });
-        }
-        await notifyUser(tx, r.customerId, "Rental Expired", `Your rental ${r.requestNo} has ended.`, "/customer/requests");
+      }
+
+      // Batch notifications
+      await prisma.notification.createMany({
+        data: expired.map((r) => ({
+          userId: r.customerId,
+          title: "Rental Expired",
+          message: `Your rental ${r.requestNo} has ended.`,
+          type: "TRANSACTION",
+          linkUrl: "/customer/requests",
+        })),
       });
     }
     // 2. Activate paid rentals whose start date has arrived.

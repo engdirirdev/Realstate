@@ -1,3 +1,4 @@
+export const revalidate = 30;
 // ================================================================
 // PAGE NAME  : Customer Portal — Payments & Receipts
 // ROUTE      : /customer/payments
@@ -15,22 +16,27 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Payments & Receipts – Customer Portal | Kiro-Maal Real Estate",
+  robots: { index: false, follow: false },
 };
 
 export default async function CustomerPaymentsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  const payments = await prisma.payment.findMany({
-    where: { customerId: session.user.id },
-    include: {
-      property: { select: { id: true, title: true, city: true } },
-      booking: { select: { id: true, status: true } },
-      receipt: { select: { id: true, receiptNo: true } },
-      transaction: { select: { id: true, type: true, txnNo: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const [payments, totalCount] = await Promise.all([
+    prisma.payment.findMany({
+      where: { customerId: session.user.id },
+      take: 50,
+      include: {
+        property: { select: { id: true, title: true, city: true } },
+        booking: { select: { id: true, status: true } },
+        receipt: { select: { id: true, receiptNo: true } },
+        transaction: { select: { id: true, type: true, txnNo: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.payment.count({ where: { customerId: session.user.id } }),
+  ]);
 
   return (
     <div className="space-y-6 bg-[#F7F3EA] min-h-screen p-5 sm:p-7">
@@ -42,7 +48,7 @@ export default async function CustomerPaymentsPage() {
           <CreditCard className="h-7 w-7 text-[#C89B3C]" /> Payment History &amp; Official Receipts
         </h1>
         <p className="text-[#6B7280] text-sm mt-1">
-          {payments.length} verified escrow and lease transactions recorded on your account
+          {totalCount} verified escrow and lease transactions recorded on your account
         </p>
       </div>
 

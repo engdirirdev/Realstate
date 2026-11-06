@@ -7,7 +7,7 @@
 // ================================================================
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, memo } from "react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import {
@@ -31,7 +31,7 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
-import type { GroundedPropertyResult } from "@/lib/chat-grounding-engine";
+import type { GroundedPropertyResult } from "@/lib/ai/conversation/types";
 
 interface Message {
   id: string;
@@ -41,19 +41,160 @@ interface Message {
   properties?: GroundedPropertyResult[];
 }
 
+
+// ─── MEMOIZED CHAT PROPERTY CARD SUB-COMPONENT ────────────────────
+const ChatPropertyCard = memo(function ChatPropertyCard({
+  property: p,
+  onFavoriteToggle,
+  onShareProperty,
+}: {
+  property: GroundedPropertyResult;
+  onFavoriteToggle: (id: string) => void;
+  onShareProperty: (id: string, title: string) => void;
+}) {
+  return (
+    <div className="bg-white border border-[#E8E1D4] rounded-2xl p-3.5 shadow-xs space-y-3 hover:border-[#C89B3C] transition-colors">
+      <div className="flex gap-3">
+        <div className="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 shrink-0 border border-[#E8E1D4] relative">
+          {p.imageUrl ? (
+            <Image
+              src={p.imageUrl}
+              alt={p.title}
+              fill
+              sizes="80px"
+              className="object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400">
+              No image
+            </div>
+          )}
+          <span className="absolute top-1 left-1 bg-[#07111F]/80 text-[#D9B45B] text-[9px] font-bold px-1.5 py-0.5 rounded">
+            {p.typeLabel}
+          </span>
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-1 flex-wrap">
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${p.statusColor}`}>
+              {p.statusEmoji}
+            </span>
+            <span className="text-[10px] font-bold text-[#8C6D23] bg-[#FBF7EE] px-1.5 py-0.5 rounded border border-[#E8DCC2]">
+              ★ {typeof p.aiMatchScore === "number" && !isNaN(p.aiMatchScore) && p.aiMatchScore > 0 ? p.aiMatchScore : 95}% Match
+            </span>
+          </div>
+
+          <h4 className="font-bold text-[#07111F] text-xs mt-1 truncate">
+            {p.title}
+          </h4>
+          <p className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5 truncate">
+            <MapPin className="h-3 w-3 text-[#C89B3C] shrink-0" />{" "}
+            {p.district ? `${p.district}, ` : ""}
+            {p.city}
+          </p>
+          <div className="flex items-baseline justify-between mt-1">
+            <span className="text-sm font-black text-[#07111F]">
+              {p.formattedPrice}
+            </span>
+            <span className="text-[10px] text-slate-500 font-medium">
+              {p.listingType}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Property Specifications */}
+      {String(p.type || "").toUpperCase() === "LAND" ||
+      String(p.typeLabel || "").toUpperCase() === "LAND" ||
+      p.bedrooms === 0 ? (
+        <div className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-[#F7F3EA] rounded-xl text-[11px] font-semibold text-[#07111F] border border-[#E8E1D4]">
+          <SquareStack className="h-3.5 w-3.5 text-[#C89B3C]" />
+          <span className="inline-flex items-center gap-1">
+            <span>
+              {String(p.type || "").toUpperCase() === "LAND" || String(p.typeLabel || "").toUpperCase() === "LAND"
+                ? "Land Plot Area:"
+                : "Total Usable Area:"}
+            </span>
+            <strong className="font-bold">{`${p.areaSize || (p as any).area || (p as any).landSize || 400} m²`}</strong>
+          </span>
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-1 py-1.5 px-2 bg-[#F7F3EA] rounded-xl text-[10px] text-slate-700 border border-[#E8E1D4]">
+          <span className="flex items-center gap-1 truncate">
+            <BedDouble className="h-3 w-3 text-[#C89B3C]" />
+            <span>{`${p.bedrooms} Beds`}</span>
+          </span>
+          <span className="flex items-center gap-1 truncate">
+            <Bath className="h-3 w-3 text-[#C89B3C]" />
+            <span>{`${p.bathrooms} Baths`}</span>
+          </span>
+          <span className="truncate">{`${p.areaSize || (p as any).area} m²`}</span>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="grid grid-cols-2 gap-1.5 pt-1">
+        <Link
+          href={`/properties/${p.id}`}
+          className="col-span-2 inline-flex items-center justify-center gap-1 py-1.5 bg-[#C89B3C] hover:bg-[#B88924] text-[#07111F] rounded-xl text-xs font-bold shadow-xs transition-colors"
+        >
+          <Eye className="h-3.5 w-3.5" /> View Details
+        </Link>
+        <button
+          type="button"
+          onClick={() => onFavoriteToggle(p.id)}
+          className="inline-flex items-center justify-center gap-1 py-1 bg-white border border-[#E8E1D4] hover:bg-[#F7F3EA] text-slate-700 rounded-xl text-[11px] font-medium"
+        >
+          <Heart className="h-3 w-3 text-rose-500" /> Save
+        </button>
+        <button
+          type="button"
+          onClick={() => onShareProperty(p.id, p.title)}
+          className="inline-flex items-center justify-center gap-1 py-1 bg-white border border-[#E8E1D4] hover:bg-[#F7F3EA] text-slate-700 rounded-xl text-[11px] font-medium"
+        >
+          <Share2 className="h-3 w-3 text-[#C89B3C]" /> Share
+        </button>
+      </div>
+    </div>
+  );
+});
+
 export default function AIChatbot() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [isOpen, setIsOpen] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const role = session?.user?.role || "PUBLIC";
+  const userName = session?.user?.name || "Guest";
+
+  // Lazy zero-cost initial message without double-mount render
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const welcomeText =
+      role === "ADMIN"
+        ? `Hello Admin ${userName}! I can help you monitor pending approvals, platform stats, and revenue.`
+        : role === "USER"
+        ? `Hello Agent ${userName}! Ask me about your property listings, approval statuses, or inquiries.`
+        : role === "CUSTOMER"
+        ? `Welcome ${userName}! I can recommend properties based on your preferences or answer housing questions.`
+        : `Welcome to Kiro-Maal Real Estate! Ask me anything about properties, locations, or price predictions in Somalia.`;
+    return [
+      {
+        id: "welcome",
+        role: "assistant",
+        content: welcomeText,
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      },
+    ];
+  });
+
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
-
-  const role = session?.user?.role || "PUBLIC";
-  const userName = session?.user?.name || "Guest";
 
   // Listen for global open event
   useEffect(() => {
@@ -67,8 +208,8 @@ export default function AIChatbot() {
     return () => window.removeEventListener("open-ai-chat", handleOpen);
   }, []);
 
-  // Role-aware suggestions
-  const getSuggestions = () => {
+  // Memoized role-aware suggestions
+  const suggestions = useMemo(() => {
     if (role === "ADMIN") {
       return [
         "How many pending properties need review?",
@@ -95,32 +236,7 @@ export default function AIChatbot() {
       "What real estate services do you provide?",
       "Show me properties in Mogadishu",
     ];
-  };
-
-  useEffect(() => {
-    if (messages.length === 0) {
-      const welcomeText =
-        role === "ADMIN"
-          ? `Hello Admin ${userName}! I can help you monitor pending approvals, platform stats, and revenue.`
-          : role === "USER"
-          ? `Hello Agent ${userName}! Ask me about your property listings, approval statuses, or inquiries.`
-          : role === "CUSTOMER"
-          ? `Welcome ${userName}! I can recommend properties based on your preferences or answer housing questions.`
-          : `Welcome to Kiro-Maal Real Estate! Ask me anything about properties, locations, or price predictions in Somalia.`;
-
-      setMessages([
-        {
-          id: "welcome",
-          role: "assistant",
-          content: welcomeText,
-          timestamp: new Date().toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-        },
-      ]);
-    }
-  }, [role, userName, messages.length]);
+  }, [role]);
 
   useEffect(() => {
     if (isOpen) {
@@ -300,7 +416,7 @@ export default function AIChatbot() {
           </div>
 
           {/* ─── Chat Messages Area ─── */}
-          <div className="relative flex-1 p-4 sm:p-5 overflow-y-auto space-y-4 bg-gradient-to-b from-[#F7F3EA]/90 via-[#FCFBF7] to-[#F7F3EA]/90">
+          <div className="relative flex-1 p-4 sm:p-5 overflow-y-auto momentum-scroll space-y-4 bg-gradient-to-b from-[#F7F3EA]/90 via-[#FCFBF7] to-[#F7F3EA]/90">
             {/* Conversation Flow */}
             <div className="relative z-10 space-y-4">
               {messages.map((msg) => (
@@ -348,106 +464,12 @@ export default function AIChatbot() {
                     {msg.properties && msg.properties.length > 0 && (
                       <div className="space-y-3 pt-1">
                         {msg.properties.map((p) => (
-                          <div
+                          <ChatPropertyCard
                             key={p.id}
-                            className="bg-white border border-[#E8E1D4] rounded-2xl p-3.5 shadow-xs space-y-3 hover:border-[#C89B3C] transition-colors"
-                          >
-                            <div className="flex gap-3">
-                              <div className="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 shrink-0 border border-[#E8E1D4] relative">
-                                {p.imageUrl ? (
-                                  <Image
-                                    src={p.imageUrl}
-                                    alt={p.title}
-                                    fill
-                                    sizes="80px"
-                                    className="object-cover"
-                                    loading="lazy"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400">
-                                    No image
-                                  </div>
-                                )}
-                                <span className="absolute top-1 left-1 bg-[#07111F]/80 text-[#D9B45B] text-[9px] font-bold px-1.5 py-0.5 rounded">
-                                  {p.typeLabel}
-                                </span>
-                              </div>
-
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between gap-1 flex-wrap">
-                                  <span
-                                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${p.statusColor}`}
-                                  >
-                                    {p.statusEmoji}
-                                  </span>
-                                  <span className="text-[10px] font-bold text-[#8C6D23] bg-[#FBF7EE] px-1.5 py-0.5 rounded border border-[#E8DCC2]">
-                                    ★ {p.aiMatchScore}% Match
-                                  </span>
-                                </div>
-
-                                <h4 className="font-bold text-[#07111F] text-xs mt-1 truncate">
-                                  {p.title}
-                                </h4>
-                                <p className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5 truncate">
-                                  <MapPin className="h-3 w-3 text-[#C89B3C] shrink-0" />{" "}
-                                  {p.district ? `${p.district}, ` : ""}
-                                  {p.city}
-                                </p>
-                                <div className="flex items-baseline justify-between mt-1">
-                                  <span className="text-sm font-black text-[#07111F]">
-                                    {p.formattedPrice}
-                                  </span>
-                                  <span className="text-[10px] text-slate-500 font-medium">
-                                    {p.listingType}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Property Specifications */}
-                            {String(p.type).toUpperCase() === "LAND" || String(p.typeLabel).toUpperCase() === "LAND" ? (
-                              <div className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-[#F7F3EA] rounded-xl text-[11px] font-semibold text-[#07111F] border border-[#E8E1D4]">
-                                <SquareStack className="h-3.5 w-3.5 text-[#C89B3C]" />
-                                <span>Land Plot Area: <strong className="font-bold">{p.areaSize || (p as any).area || (p as any).landSize || 400} m²</strong></span>
-                              </div>
-                            ) : (
-                              <div className="grid grid-cols-3 gap-1 py-1.5 px-2 bg-[#F7F3EA] rounded-xl text-[10px] text-slate-700 border border-[#E8E1D4]">
-                                <span className="flex items-center gap-1 truncate">
-                                  <BedDouble className="h-3 w-3 text-[#C89B3C]" />{" "}
-                                  {p.bedrooms} Beds
-                                </span>
-                                <span className="flex items-center gap-1 truncate">
-                                  <Bath className="h-3 w-3 text-[#C89B3C]" />{" "}
-                                  {p.bathrooms} Baths
-                                </span>
-                                <span className="truncate">{p.areaSize || (p as any).area} m²</span>
-                              </div>
-                            )}
-
-                            {/* Actions */}
-                            <div className="grid grid-cols-2 gap-1.5 pt-1">
-                              <Link
-                                href={`/properties/${p.id}`}
-                                className="col-span-2 inline-flex items-center justify-center gap-1 py-1.5 bg-[#C89B3C] hover:bg-[#B88924] text-[#07111F] rounded-xl text-xs font-bold shadow-xs transition-colors"
-                              >
-                                <Eye className="h-3.5 w-3.5" /> View Details
-                              </Link>
-                              <button
-                                type="button"
-                                onClick={() => handleFavoriteToggle(p.id)}
-                                className="inline-flex items-center justify-center gap-1 py-1 bg-white border border-[#E8E1D4] hover:bg-[#F7F3EA] text-slate-700 rounded-xl text-[11px] font-medium"
-                              >
-                                <Heart className="h-3 w-3 text-rose-500" /> Save
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleShareProperty(p.id, p.title)}
-                                className="inline-flex items-center justify-center gap-1 py-1 bg-white border border-[#E8E1D4] hover:bg-[#F7F3EA] text-slate-700 rounded-xl text-[11px] font-medium"
-                              >
-                                <Share2 className="h-3 w-3 text-[#C89B3C]" /> Share
-                              </button>
-                            </div>
-                          </div>
+                            property={p}
+                            onFavoriteToggle={handleFavoriteToggle}
+                            onShareProperty={handleShareProperty}
+                          />
                         ))}
                       </div>
                     )}
@@ -474,7 +496,7 @@ export default function AIChatbot() {
 
           {/* ─── Quick Suggested Action Pills ─── */}
           <div className="relative z-10 px-4 pt-2 pb-1.5 bg-[#F7F3EA] flex items-center gap-2 overflow-x-auto scrollbar-hide">
-            {getSuggestions().map((sug, i) => (
+            {suggestions.map((sug, i) => (
               <button
                 key={i}
                 onClick={() => handleSend(sug)}

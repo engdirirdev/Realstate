@@ -5,6 +5,57 @@
 
 import { SupportedLanguage } from "../language/detector";
 
+export interface GroundedPropertyResult {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  formattedPrice: string;
+  currency: string;
+  city: string;
+  district: string;
+  location: string;
+  address: string | null;
+  type: string;
+  typeLabel: string;
+  listingType: "For Sale" | "For Rent";
+  bedrooms: number;
+  bathrooms: number;
+  livingRooms: number;
+  kitchen: string;
+  parkingSpaces: number;
+  areaSize: number;
+  landSize: number | null;
+  floorNumber: string;
+  yearBuilt: number | null;
+  furnished: boolean;
+  swimmingPool: boolean;
+  garden: boolean;
+  security: boolean;
+  water: boolean;
+  electricity: boolean;
+  internet: boolean;
+  status: string;
+  statusLabel: string;
+  statusColor: string;
+  statusEmoji: string;
+  isAvailable: boolean;
+  imageUrl: string | null;
+  images: string[];
+  features: string[];
+  managerName: string;
+  isVerified: boolean;
+  aiMatchScore: number;
+  similarProperties?: {
+    id: string;
+    title: string;
+    city: string;
+    price: number;
+    formattedPrice: string;
+    imageUrl: string | null;
+  }[];
+}
+
 export type ConversationTopic =
   | "PROPERTY_SEARCH"
   | "PROPERTY_DETAILS"

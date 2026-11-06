@@ -198,23 +198,25 @@ export default async function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featuredProperties.map((p) => (
-              <PropertyCard
-                key={p.id}
-                property={{
-                  id: p.id,
-                  title: p.title,
-                  price: p.price,
-                  location: p.location,
-                  city: p.city,
-                  type: p.type,
-                  bedrooms: p.bedrooms,
-                  bathrooms: p.bathrooms,
-                  area: p.area,
-                  images: p.images,
-                  isFeatured: p.isFeatured,
-                }}
-              />
+            {featuredProperties.map((p, index) => (
+              <div key={p.id} className="content-visibility-auto">
+                <PropertyCard
+                  priority={index < 4}
+                  property={{
+                    id: p.id,
+                    title: p.title,
+                    price: p.price,
+                    location: p.location,
+                    city: p.city,
+                    type: p.type,
+                    bedrooms: p.bedrooms,
+                    bathrooms: p.bathrooms,
+                    area: p.area,
+                    images: p.images,
+                    isFeatured: p.isFeatured,
+                  }}
+                />
+              </div>
             ))}
           </div>
         </div>

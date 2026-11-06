@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Loader2,
   XCircle,
@@ -18,6 +19,7 @@ import {
   KeyRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { THUMBNAIL_BLUR_DATA_URL } from "@/lib/image-utils";
 import {
   Dialog,
   DialogContent,
@@ -31,14 +33,26 @@ import { formatPrice } from "@/lib/utils";
 
 type RequestType = "ALL" | "RENTAL" | "PURCHASE";
 
-export default function CustomerRequestsView() {
+interface CustomerRequestsViewProps {
+  initialRentalRequests?: any[];
+  initialPurchaseRequests?: any[];
+}
+
+export default function CustomerRequestsView({
+  initialRentalRequests,
+  initialPurchaseRequests,
+}: CustomerRequestsViewProps = {}) {
   const [filter, setFilter] = useState<RequestType>("ALL");
-  const [loading, setLoading] = useState(true);
-  const [rentalRequests, setRentalRequests] = useState<any[]>([]);
-  const [purchaseRequests, setPurchaseRequests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(
+    !(initialRentalRequests !== undefined && initialPurchaseRequests !== undefined)
+  );
+  const [rentalRequests, setRentalRequests] = useState<any[]>(initialRentalRequests || []);
+  const [purchaseRequests, setPurchaseRequests] = useState<any[]>(initialPurchaseRequests || []);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [payTarget, setPayTarget] = useState<any | null>(null);
   const [viewBookingTarget, setViewBookingTarget] = useState<any | null>(null);
+
+  const isInitialMount = useRef(true);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -62,8 +76,14 @@ export default function CustomerRequestsView() {
   }, []);
 
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      if (initialRentalRequests !== undefined && initialPurchaseRequests !== undefined) {
+        return;
+      }
+    }
     loadData();
-  }, [loadData]);
+  }, [loadData, initialRentalRequests, initialPurchaseRequests]);
 
   const cancelRequest = async (kind: "rental" | "purchase", id: string) => {
     if (!confirm("Are you sure you want to cancel this request?")) return;
@@ -204,10 +224,12 @@ export default function CustomerRequestsView() {
     <div className="space-y-6">
       {/* Filter Tabs */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="inline-flex rounded-xl border border-[#E8E1D4] bg-[#FCFBF7] p-1 shadow-2xs">
+        <div role="tablist" aria-label="Request type filter" className="inline-flex rounded-xl border border-[#E8E1D4] bg-[#FCFBF7] p-1 shadow-2xs">
           <button
+            role="tab"
+            aria-selected={filter === "ALL"}
             onClick={() => setFilter("ALL")}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C89B3C] ${
               filter === "ALL"
                 ? "bg-[#07111F] text-[#D9B45B] shadow-xs"
                 : "text-[#6B7280] hover:text-[#07111F]"
@@ -216,8 +238,10 @@ export default function CustomerRequestsView() {
             All Requests ({allItems.length})
           </button>
           <button
+            role="tab"
+            aria-selected={filter === "RENTAL"}
             onClick={() => setFilter("RENTAL")}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C89B3C] ${
               filter === "RENTAL"
                 ? "bg-[#07111F] text-[#D9B45B] shadow-xs"
                 : "text-[#6B7280] hover:text-[#07111F]"
@@ -226,8 +250,10 @@ export default function CustomerRequestsView() {
             Rental Bookings ({rentalRequests.length})
           </button>
           <button
+            role="tab"
+            aria-selected={filter === "PURCHASE"}
             onClick={() => setFilter("PURCHASE")}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C89B3C] ${
               filter === "PURCHASE"
                 ? "bg-[#07111F] text-[#D9B45B] shadow-xs"
                 : "text-[#6B7280] hover:text-[#07111F]"
@@ -335,11 +361,15 @@ export default function CustomerRequestsView() {
 
                   {/* Property Header */}
                   <div className="flex items-start gap-3 mb-4">
-                    <div className="w-16 h-16 rounded-xl overflow-hidden bg-[#07111F] flex-shrink-0 border border-[#E8E1D4]">
-                      <img
+                    <div className="w-16 h-16 rounded-xl overflow-hidden bg-[#07111F] flex-shrink-0 border border-[#E8E1D4] relative">
+                      <Image
                         src={propertyImage}
                         alt={item.property?.title || "Property"}
-                        className="w-full h-full object-cover"
+                        fill
+                        sizes="64px"
+                        placeholder="blur"
+                        blurDataURL={THUMBNAIL_BLUR_DATA_URL}
+                        className="object-cover"
                       />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -547,10 +577,14 @@ export default function CustomerRequestsView() {
             <div className="space-y-4 mt-2 text-xs">
               {/* Property Card */}
               <div className="p-3 bg-white rounded-xl border border-[#E8E1D4] flex items-center gap-3">
-                <div className="h-12 w-12 rounded-lg bg-[#07111F] overflow-hidden shrink-0">
-                  <img
+                <div className="h-12 w-12 rounded-lg bg-[#07111F] overflow-hidden shrink-0 relative">
+                  <Image
                     src={viewBookingTarget.property?.images?.[0]?.url || "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800"}
-                    alt={viewBookingTarget.property?.title}
+                    alt={viewBookingTarget.property?.title || "Property"}
+                    fill
+                    sizes="48px"
+                    placeholder="blur"
+                    blurDataURL={THUMBNAIL_BLUR_DATA_URL}
                     className="h-full w-full object-cover"
                   />
                 </div>

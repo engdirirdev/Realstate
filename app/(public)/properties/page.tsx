@@ -6,24 +6,16 @@
 // ================================================================
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { Button } from "@/components/ui/button";
-import {
-  Search,
-  Filter,
-  MapPin,
-  KeyRound,
-  Building2,
-  BedDouble,
-  DollarSign,
-  ArrowUpDown,
-  ChevronDown,
-  Sparkles,
-} from "lucide-react";
+import { cachedDbQuery } from "@/lib/cache";
+import { Search, Sparkles } from "lucide-react";
 import SaveSearchButton from "@/components/SaveSearchButton";
-import ResetFilterButton from "@/components/ResetFilterButton";
 import PropertyCard from "@/components/PropertyCard";
 import PropertiesSearchFilterForm from "@/components/properties/PropertiesSearchFilterForm";
-import { resolveLocation } from "@/lib/ai/nlu/location-resolver";
+import {
+  resolveLocation,
+  getCityDbVariants,
+  getDistrictAliases,
+} from "@/lib/ai/nlu/location-resolver";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -106,47 +98,78 @@ export default async function PropertiesPage({
 
   const andClauses: any[] = [];
 
-  // 1. Keyword search (q / search) across relevant text fields
+  // 1. Keyword search (q / search) with multi-token precision matching
   if (keywordQuery) {
-    andClauses.push({
-      OR: [
-        { title: { contains: keywordQuery } },
-        { description: { contains: keywordQuery } },
-        { location: { contains: keywordQuery } },
-        { address: { contains: keywordQuery } },
-        { city: { contains: keywordQuery } },
-      ],
-    });
-  }
+    const rawTerms = keywordQuery.split(/\s+/).map((t) => t.trim()).filter((t) => t.length > 1);
+    const stopWords = new Set(["oo", "ku", "ah", "ee", "ka", "in", "at", "for", "the", "and", "with", "la", "waa"]);
+    const filteredTerms = rawTerms.filter((t) => !stopWords.has(t.toLowerCase()));
+    const termsToMatch = filteredTerms.length > 0 ? filteredTerms : rawTerms;
 
-  // 2. City & District resolution with canonical normalization
-  if (searchLocation) {
-    const resolved = resolveLocation(searchLocation);
-    if (resolved) {
-      where.city = { contains: resolved.canonicalCity };
-      if (resolved.district) {
-        andClauses.push({
-          OR: [
-            { location: { contains: resolved.district } },
-            { address: { contains: resolved.district } },
-            { title: { contains: resolved.district } },
-            { description: { contains: resolved.district } },
-          ],
-        });
-      }
+    if (termsToMatch.length <= 1) {
+      andClauses.push({
+        OR: [
+          { title: { contains: keywordQuery } },
+          { description: { contains: keywordQuery } },
+          { location: { contains: keywordQuery } },
+          { address: { contains: keywordQuery } },
+          { city: { contains: keywordQuery } },
+        ],
+      });
     } else {
-      where.city = { contains: searchLocation };
+      andClauses.push({
+        OR: [
+          { title: { contains: keywordQuery } },
+          { description: { contains: keywordQuery } },
+          {
+            AND: termsToMatch.map((term) => ({
+              OR: [
+                { title: { contains: term } },
+                { description: { contains: term } },
+                { location: { contains: term } },
+                { address: { contains: term } },
+                { city: { contains: term } },
+              ],
+            })),
+          },
+        ],
+      });
     }
   }
 
-  if (explicitDistrict) {
+  // 2. City & District resolution with canonical DB alias expansion
+  if (searchLocation) {
+    const resolved = resolveLocation(searchLocation);
+    const cityVariants = getCityDbVariants(resolved ? resolved.canonicalCity : searchLocation);
+
+    if (cityVariants.length > 1) {
+      where.city = { in: cityVariants };
+    } else if (cityVariants.length === 1) {
+      where.city = cityVariants[0];
+    } else {
+      where.city = { contains: searchLocation };
+    }
+
+    const targetDistrict = resolved?.district || explicitDistrict;
+    if (targetDistrict) {
+      const districtTerms = getDistrictAliases(targetDistrict);
+      andClauses.push({
+        OR: districtTerms.flatMap((term) => [
+          { location: { contains: term } },
+          { address: { contains: term } },
+          { title: { contains: term } },
+          { description: { contains: term } },
+        ]),
+      });
+    }
+  } else if (explicitDistrict) {
+    const districtTerms = getDistrictAliases(explicitDistrict);
     andClauses.push({
-      OR: [
-        { location: { contains: explicitDistrict } },
-        { address: { contains: explicitDistrict } },
-        { title: { contains: explicitDistrict } },
-        { description: { contains: explicitDistrict } },
-      ],
+      OR: districtTerms.flatMap((term) => [
+        { location: { contains: term } },
+        { address: { contains: term } },
+        { title: { contains: term } },
+        { description: { contains: term } },
+      ]),
     });
   }
 
@@ -159,14 +182,15 @@ export default async function PropertiesPage({
     }
   }
 
-  // 4. Bedrooms with Studio (0 bed) support (omitted for LAND)
+  // 4. Bedrooms with exactBedrooms & Studio (0 bed) support (omitted for LAND)
+  const exactBedrooms = params.exactBedrooms === "true";
   if (String(type || "").toUpperCase() !== "LAND" && bedrooms !== undefined && bedrooms !== "") {
     const bedNum = Number(bedrooms);
     if (!isNaN(bedNum)) {
       if (bedNum === 0) {
         where.bedrooms = 0;
       } else {
-        where.bedrooms = { gte: bedNum };
+        where.bedrooms = exactBedrooms ? bedNum : { gte: bedNum };
       }
     }
   }
@@ -175,11 +199,19 @@ export default async function PropertiesPage({
   if (furnished === "true") where.isFurnished = true;
   if (parking) where.parking = { gte: Number(parking) };
 
-  // 5. Price filtering
+  // 5. Price filtering with boundary inversion auto-protection
   if (minPrice || maxPrice) {
-    where.price = {};
-    if (minPrice && !isNaN(Number(minPrice))) where.price.gte = Number(minPrice);
-    if (maxPrice && !isNaN(Number(maxPrice))) where.price.lte = Number(maxPrice);
+    const minVal = minPrice && !isNaN(Number(minPrice)) ? Number(minPrice) : undefined;
+    const maxVal = maxPrice && !isNaN(Number(maxPrice)) ? Number(maxPrice) : undefined;
+
+    if (minVal !== undefined && maxVal !== undefined) {
+      const [effMin, effMax] = minVal > maxVal ? [maxVal, minVal] : [minVal, maxVal];
+      where.price = { gte: effMin, lte: effMax };
+    } else if (minVal !== undefined) {
+      where.price = { gte: minVal };
+    } else if (maxVal !== undefined) {
+      where.price = { lte: maxVal };
+    }
   }
 
   if (andClauses.length > 0) {
@@ -194,50 +226,74 @@ export default async function PropertiesPage({
 
   // Fetch registered cities and categories from Admin registry + active properties
   const [registeredLocations, registeredCategories, properties, totalCount] = await Promise.all([
-    prisma.location.findMany({
-      select: { id: true, city: true, region: true, country: true },
-      orderBy: { city: "asc" },
-    }),
-    prisma.category.findMany({
-      select: { id: true, name: true, slug: true },
-      orderBy: { name: "asc" },
-    }),
-    prisma.property.findMany({
-      where,
-      select: {
-        id: true,
-        title: true,
-        price: true,
-        basePrice: true,
-        companyServiceFee: true,
-        legalTransferFee: true,
-        brokerCommission: true,
-        currency: true,
-        city: true,
-        location: true,
-        address: true,
-        type: true,
-        listingType: true,
-        bedrooms: true,
-        bathrooms: true,
-        area: true,
-        isFurnished: true,
-        parking: true,
-        status: true,
-        availabilityStatus: true,
-        isFeatured: true,
-        viewCount: true,
-        createdAt: true,
-        images: {
-          orderBy: { order: "asc" },
-          take: 1,
-          select: { id: true, url: true, isPrimary: true },
-        },
-      },
-      orderBy,
-      take: 40,
-    }),
-    prisma.property.count({ where }),
+    cachedDbQuery(
+      ["public", "locations-registry"],
+      () =>
+        prisma.location.findMany({
+          select: { id: true, city: true, region: true, country: true },
+          orderBy: { city: "asc" },
+        }),
+      { tags: ["locations"], revalidate: 300 }
+    ),
+    cachedDbQuery(
+      ["public", "categories-registry"],
+      () =>
+        prisma.category.findMany({
+          select: { id: true, name: true, slug: true },
+          orderBy: { name: "asc" },
+        }),
+      { tags: ["categories"], revalidate: 300 }
+    ),
+    cachedDbQuery(
+      [
+        "public",
+        "properties-catalog",
+        JSON.stringify(where),
+        JSON.stringify(orderBy),
+      ],
+      () =>
+        prisma.property.findMany({
+          where,
+          select: {
+            id: true,
+            title: true,
+            price: true,
+            basePrice: true,
+            companyServiceFee: true,
+            legalTransferFee: true,
+            brokerCommission: true,
+            currency: true,
+            city: true,
+            location: true,
+            address: true,
+            type: true,
+            listingType: true,
+            bedrooms: true,
+            bathrooms: true,
+            area: true,
+            isFurnished: true,
+            parking: true,
+            status: true,
+            availabilityStatus: true,
+            isFeatured: true,
+            viewCount: true,
+            createdAt: true,
+            images: {
+              orderBy: { order: "asc" },
+              take: 1,
+              select: { id: true, url: true, isPrimary: true },
+            },
+          },
+          orderBy,
+          take: 40,
+        }),
+      { tags: ["properties"], revalidate: 60 }
+    ),
+    cachedDbQuery(
+      ["public", "properties-count", JSON.stringify(where)],
+      () => prisma.property.count({ where }),
+      { tags: ["properties"], revalidate: 60 }
+    ),
   ]);
 
   // Use strictly registered locations from admin
@@ -325,7 +381,9 @@ export default async function PropertiesPage({
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {properties.map((p, index) => (
-              <PropertyCard key={p.id} property={p as any} priority={index < 4} />
+              <div key={p.id} className="content-visibility-auto">
+                <PropertyCard property={p as any} priority={index < 4} />
+              </div>
             ))}
           </div>
         )}

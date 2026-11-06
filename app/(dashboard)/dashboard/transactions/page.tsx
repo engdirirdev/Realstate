@@ -2,16 +2,25 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { Sparkles, CreditCard } from "lucide-react";
 import CentralTransactionsView from "@/components/transactions/CentralTransactionsView";
+import { getTransactionsDashboardData } from "@/lib/server/dashboard-data";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Payments – Manager Portal | Kiro-Maal Real Estate",
   description: "Unified manager payment logs, escrow settlements, and verified customer receipts.",
+  robots: { index: false, follow: false },
 };
+
+export const revalidate = 30;
 
 export default async function ManagerTransactionsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
+
+  const { paymentsData, ledgerData } = await getTransactionsDashboardData(
+    session.user.id,
+    (session.user as any).role || "USER"
+  );
 
   return (
     <div className="space-y-6 w-full min-w-0">
@@ -27,7 +36,12 @@ export default async function ManagerTransactionsPage() {
         </p>
       </div>
 
-      <CentralTransactionsView isAdmin={false} initialTab="payments" />
+      <CentralTransactionsView
+        isAdmin={false}
+        initialTab="payments"
+        initialPaymentsData={paymentsData}
+        initialLedgerData={ledgerData}
+      />
     </div>
   );
 }

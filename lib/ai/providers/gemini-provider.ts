@@ -130,6 +130,7 @@ export interface GeminiContextUpdates {
   userReasoning?: string[];
   furnished?: boolean;
   parking?: boolean;
+  pricePeriod?: "month" | "year" | "week" | "day";
   responseType?: ResponseType;
   referencedPropertyId?: string;
   proximity?: string;
@@ -506,7 +507,7 @@ CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
    - DO NOT call any tool for greetings, general conversation, advice questions, expressing preferences, budget statements, or inquiries about already displayed properties. Answer those with natural conversational text!
 5. When responding with text, if the user mentioned new criteria, preferences, or constraints during this turn, or if answering an inquiry about a property, append a JSON block at the very end:
 \`\`\`context
-{"city":"...","district":"...","maxPrice":...,"minPrice":...,"bedrooms":...,"propertyType":"...","purpose":"...","excludedLocations":[...],"softPreferences":[...],"responseType":"GREETING|ADVICE|REQUIREMENT_UPDATE|PROPERTY_DETAIL|GENERAL_CONVERSATION"}
+{"city":"...","district":"...","maxPrice":...,"minPrice":...,"bedrooms":...,"propertyType":"...","purpose":"...","excludedLocations":[...],"softPreferences":[...],"responseType":"GREETING|ADVICE|CLARIFICATION|PROPERTY_DETAIL|GENERAL_CONVERSATION"}
 \`\`\`
 6. STRICT TRUTH: Never invent properties, prices, or listings.`;
 
@@ -672,12 +673,36 @@ CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
       };
     }
 
+    // 1b. Casual Gratitude / Polite Closing Check
+    if (lower.match(/^(mahadsanid|waad mahadsantahay|thanks|thank you|shukran|waad ku mahadsantahay|alx|alxamdulilaah)\b/i)) {
+      const replyText =
+        lang === "en"
+          ? "You are very welcome! If you need anything else or want to find more properties, feel free to ask anytime. 😊"
+          : lang === "ar"
+          ? "على الرحب والسعة! إذا كنت بحاجة إلى أي مساعدة أخرى، يسعدني دائماً تقديم العون. 😊"
+          : "Adaa mudan! Haddii aad faahfaahin dheeraad ah u baahato ama aad rabto inaad guryo kale raadiso, mar walba diyaar baan kuu ahay. 😊";
+
+      return {
+        type: "TEXT_RESPONSE",
+        replyText,
+        contextUpdates: {
+          responseType: "GENERAL_CONVERSATION",
+        },
+        latencyMs,
+        model: this.model,
+        success: true,
+      };
+    }
+
     // 2. Advice / Educational Question / Valuation Check
     if (
+      /^(what is|waa maxay|ma hiya|ma huwa|tell me about|how does|sidee u shaqeeyaa|explain|faahfaahin)\b/i.test(lower) ||
+      lower.includes("villa vs") ||
+      lower.includes("what is a villa") ||
+      lower.includes("waa maxay villa") ||
       lower.includes("escrow") ||
       lower.includes("payment methods") ||
       lower.includes("sidee loo bixiyaa") ||
-      lower.includes("villa vs townhouse") ||
       lower.includes("price prediction") ||
       lower.includes("qiimee") ||
       lower.includes("qiimeynta") ||
@@ -692,6 +717,10 @@ CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
         replyText = lang === "so"
           ? "Adeegga Escrow ee Kiro-Maal wuxuu si buuxda u ilaaliyaa lacagtaada. Lacagta waxaa lagu hayaa meel ammaan ah ilaa inta aad ka kormeereyso guriga oo aad ku qancayso heshiiska."
           : "Kiro-Maal's secure escrow holds tenant/buyer funds safely until property inspection and contract requirements are fulfilled.";
+      } else if (lower.includes("villa")) {
+        replyText = lang === "so"
+          ? "Villa (fiilo) waa guri weyn oo gooni u taagan oo leh barxad ama deyr u gaar ah, badanaana ka kooban dhowr qolal jiif ah iyo meel baarkin gaari oo gaar u ah qoyska."
+          : "A villa is a spacious, standalone private residential property typically featuring a private enclosed compound, garden, multiple bedrooms, and dedicated parking.";
       } else if (
         lower.includes("price prediction") ||
         lower.includes("qiimee") ||
@@ -716,7 +745,7 @@ CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
         type: "TEXT_RESPONSE",
         replyText,
         contextUpdates: {
-          responseType: isVal ? "VALUATION" : "ADVICE",
+          responseType: isVal ? "VALUATION" : "EDUCATION",
         },
         latencyMs,
         model: this.model,
@@ -760,20 +789,40 @@ CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
     // Check Bedrooms
     let detectedBedrooms: number | undefined = undefined;
     const bedMatch = lower.match(/(\d+)\s*(?:bed|bedroom|bedrooms|bds|qol|qolal)/i);
+    const lastAssistantMsgLower = ((input.conversationHistory || []).slice(-1)[0]?.content || "").toLowerCase();
     if (bedMatch) {
       detectedBedrooms = parseInt(bedMatch[1], 10);
+    } else if (
+      /^\s*(\d{1,2})\s*$/.test(lower) &&
+      (!input.contextSlots?.bedrooms || lastAssistantMsgLower.includes("qol") || lastAssistantMsgLower.includes("bed"))
+    ) {
+      const num = parseInt(lower.trim(), 10);
+      if (num > 0 && num <= 20) {
+        detectedBedrooms = num;
+      }
     }
 
-    // Check Price Constraints
+    // Check Price Constraints (stripping commas for $80,000)
     let detectedMaxPrice: number | undefined = undefined;
     let detectedMinPrice: number | undefined = undefined;
-    const maxMatch = lower.match(/(?:under|below|less than|up to|ka yar|\$)\s*(\d+)/i);
+    const cleanLower = lower.replace(/,/g, "");
+    const maxMatch =
+      cleanLower.match(/(?:under|below|less than|up to|ka yar|\$)\s*(\d+)\s*(k|kun|thousand)?/i) ||
+      cleanLower.match(/\b(\d+)\s*(?:dollar|doolar|usd|\$)/i);
     if (maxMatch) {
-      detectedMaxPrice = parseInt(maxMatch[1], 10);
+      let num = parseInt(maxMatch[1], 10);
+      if (maxMatch[2] && (maxMatch[2].toLowerCase() === "k" || maxMatch[2].toLowerCase() === "kun" || maxMatch[2].toLowerCase() === "thousand")) {
+        num *= 1000;
+      }
+      detectedMaxPrice = num;
     }
-    const minMatch = lower.match(/(?:above|more than|at least|ka badan)\s*(\d+)/i);
+    const minMatch = cleanLower.match(/(?:above|more than|at least|ka badan)\s*(\d+)\s*(k|kun|thousand)?/i);
     if (minMatch) {
-      detectedMinPrice = parseInt(minMatch[1], 10);
+      let num = parseInt(minMatch[1], 10);
+      if (minMatch[2] && (minMatch[2].toLowerCase() === "k" || minMatch[2].toLowerCase() === "kun" || minMatch[2].toLowerCase() === "thousand")) {
+        num *= 1000;
+      }
+      detectedMinPrice = num;
     }
 
     // Check Purpose
@@ -784,12 +833,17 @@ CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
       detectedPurpose = "SALE";
     }
 
+    const detectedPeriod = /\b(bishii|month|monthly|شهريا|شهرياً)\b/i.test(cleanLower) ? ("month" as const) : undefined;
+
     const isSearchIntent =
       Boolean(detectedCity) ||
       Boolean(detectedDistrict) ||
       Boolean(detectedPropertyType) ||
       Boolean(detectedBedrooms) ||
       Boolean(detectedMaxPrice) ||
+      Boolean(input.contextSlots?.city) ||
+      Boolean(input.contextSlots?.propertyType) ||
+      Boolean(input.contextSlots?.purpose) ||
       /\b(show|find|search|keen|raadi|i tus|doonayaa|rabaa|properties|listings)\b/i.test(lower);
 
     if (isSearchIntent) {
@@ -800,6 +854,93 @@ CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
       const finalMinPrice = detectedMinPrice !== undefined ? detectedMinPrice : input.contextSlots?.minPrice;
       const finalPurpose = detectedPurpose || input.contextSlots?.purpose;
       const finalBeds = detectedBedrooms !== undefined ? [detectedBedrooms] : (input.contextSlots?.bedrooms ? [input.contextSlots.bedrooms] : undefined);
+      const finalPeriod = detectedPeriod || input.contextSlots?.pricePeriod;
+
+      // 1. If user is searching but hasn't provided a city, trigger CLARIFICATION interview!
+      if (!finalCity) {
+        const replyText =
+          lang === "en"
+            ? "Which city in Somalia are you looking in? (e.g., Mogadishu, Hargeisa, Garowe, Kismayo)"
+            : lang === "ar"
+            ? "في أي مدينة تبحث عن العقار؟ (مثال: مقديشو، هرجيسا، غاروي، كيسمايو)"
+            : "Magaalo kee ayaad guri ka raadinaysaa? (tusaale: Muqdisho, Hargeysa, Garoowe, ama Kismaayo)?";
+        return {
+          type: "TEXT_RESPONSE",
+          replyText,
+          contextUpdates: {
+            city: finalCity,
+            purpose: finalPurpose,
+            propertyType: finalType as any,
+            bedrooms: detectedBedrooms !== undefined ? detectedBedrooms : input.contextSlots?.bedrooms,
+            maxPrice: finalMaxPrice,
+            minPrice: finalMinPrice,
+            pricePeriod: finalPeriod,
+            responseType: "CLARIFICATION",
+          },
+          latencyMs,
+          model: this.model,
+          success: true,
+        };
+      }
+
+      const hasDirectShowCommand = /\b(show|find|search|keen|raadi|i tus|list|browse|wax walba)\b/i.test(lower);
+
+      // 2. If city is set, but user hasn't specified a budget yet, ask for budget in conversational clarification!
+      if (finalCity && finalMaxPrice === undefined && finalMinPrice === undefined && !hasDirectShowCommand) {
+        const replyText =
+          lang === "en"
+            ? `Great, looking for properties in ${finalCity}. What is your preferred budget (e.g. $300 or $500/month)?`
+            : lang === "ar"
+            ? `ممتاز، أبحث لك عن عقارات في ${finalCity}. ما هي الميزانية المناسبة لك (مثال: 500$ شهرياً)؟`
+            : `Hagaag, waxaan kuu raadinayaa guryaha ku yaal ${finalCity}. Miisaaniyadda intee le'eg ayaad qorsheynaysaa (tusaale: $300 ama $500 bishii)?`;
+        return {
+          type: "TEXT_RESPONSE",
+          replyText,
+          contextUpdates: {
+            city: finalCity,
+            purpose: finalPurpose,
+            propertyType: finalType as any,
+            bedrooms: detectedBedrooms !== undefined ? detectedBedrooms : input.contextSlots?.bedrooms,
+            responseType: "CLARIFICATION",
+          },
+          latencyMs,
+          model: this.model,
+          success: true,
+        };
+      }
+
+      // 3. If city and budget are set, but bedrooms is not specified yet (and type is not Land), ask for bedroom count!
+      if (
+        finalCity &&
+        (finalMaxPrice !== undefined || finalMinPrice !== undefined) &&
+        !detectedBedrooms &&
+        !input.contextSlots?.bedrooms &&
+        finalType !== "LAND" &&
+        !hasDirectShowCommand
+      ) {
+        const replyText =
+          lang === "en"
+            ? `Budget of $${finalMaxPrice || 500} noted. How many bedrooms do you need (e.g. 2 or 3 bedrooms)?`
+            : lang === "ar"
+            ? `تم تسجيل الميزانية ($${finalMaxPrice || 500}). كم عدد غرف النوم التي تحتاجها؟`
+            : `Miisaaniyadda $${finalMaxPrice || 500} waa la xaqiijiyey. Qolal intee le'eg ayaad u baahan tahay (tusaale: 2 qol ama 3 qol)?`;
+        return {
+          type: "TEXT_RESPONSE",
+          replyText,
+          contextUpdates: {
+            city: finalCity,
+            purpose: finalPurpose,
+            propertyType: finalType as any,
+            maxPrice: finalMaxPrice,
+            minPrice: finalMinPrice,
+            pricePeriod: finalPeriod,
+            responseType: "CLARIFICATION",
+          },
+          latencyMs,
+          model: this.model,
+          success: true,
+        };
+      }
 
       return {
         type: "TOOL_CALL",
@@ -823,6 +964,7 @@ CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
           minPrice: finalMinPrice,
           purpose: finalPurpose,
           bedrooms: detectedBedrooms !== undefined ? detectedBedrooms : input.contextSlots?.bedrooms,
+          pricePeriod: finalPeriod,
           responseType: "PROPERTY_RESULTS",
         },
         latencyMs,

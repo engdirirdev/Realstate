@@ -10,7 +10,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     const { id } = await params;
     const session = await auth();
     if (!session || (session.user as any)?.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized. Admin access required." }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized. Admin access required." }, { status: 401 });
     }
 
     const user = await prisma.user.findUnique({
@@ -57,13 +57,16 @@ export async function GET(request: NextRequest, { params }: Props) {
     });
 
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, user });
+    // Security: exclude password hash
+    const { password: _, ...safeUser } = user as any;
+
+    return NextResponse.json({ success: true, user: safeUser });
   } catch (error) {
     console.error("[GET /api/admin/users/[id]]", error);
-    return NextResponse.json({ error: "Failed to fetch user preview data" }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Failed to fetch user preview data" }, { status: 500 });
   }
 }
 

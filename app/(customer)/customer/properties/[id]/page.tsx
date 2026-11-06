@@ -156,13 +156,13 @@ export default async function CustomerPropertyDetailPage({ params }: Props) {
                 <div className="bg-[#FAF7F2] p-3 rounded-xl border border-[#E8E1D4] text-center">
                   <BedDouble className="w-4 h-4 text-[#C89B3C] mx-auto mb-1" />
                   <span className="text-xs font-bold text-[#07111F]">
-                    {property.bedrooms || 1} Beds
+                    {property.type === "LAND" || property.bedrooms === 0 ? "N/A" : `${property.bedrooms || 1} Beds`}
                   </span>
                 </div>
                 <div className="bg-[#FAF7F2] p-3 rounded-xl border border-[#E8E1D4] text-center">
                   <Bath className="w-4 h-4 text-[#C89B3C] mx-auto mb-1" />
                   <span className="text-xs font-bold text-[#07111F]">
-                    {property.bathrooms || 1} Baths
+                    {property.type === "LAND" ? "N/A" : `${property.bathrooms || 1} Baths`}
                   </span>
                 </div>
                 <div className="bg-[#FAF7F2] p-3 rounded-xl border border-[#E8E1D4] text-center">

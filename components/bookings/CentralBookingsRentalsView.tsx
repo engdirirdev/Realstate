@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef, memo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -52,42 +52,76 @@ interface CentralBookingsRentalsViewProps {
   initialTab?: "bookings" | "rentals";
   initialDirectOpen?: boolean;
   initialCustomerId?: string;
+  initialBookings?: any[];
+  initialRentals?: any[];
+  initialMetrics?: {
+    pendingBookings: number;
+    approvedBookings: number;
+    activeRentals: number;
+    expiringSoon: number;
+  };
+  initialBookingTotal?: number;
+  initialRentalTotal?: number;
 }
 
-export default function CentralBookingsRentalsView({
+function CentralBookingsRentalsView({
   isAdmin = false,
   initialTab = "bookings",
   initialDirectOpen = false,
   initialCustomerId,
+  initialBookings,
+  initialRentals,
+  initialMetrics,
+  initialBookingTotal,
+  initialRentalTotal,
 }: CentralBookingsRentalsViewProps) {
   // Segmented control: "bookings" | "rentals" (Section 4)
   const [activeTab, setActiveTab] = useState<"bookings" | "rentals">(initialTab);
 
-  // ─── TAB 1: RENTAL BOOKINGS STATE ───
-  const [bookings, setBookings] = useState<any[]>([]);
-  const [bookingsLoading, setBookingsLoading] = useState(true);
+  // ─── TAB 1: RENTAL BOOKINGS STATE (SSR pre-hydrated for 0ms render) ───
+  const [bookings, setBookings] = useState<any[]>(initialBookings || []);
+  const [bookingsLoading, setBookingsLoading] = useState(initialBookings ? false : true);
   const [bookingsError, setBookingsError] = useState<string | null>(null);
   const [bookingStatusFilter, setBookingStatusFilter] = useState("ALL");
   const [bookingSearch, setBookingSearch] = useState("");
+  const [debouncedBookingSearch, setDebouncedBookingSearch] = useState("");
   const [bookingPage, setBookingPage] = useState(1);
-  const [bookingTotal, setBookingTotal] = useState(0);
+  const [bookingTotal, setBookingTotal] = useState(initialBookingTotal ?? (initialBookings?.length || 0));
 
-  // ─── TAB 2: ACTIVE RENTALS STATE ───
-  const [rentals, setRentals] = useState<any[]>([]);
-  const [rentalsLoading, setRentalsLoading] = useState(true);
+  // ─── TAB 2: ACTIVE RENTALS STATE (SSR pre-hydrated for 0ms render) ───
+  const [rentals, setRentals] = useState<any[]>(initialRentals || []);
+  const [rentalsLoading, setRentalsLoading] = useState(initialRentals ? false : true);
   const [rentalsError, setRentalsError] = useState<string | null>(null);
   const [rentalStatusFilter, setRentalStatusFilter] = useState("ALL");
   const [rentalSearch, setRentalSearch] = useState("");
+  const [debouncedRentalSearch, setDebouncedRentalSearch] = useState("");
   const [rentalPage, setRentalPage] = useState(1);
-  const [rentalTotal, setRentalTotal] = useState(0);
+  const [rentalTotal, setRentalTotal] = useState(initialRentalTotal ?? (initialRentals?.length || 0));
+
+  // 350ms Debounce search terms to eliminate typing network spikes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedBookingSearch(bookingSearch);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [bookingSearch]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedRentalSearch(rentalSearch);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [rentalSearch]);
 
   // ─── ONLY 4 SUMMARY CARDS (Section 3) ───
-  const [metrics, setMetrics] = useState({
-    pendingBookings: 0,
-    approvedBookings: 0,
-    activeRentals: 0,
-    expiringSoon: 0,
-  });
+  const [metrics, setMetrics] = useState(
+    initialMetrics || {
+      pendingBookings: 0,
+      approvedBookings: 0,
+      activeRentals: 0,
+      expiringSoon: 0,
+    }
+  );
 
   // ─── ACTION MODALS STATE ───
   const [viewBookingTarget, setViewBookingTarget] = useState<any | null>(null);
@@ -134,7 +168,7 @@ export default function CentralBookingsRentalsView({
         pageSize: "15",
       });
       if (bookingStatusFilter !== "ALL") sp.set("status", bookingStatusFilter);
-      if (bookingSearch.trim()) sp.set("q", bookingSearch.trim());
+      if (debouncedBookingSearch.trim()) sp.set("q", debouncedBookingSearch.trim());
 
       const res = await fetch(`/api/requests?${sp.toString()}`);
       const data = await res.json();
@@ -149,7 +183,7 @@ export default function CentralBookingsRentalsView({
     } finally {
       setBookingsLoading(false);
     }
-  }, [bookingPage, bookingStatusFilter, bookingSearch]);
+  }, [bookingPage, bookingStatusFilter, debouncedBookingSearch]);
 
   // ─── 3. Fetch Rentals (Agreements) ───
   const fetchRentals = useCallback(async () => {
@@ -163,7 +197,7 @@ export default function CentralBookingsRentalsView({
         pageSize: "15",
       });
       if (rentalStatusFilter !== "ALL") sp.set("status", rentalStatusFilter);
-      if (rentalSearch.trim()) sp.set("q", rentalSearch.trim());
+      if (debouncedRentalSearch.trim()) sp.set("q", debouncedRentalSearch.trim());
 
       const res = await fetch(`/api/requests?${sp.toString()}`);
       const data = await res.json();
@@ -178,22 +212,35 @@ export default function CentralBookingsRentalsView({
     } finally {
       setRentalsLoading(false);
     }
-  }, [rentalPage, rentalStatusFilter, rentalSearch]);
+  }, [rentalPage, rentalStatusFilter, debouncedRentalSearch]);
+
+  const isInitialBookingsMount = useRef(true);
+  const isInitialRentalsMount = useRef(true);
 
   useEffect(() => {
-    fetchMetrics();
-  }, [fetchMetrics]);
+    if (!initialMetrics) {
+      fetchMetrics();
+    }
+  }, [fetchMetrics, initialMetrics]);
 
   useEffect(() => {
     if (activeTab === "bookings") {
+      if (isInitialBookingsMount.current) {
+        isInitialBookingsMount.current = false;
+        if (initialBookings) return;
+      }
       fetchBookings();
     } else {
+      if (isInitialRentalsMount.current) {
+        isInitialRentalsMount.current = false;
+        if (initialRentals) return;
+      }
       fetchRentals();
     }
-  }, [activeTab, fetchBookings, fetchRentals]);
+  }, [activeTab, fetchBookings, fetchRentals, initialBookings, initialRentals]);
 
   // ─── Manager Booking Approval Action (Section 13) ───
-  const handleApproveBooking = async (bookingId: string) => {
+  const handleApproveBooking = useCallback(async (bookingId: string) => {
     if (isAdmin) {
       toast({
         title: "Unauthorized Action",
@@ -249,10 +296,10 @@ export default function CentralBookingsRentalsView({
     } finally {
       setBusyId(null);
     }
-  };
+  }, [isAdmin, fetchBookings, fetchRentals, fetchMetrics]);
 
   // ─── Manager Booking Rejection Action (Section 14) ───
-  const handleRejectBooking = async () => {
+  const handleRejectBooking = useCallback(async () => {
     if (!rejectingBooking) return;
     if (isAdmin) {
       toast({
@@ -297,7 +344,7 @@ export default function CentralBookingsRentalsView({
     } finally {
       setBusyId(null);
     }
-  };
+  }, [rejectingBooking, isAdmin, rejectReason, fetchBookings, fetchMetrics]);
 
   // ─── Manager Direct Rental Creation (Section 22, 25, 29) ───
   const openDirectModal = async (preselectedCustomerId?: string | unknown) => {
@@ -661,8 +708,8 @@ export default function CentralBookingsRentalsView({
             ) : (
               <>
                 {/* ─── DESKTOP & TABLET: HORIZONTAL SCROLL TABLE (Section 8-21) ─── */}
-                <div className="hidden md:block w-full max-w-full overflow-x-auto">
-                  <table className="w-full min-w-[960px] lg:min-w-0 text-left border-collapse text-xs">
+                <div className="hidden md:block w-full max-w-full overflow-x-auto momentum-scroll">
+                  <table className="w-full min-w-[960px] lg:min-w-0 text-left border-collapse text-xs table-fixed-layout">
                     <thead className="bg-[#F8FAFC] border-b border-[#E5E7EB]">
                       <tr>
                         <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[130px]">
@@ -1092,8 +1139,8 @@ export default function CentralBookingsRentalsView({
             ) : (
               <>
                 {/* ─── DESKTOP & TABLET: HORIZONTAL SCROLL TABLE (Section 8-21) ─── */}
-                <div className="hidden md:block w-full max-w-full overflow-x-auto">
-                  <table className="w-full min-w-[960px] lg:min-w-0 text-left border-collapse text-xs">
+                <div className="hidden md:block w-full max-w-full overflow-x-auto momentum-scroll">
+                  <table className="w-full min-w-[960px] lg:min-w-0 text-left border-collapse text-xs table-fixed-layout">
                     <thead className="bg-[#F8FAFC] border-b border-[#E5E7EB]">
                       <tr>
                         <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[140px]">
@@ -1901,3 +1948,5 @@ export default function CentralBookingsRentalsView({
     </div>
   );
 }
+
+export default memo(CentralBookingsRentalsView);

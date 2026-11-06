@@ -284,6 +284,10 @@ model Property {
   @@index([city, listingType])
   @@index([city, type])
   @@index([status, availabilityStatus, isActive])
+  @@index([isFeatured, createdAt])
+  @@index([status, availabilityStatus, isActive, createdAt])
+  @@index([status, availabilityStatus, isActive, city, listingType])
+  @@index([status, availabilityStatus, isActive, city, type])
   @@map("properties")
 }
 
@@ -423,6 +427,8 @@ model Payment {
   @@index([transactionRef])
   @@index([transactionId])
   @@index([createdAt])
+  @@index([customerId, status, createdAt])
+  @@index([managerId, status, createdAt])
   @@map("payments")
 }
 
@@ -512,6 +518,7 @@ model RentalRequest {
   @@index([managerId, rentalStatus])
   @@index([customerId, bookingStatus])
   @@index([customerId, rentalStatus])
+  @@index([status, endDate])
   @@map("rental_requests")
 }
 
@@ -547,6 +554,7 @@ model Transaction {
   @@index([createdAt])
   @@index([customerId, status])
   @@index([managerId, status])
+  @@index([type, status, createdAt])
   @@map("transactions")
 }
 
@@ -580,6 +588,7 @@ model Favorite {
   @@unique([userId, propertyId])
   @@index([userId])
   @@index([propertyId])
+  @@index([userId, createdAt])
   @@map("favorites")
 }
 
@@ -606,6 +615,8 @@ model SearchHistory {
   @@index([userId])
   @@index([isSaved])
   @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([userId, isSaved, createdAt])
   @@map("search_history")
 }
 
@@ -629,6 +640,7 @@ model Recommendation {
   @@index([userId])
   @@index([propertyId])
   @@index([score])
+  @@index([userId, score])
   @@map("recommendations")
 }
 

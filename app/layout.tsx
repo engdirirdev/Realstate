@@ -26,7 +26,7 @@ const playfair = Playfair_Display({
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://kiromaal.com";
 
 export const viewport: Viewport = {
-  themeColor: "#059669",
+  themeColor: "#07111F",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
@@ -104,6 +104,7 @@ export const metadata: Metadata = {
     icon: "/favicon.ico",
     apple: "/apple-touch-icon.png",
   },
+  manifest: "/manifest.webmanifest",
 };
 
 import SkipToContent from "@/components/layout/SkipToContent";
@@ -115,45 +116,103 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning className={`${inter.variable} ${playfair.variable}`}>
       <head>
-        <JsonLd data={agentSchema} />
-        <JsonLd data={webSiteSchema} />
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
+                if (typeof window === 'undefined') return;
+
+                // 1. Intercept console.error and console.warn so Next.js intercept-console-error cannot bypass our filter
                 try {
-                  function cleanBis() {
+                  function isBisError(args) {
+                    for (var i = 0; i < args.length; i++) {
+                      var arg = args[i];
+                      var str = typeof arg === 'string' ? arg : (arg && arg.message ? arg.message : String(arg || ''));
+                      if (str.indexOf('bis_skin_checked') !== -1 || str.indexOf('bis_') !== -1) {
+                        return true;
+                      }
+                    }
+                    return false;
+                  }
+
+                  var _activeError = window.console.error;
+                  Object.defineProperty(window.console, 'error', {
+                    get: function() { return _activeError; },
+                    set: function(newHandler) {
+                      _activeError = function() {
+                        if (isBisError(arguments)) return;
+                        return newHandler.apply(console, arguments);
+                      };
+                    },
+                    configurable: true,
+                    enumerable: true,
+                  });
+
+                  var _activeWarn = window.console.warn;
+                  Object.defineProperty(window.console, 'warn', {
+                    get: function() { return _activeWarn; },
+                    set: function(newHandler) {
+                      _activeWarn = function() {
+                        if (isBisError(arguments)) return;
+                        return newHandler.apply(console, arguments);
+                      };
+                    },
+                    configurable: true,
+                    enumerable: true,
+                  });
+
+                  window.addEventListener('error', function(event) {
+                    if (event && event.message && (event.message.indexOf('bis_skin_checked') !== -1 || event.message.indexOf('bis_') !== -1)) {
+                      event.stopImmediatePropagation();
+                      event.preventDefault();
+                    }
+                  }, true);
+                } catch (e) {}
+
+                // 2. Intercept Element.prototype.setAttribute so in-page scripts don't add bis_
+                try {
+                  var origSet = Element.prototype.setAttribute;
+                  Element.prototype.setAttribute = function(name, value) {
+                    if (name === 'bis_skin_checked' || name === 'bis_register' || (typeof name === 'string' && name.indexOf('bis_') === 0)) {
+                      return;
+                    }
+                    return origSet.apply(this, arguments);
+                  };
+
+                  var origSetNS = Element.prototype.setAttributeNS;
+                  Element.prototype.setAttributeNS = function(ns, name, value) {
+                    if (name === 'bis_skin_checked' || name === 'bis_register' || (typeof name === 'string' && name.indexOf('bis_') === 0)) {
+                      return;
+                    }
+                    return origSetNS.apply(this, arguments);
+                  };
+                } catch (e) {}
+
+                // 3. Remove any pre-existing bis_skin_checked attributes from initial DOM
+                try {
+                  var clean = function() {
                     var els = document.querySelectorAll('[bis_skin_checked]');
                     for (var i = 0; i < els.length; i++) {
                       els[i].removeAttribute('bis_skin_checked');
                     }
-                  }
-                  cleanBis();
-                  if (typeof MutationObserver !== 'undefined') {
-                    var observer = new MutationObserver(function(mutations) {
-                      for (var i = 0; i < mutations.length; i++) {
-                        var m = mutations[i];
-                        if (m.type === 'attributes' && m.attributeName === 'bis_skin_checked') {
-                          m.target.removeAttribute('bis_skin_checked');
-                        }
-                      }
-                    });
-                    observer.observe(document.documentElement, {
-                      attributes: true,
-                      subtree: true,
-                      attributeFilter: ['bis_skin_checked']
-                    });
+                  };
+                  if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', clean);
+                  } else {
+                    clean();
                   }
                 } catch (e) {}
               })();
             `,
           }}
         />
+        <JsonLd data={agentSchema} />
+        <JsonLd data={webSiteSchema} />
       </head>
       <body suppressHydrationWarning className="font-sans antialiased min-h-screen bg-white text-gray-900">
         <SkipToContent />
         <Providers>
-          <div id="main-content">
+          <div id="main-content" suppressHydrationWarning>
             {children}
           </div>
           <Toaster />

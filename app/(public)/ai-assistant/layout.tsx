@@ -1,22 +1,22 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "AI Property Assistant & Concierge — Kiro-Maal Real Estate",
+  title: "AIDA Conversational Real Estate AI — Kiro-Maal",
   description:
-    "Chat with Somalia's first conversational real estate AI. Get instant recommendations, verify property amenities, and estimate valuations in English and Somali.",
+    "Chat with AIDA, Somalia's first conversational real estate intelligence agent. Search verified listings, ask bilingual questions in Somali and English, and receive personalized recommendations.",
   alternates: {
     canonical: "/ai-assistant",
   },
   openGraph: {
-    title: "AI Property Assistant — Kiro-Maal Real Estate",
-    description: "24/7 bilingual real estate AI concierge for Somali properties.",
+    title: "AIDA Conversational Real Estate AI — Kiro-Maal Somalia",
+    description: "Somalia's first bilingual real estate AI agent grounded in live database listings.",
     url: "/ai-assistant",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "AI Property Assistant — Kiro-Maal Real Estate",
-    description: "Intelligent property search and instant answers in Somalia.",
+    title: "AIDA Real Estate AI Assistant Somalia",
+    description: "Conversational property search in Somali and English.",
   },
 };
 

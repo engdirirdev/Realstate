@@ -20,13 +20,15 @@ interface CacheEntry<T> {
   createdAt: number;
 }
 
-class MemoryCache {
+export class MemoryCache {
   private store = new Map<string, CacheEntry<any>>();
+  private maxEntries: number;
   private hits = 0;
   private misses = 0;
   private cleanupTimer: NodeJS.Timeout | null = null;
 
-  constructor() {
+  constructor(maxEntries: number = 2000) {
+    this.maxEntries = maxEntries;
     // Periodic background cleanup every 60 seconds
     if (typeof setInterval !== "undefined") {
       this.cleanupTimer = setInterval(() => {
@@ -39,7 +41,21 @@ class MemoryCache {
   }
 
   /**
+   * Check if an active, unexpired entry exists for the key.
+   */
+  has(key: string): boolean {
+    const entry = this.store.get(key);
+    if (!entry) return false;
+    if (Date.now() > entry.expiresAt) {
+      this.store.delete(key);
+      return false;
+    }
+    return true;
+  }
+
+  /**
    * Retrieve cached item if present and unexpired.
+   * Touches item to front of LRU order.
    */
   get<T>(key: string): T | null {
     const entry = this.store.get(key);
@@ -54,17 +70,32 @@ class MemoryCache {
       return null;
     }
 
+    // Refresh access order for LRU eviction (Map preserves insertion order)
+    this.store.delete(key);
+    this.store.set(key, entry);
+
     this.hits++;
     return entry.value as T;
   }
 
   /**
    * Store item in cache with TTL and optional invalidation tags.
+   * Enforces maxEntries bound by evicting least-recently-used item.
    */
   set<T>(key: string, value: T, ttlSeconds: number, tags: string[] = []): void {
+    if (this.store.has(key)) {
+      this.store.delete(key);
+    } else if (this.store.size >= this.maxEntries) {
+      // Evict oldest (least recently used) entry
+      const oldestKey = this.store.keys().next().value;
+      if (oldestKey) {
+        this.store.delete(oldestKey);
+      }
+    }
+
     this.store.set(key, {
       value,
-      expiresAt: Date.now() + Math.max(1, ttlSeconds) * 1000,
+      expiresAt: Date.now() + Math.max(0.01, ttlSeconds) * 1000,
       tags: new Set(tags),
       createdAt: Date.now(),
     });
@@ -167,6 +198,7 @@ class MemoryCache {
     const hitRate = totalRequests > 0 ? ((this.hits / totalRequests) * 100).toFixed(1) + "%" : "0%";
     return {
       size: this.store.size,
+      maxEntries: this.maxEntries,
       hits: this.hits,
       misses: this.misses,
       hitRate,
@@ -274,8 +306,10 @@ export async function invalidateCacheTags(tags: string[]): Promise<void> {
       if (typeof revalidateTag === "function") {
         revalidateTag(tag);
       }
-    } catch (err) {
-      console.warn(`[Cache] Warning: revalidateTag failed for tag "${tag}":`, err);
+    } catch (err: any) {
+      if (!err?.message?.includes("static generation store")) {
+        console.warn(`[Cache] Warning: revalidateTag failed for tag "${tag}":`, err);
+      }
     }
   }
 }
@@ -289,8 +323,10 @@ export async function invalidateCachePaths(paths: string[]): Promise<void> {
       if (typeof revalidatePath === "function") {
         revalidatePath(path);
       }
-    } catch (err) {
-      console.warn(`[Cache] Warning: revalidatePath failed for path "${path}":`, err);
+    } catch (err: any) {
+      if (!err?.message?.includes("static generation store")) {
+        console.warn(`[Cache] Warning: revalidatePath failed for path "${path}":`, err);
+      }
     }
   }
 }
@@ -311,4 +347,20 @@ export async function invalidatePropertyCache(propertyId?: string): Promise<void
 
   await invalidateCacheTags(tags);
   await invalidateCachePaths(paths);
+}
+
+/**
+ * Convenience helper to invalidate categories cache across memory and Next.js ISR.
+ */
+export async function invalidateCategoryCache(): Promise<void> {
+  await invalidateCacheTags(["categories"]);
+  await invalidateCachePaths(["/properties", "/admin/categories"]);
+}
+
+/**
+ * Convenience helper to invalidate locations cache across memory and Next.js ISR.
+ */
+export async function invalidateLocationCache(): Promise<void> {
+  await invalidateCacheTags(["locations"]);
+  await invalidateCachePaths(["/properties", "/admin/locations"]);
 }

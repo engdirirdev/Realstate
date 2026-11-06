@@ -1,5 +1,7 @@
 "use client";
 
+import { memo } from "react";
+
 import {
   Building2,
   SquareStack,
@@ -35,7 +37,7 @@ interface PropertyDynamicSpecsProps {
   className?: string;
 }
 
-export default function PropertyDynamicSpecs({
+function PropertyDynamicSpecs({
   type,
   typeDetails,
   bedrooms,
@@ -134,3 +136,5 @@ export default function PropertyDynamicSpecs({
     </div>
   );
 }
+
+export default memo(PropertyDynamicSpecs);

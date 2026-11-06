@@ -80,7 +80,9 @@ async function run() {
   const { recordInteraction } = await import("../lib/ai/behavior/event-recorder.ts");
 
   const testUserId = "cmus03vjn0004hy5wc77ofx2p"; // customer user
-  const testPropId = "cmus03vk50008hy5wqk1naxrv";
+  await prisma.userInteraction.deleteMany({ where: { userId: testUserId } });
+  const sampleProp = await prisma.property.findFirst({ where: { status: "APPROVED", type: "HOUSE" }, select: { id: true } });
+  const testPropId = sampleProp?.id || "cmw1o2ck0000210kwxmasbpoz";
 
   // First interaction
   const rec1 = await recordInteraction({
@@ -98,6 +100,13 @@ async function run() {
   });
   assert(rec2.recorded === false && rec2.reason.includes("Throttled"),
     "Rapid duplicate VIEW within 60s successfully throttled");
+
+  // Record a FAVORITE interaction to reach confidence > 0.0
+  await recordInteraction({
+    userId: testUserId,
+    propertyId: testPropId,
+    eventType: "FAVORITE",
+  });
 
   // -------------------------------------------------------------------------
   // 3. PROFILE BUILDER & 768-D SEMANTIC VECTOR SYNTHESIS

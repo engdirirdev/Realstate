@@ -1,3 +1,4 @@
+export const revalidate = 30;
 // ================================================================
 // PAGE NAME  : Customer Portal — Saved Favorites
 // ROUTE      : /customer/favorites

@@ -6,9 +6,11 @@
 // ================================================================
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import Image from "next/image";
 import { Building2, ArrowLeft, Check, X, Star, MapPin, Scale } from "lucide-react";
 import { formatPrice, getPropertyTypeLabel } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { THUMBNAIL_BLUR_DATA_URL } from "@/lib/image-utils";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -103,7 +105,15 @@ export default async function PropertyComparePage({ searchParams }: Props) {
                       <div className="space-y-3">
                         <div className="h-36 rounded-xl bg-[#0B1728] overflow-hidden relative border border-[#C89B3C]/30">
                           {p.images[0] ? (
-                            <img src={p.images[0].url} alt={p.title} className="w-full h-full object-cover" />
+                            <Image
+                              src={p.images[0].url}
+                              alt={p.title}
+                              fill
+                              sizes="260px"
+                              placeholder="blur"
+                              blurDataURL={THUMBNAIL_BLUR_DATA_URL}
+                              className="object-cover"
+                            />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-[#D9B45B]/60">
                               <Building2 className="h-8 w-8" />
@@ -150,7 +160,7 @@ export default async function PropertyComparePage({ searchParams }: Props) {
                   <td className="p-4 font-semibold text-[#07111F] bg-[#FCFBF7] sticky left-0 border-r border-[#E8E1D4] text-xs">Bedrooms &amp; Baths</td>
                   {properties.map((p) => (
                     <td key={p.id} className="p-4 text-[#07111F] text-xs font-medium">
-                      🛏️ {p.bedrooms} Beds • 🚿 {p.bathrooms} Baths
+                      {p.type === "LAND" || p.bedrooms === 0 ? "N/A (Land Plot / Open Area)" : `🛏️ ${p.bedrooms} Beds • 🚿 ${p.bathrooms} Baths`}
                     </td>
                   ))}
                 </tr>

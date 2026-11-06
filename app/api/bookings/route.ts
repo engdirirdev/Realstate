@@ -20,29 +20,48 @@ export async function GET(request: NextRequest) {
         ? {}
         : { customerId: user.id };
 
-    const bookings = await prisma.booking.findMany({
-      where,
-      include: {
-        property: {
-          select: {
-            id: true,
-            title: true,
-            city: true,
-            price: true,
-            type: true,
-            images: { take: 1, orderBy: { order: "asc" } },
+    const { searchParams } = new URL(request.url);
+    const pageParam = searchParams.get("page");
+    const pageSizeParam = searchParams.get("pageSize");
+    const page = Math.max(1, parseInt(pageParam || "1", 10));
+    const pageSize = pageSizeParam ? Math.min(100, Math.max(1, parseInt(pageSizeParam, 10))) : 25;
+    const skip = (page - 1) * pageSize;
+
+    const [bookings, total] = await Promise.all([
+      prisma.booking.findMany({
+        where,
+        include: {
+          property: {
+            select: {
+              id: true,
+              title: true,
+              city: true,
+              price: true,
+              type: true,
+              images: { take: 1, orderBy: { order: "asc" } },
+            },
+          },
+          customer: { select: { id: true, name: true, email: true, phone: true } },
+          manager: { select: { id: true, name: true, email: true } },
+          payments: {
+            select: { id: true, amount: true, status: true, transactionRef: true },
           },
         },
-        customer: { select: { id: true, name: true, email: true, phone: true } },
-        manager: { select: { id: true, name: true, email: true } },
-        payments: {
-          select: { id: true, amount: true, status: true, transactionRef: true },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+        orderBy: { createdAt: "desc" },
+        take: pageSize,
+        skip,
+      }),
+      prisma.booking.count({ where }),
+    ]);
 
-    return NextResponse.json({ success: true, bookings });
+    return NextResponse.json({
+      success: true,
+      bookings,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    });
   } catch (error) {
     console.error("[GET /api/bookings]", error);
     return NextResponse.json(

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ShoppingBag,
   MapPin,
@@ -17,15 +18,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { toast } from "@/hooks/use-toast";
 import { formatPrice } from "@/lib/utils";
 import StatusBadge from "@/components/transactions/StatusBadge";
+import { PROPERTY_CARD_BLUR_DATA_URL } from "@/lib/image-utils";
 
 type PurchaseTab = "ALL" | "APPROVED" | "PENDING" | "COMPLETED" | "CANCELLED";
 
-export default function CustomerPurchasesView() {
+interface CustomerPurchasesViewProps {
+  initialPurchases?: any[];
+}
+
+export default function CustomerPurchasesView({ initialPurchases }: CustomerPurchasesViewProps = {}) {
   const [tab, setTab] = useState<PurchaseTab>("ALL");
-  const [loading, setLoading] = useState(true);
-  const [purchases, setPurchases] = useState<any[]>([]);
+  const [loading, setLoading] = useState(initialPurchases ? false : true);
+  const [purchases, setPurchases] = useState<any[]>(initialPurchases || []);
   const [payTarget, setPayTarget] = useState<any | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const isInitialMount = useRef(true);
 
   const loadPurchases = useCallback(async () => {
     setLoading(true);
@@ -45,8 +52,12 @@ export default function CustomerPurchasesView() {
   }, []);
 
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      if (initialPurchases) return;
+    }
     loadPurchases();
-  }, [loadPurchases]);
+  }, [loadPurchases, initialPurchases]);
 
   const handlePay = async () => {
     if (!payTarget) return;
@@ -93,10 +104,12 @@ export default function CustomerPurchasesView() {
     <div className="space-y-6">
       {/* Category Tabs */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex rounded-xl border border-[#E8E1D4] bg-[#FCFBF7] p-1 shadow-2xs">
+        <div role="tablist" aria-label="Purchase status filter" className="inline-flex rounded-xl border border-[#E8E1D4] bg-[#FCFBF7] p-1 shadow-2xs">
           <button
+            role="tab"
+            aria-selected={tab === "ALL"}
             onClick={() => setTab("ALL")}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C89B3C] ${
               tab === "ALL"
                 ? "bg-[#07111F] text-[#D9B45B] shadow-xs"
                 : "text-[#6B7280] hover:text-[#07111F]"
@@ -105,8 +118,10 @@ export default function CustomerPurchasesView() {
             All Purchases ({purchases.length})
           </button>
           <button
+            role="tab"
+            aria-selected={tab === "APPROVED"}
             onClick={() => setTab("APPROVED")}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C89B3C] ${
               tab === "APPROVED"
                 ? "bg-[#07111F] text-[#D9B45B] shadow-xs"
                 : "text-[#6B7280] hover:text-[#07111F]"
@@ -115,8 +130,10 @@ export default function CustomerPurchasesView() {
             Approved ({approvedCount})
           </button>
           <button
+            role="tab"
+            aria-selected={tab === "PENDING"}
             onClick={() => setTab("PENDING")}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C89B3C] ${
               tab === "PENDING"
                 ? "bg-[#07111F] text-[#D9B45B] shadow-xs"
                 : "text-[#6B7280] hover:text-[#07111F]"
@@ -125,8 +142,10 @@ export default function CustomerPurchasesView() {
             Pending Review ({pendingCount})
           </button>
           <button
+            role="tab"
+            aria-selected={tab === "COMPLETED"}
             onClick={() => setTab("COMPLETED")}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C89B3C] ${
               tab === "COMPLETED"
                 ? "bg-[#07111F] text-[#D9B45B] shadow-xs"
                 : "text-[#6B7280] hover:text-[#07111F]"
@@ -135,8 +154,10 @@ export default function CustomerPurchasesView() {
             Completed ({completedCount})
           </button>
           <button
+            role="tab"
+            aria-selected={tab === "CANCELLED"}
             onClick={() => setTab("CANCELLED")}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C89B3C] ${
               tab === "CANCELLED"
                 ? "bg-[#07111F] text-[#D9B45B] shadow-xs"
                 : "text-[#6B7280] hover:text-[#07111F]"
@@ -194,10 +215,14 @@ export default function CustomerPurchasesView() {
                 <div>
                   {/* Top Image + Badges */}
                   <div className="relative aspect-[16/9] bg-[#07111F] overflow-hidden">
-                    <img
+                    <Image
                       src={propertyImage}
                       alt={purchase.property?.title || "Property"}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      placeholder="blur"
+                      blurDataURL={PROPERTY_CARD_BLUR_DATA_URL}
+                      className="object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute top-3 left-3 flex flex-wrap items-center gap-2">
                       <span className="px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase bg-[#07111F]/90 text-[#D9B45B] border border-[#C89B3C]/50 backdrop-blur-xs">

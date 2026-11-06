@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Key,
   Calendar,
@@ -16,13 +17,19 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { formatPrice } from "@/lib/utils";
 import StatusBadge from "@/components/transactions/StatusBadge";
+import { PROPERTY_CARD_BLUR_DATA_URL } from "@/lib/image-utils";
 
 type RentalTab = "ACTIVE" | "UPCOMING" | "COMPLETED" | "EXPIRED" | "CANCELLED" | "ALL";
 
-export default function CustomerRentalsView() {
+interface CustomerRentalsViewProps {
+  initialRentals?: any[];
+}
+
+export default function CustomerRentalsView({ initialRentals }: CustomerRentalsViewProps = {}) {
   const [tab, setTab] = useState<RentalTab>("ACTIVE");
-  const [loading, setLoading] = useState(true);
-  const [rentals, setRentals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(initialRentals ? false : true);
+  const [rentals, setRentals] = useState<any[]>(initialRentals || []);
+  const isInitialMount = useRef(true);
 
   const loadRentals = useCallback(async () => {
     setLoading(true);
@@ -43,8 +50,12 @@ export default function CustomerRentalsView() {
   }, []);
 
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      if (initialRentals) return;
+    }
     loadRentals();
-  }, [loadRentals]);
+  }, [loadRentals, initialRentals]);
 
   const now = new Date();
 
@@ -104,10 +115,12 @@ export default function CustomerRentalsView() {
     <div className="space-y-6">
       {/* Category Tabs: ACTIVE, UPCOMING, COMPLETED, EXPIRED, CANCELLED, ALL */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex flex-wrap rounded-xl border border-[#E8E1D4] bg-[#FCFBF7] p-1 shadow-2xs">
+        <div role="tablist" aria-label="Rental status filter" className="inline-flex flex-wrap rounded-xl border border-[#E8E1D4] bg-[#FCFBF7] p-1 shadow-2xs">
           <button
+            role="tab"
+            aria-selected={tab === "ACTIVE"}
             onClick={() => setTab("ACTIVE")}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C89B3C] ${
               tab === "ACTIVE"
                 ? "bg-[#07111F] text-[#D9B45B] shadow-xs"
                 : "text-[#6B7280] hover:text-[#07111F]"
@@ -116,8 +129,10 @@ export default function CustomerRentalsView() {
             Active ({activeCount})
           </button>
           <button
+            role="tab"
+            aria-selected={tab === "UPCOMING"}
             onClick={() => setTab("UPCOMING")}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C89B3C] ${
               tab === "UPCOMING"
                 ? "bg-[#07111F] text-[#D9B45B] shadow-xs"
                 : "text-[#6B7280] hover:text-[#07111F]"
@@ -126,8 +141,10 @@ export default function CustomerRentalsView() {
             Upcoming ({upcomingCount})
           </button>
           <button
+            role="tab"
+            aria-selected={tab === "COMPLETED"}
             onClick={() => setTab("COMPLETED")}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C89B3C] ${
               tab === "COMPLETED"
                 ? "bg-[#07111F] text-[#D9B45B] shadow-xs"
                 : "text-[#6B7280] hover:text-[#07111F]"
@@ -136,8 +153,10 @@ export default function CustomerRentalsView() {
             Completed ({completedCount})
           </button>
           <button
+            role="tab"
+            aria-selected={tab === "EXPIRED"}
             onClick={() => setTab("EXPIRED")}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C89B3C] ${
               tab === "EXPIRED"
                 ? "bg-[#07111F] text-[#D9B45B] shadow-xs"
                 : "text-[#6B7280] hover:text-[#07111F]"
@@ -146,8 +165,10 @@ export default function CustomerRentalsView() {
             Expired ({expiredCount})
           </button>
           <button
+            role="tab"
+            aria-selected={tab === "CANCELLED"}
             onClick={() => setTab("CANCELLED")}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C89B3C] ${
               tab === "CANCELLED"
                 ? "bg-[#07111F] text-[#D9B45B] shadow-xs"
                 : "text-[#6B7280] hover:text-[#07111F]"
@@ -156,8 +177,10 @@ export default function CustomerRentalsView() {
             Cancelled ({cancelledCount})
           </button>
           <button
+            role="tab"
+            aria-selected={tab === "ALL"}
             onClick={() => setTab("ALL")}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C89B3C] ${
               tab === "ALL"
                 ? "bg-[#07111F] text-[#D9B45B] shadow-xs"
                 : "text-[#6B7280] hover:text-[#07111F]"
@@ -205,10 +228,14 @@ export default function CustomerRentalsView() {
                 <div>
                   {/* Top Image + Badges */}
                   <div className="relative aspect-[16/9] bg-[#07111F] overflow-hidden">
-                    <img
+                    <Image
                       src={propertyImage}
                       alt={rental.property?.title || "Property"}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      placeholder="blur"
+                      blurDataURL={PROPERTY_CARD_BLUR_DATA_URL}
+                      className="object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute top-3 left-3 flex flex-wrap items-center gap-2">
                       <span className="px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase bg-[#07111F]/90 text-[#D9B45B] border border-[#C89B3C]/50 backdrop-blur-xs flex items-center gap-1.5">

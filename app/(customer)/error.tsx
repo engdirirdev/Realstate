@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { UserCheck, RotateCcw, Calendar, Home } from "lucide-react";
 
@@ -18,14 +18,14 @@ export default function CustomerError({
   return (
     <div className="min-h-[60vh] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-lg text-center p-8 rounded-3xl bg-card border border-border shadow-xl">
-        <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center mb-5">
+        <div className="w-14 h-14 rounded-2xl bg-[#C89B3C]/10 border border-[#C89B3C]/20 text-[#C89B3C] dark:text-[#D9B45B] mx-auto flex items-center justify-center mb-5">
           <UserCheck className="w-7 h-7" />
         </div>
 
         <h2 className="text-2xl font-bold tracking-tight text-foreground mb-1">
           Customer Portal Error
         </h2>
-        <p className="text-emerald-600 dark:text-emerald-400 text-sm font-medium mb-3">
+        <p className="text-[#C89B3C] dark:text-[#D9B45B] text-sm font-medium mb-3">
           Waxaa dhacday cilad ku timid macluumaadka akoonkaada
         </p>
         <p className="text-muted-foreground text-sm mb-6 max-w-md mx-auto">
@@ -34,7 +34,7 @@ export default function CustomerError({
 
         {error.digest && (
           <p className="text-xs font-mono text-muted-foreground/80 mb-6">
-            Reference code: <span className="text-emerald-500 font-semibold">{error.digest}</span>
+            Reference code: <span className="text-[#C89B3C] dark:text-[#D9B45B] font-semibold">{error.digest}</span>
           </p>
         )}
 

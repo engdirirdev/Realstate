@@ -1,3 +1,4 @@
+export const revalidate = 30;
 // ================================================================
 // PAGE NAME  : Customer Portal — Browse Properties
 // ROUTE      : /customer/properties
@@ -12,10 +13,12 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Building2, Filter, Sparkles } from "lucide-react";
 import PropertyCard from "@/components/PropertyCard";
+import CustomerPropertiesFilterForm from "@/components/customer/CustomerPropertiesFilterForm";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Browse Properties – Customer Portal | Kiro-Maal Real Estate",
+  robots: { index: false, follow: false },
 };
 
 
@@ -142,111 +145,7 @@ export default async function CustomerPropertiesPage({
         </div>
 
         {/* Filter Toolbar */}
-        <form method="GET" className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-3 pt-4 border-t border-[#E8E1D4]">
-          {/* Keyword Search */}
-          <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-[#6B7280] mb-1">
-              Search Keywords
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                name="q"
-                defaultValue={q}
-                placeholder="Title, area, street..."
-                className="w-full px-3 py-2 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs font-semibold focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] outline-none transition-all"
-              />
-            </div>
-          </div>
-          {/* Listing Type Filter */}
-          <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-[#6B7280] mb-1">
-              Listing Type
-            </label>
-            <select
-              name="listingType"
-              defaultValue={listingType}
-              className="w-full px-3 py-2 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs font-semibold focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] outline-none transition-all"
-            >
-              <option value="">All (Rent &amp; Sale)</option>
-              <option value="FOR_RENT">For Rent</option>
-              <option value="FOR_SALE">For Sale</option>
-            </select>
-          </div>
-
-          {/* City Filter */}
-          <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-[#6B7280] mb-1">
-              Location / City
-            </label>
-            <select
-              name="city"
-              defaultValue={city}
-              className="w-full px-3 py-2 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs font-semibold focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] outline-none transition-all"
-            >
-              <option value="">All Registered Cities</option>
-              {availableCities.map((c) => (
-                <option key={c.city} value={c.city}>
-                  {c.city} {c.region ? `(${c.region})` : ""}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Type Filter */}
-          <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-[#6B7280] mb-1">
-              Property Type
-            </label>
-            <select
-              name="type"
-              defaultValue={type}
-              className="w-full px-3 py-2 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs font-medium focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] outline-none transition-all"
-            >
-              {TYPES.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Sort By */}
-          <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-[#6B7280] mb-1">
-              Sort By
-            </label>
-            <select
-              name="sort"
-              defaultValue={sort}
-              className="w-full px-3 py-2 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs font-medium focus:ring-2 focus:ring-[#C89B3C]/20 focus:border-[#C89B3C] outline-none transition-all"
-            >
-              <option value="latest">Newest Listings</option>
-              <option value="price_asc">Price: Low to High</option>
-              <option value="price_desc">Price: High to Low</option>
-              <option value="area_desc">Largest Area</option>
-            </select>
-          </div>
-
-          {/* Submit */}
-          <div className="flex items-end gap-2">
-            <button
-              type="submit"
-              className="flex-1 py-2 px-4 rounded-xl bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] text-xs font-bold hover:brightness-105 transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <Filter className="w-3.5 h-3.5" /> Filter Listings
-            </button>
-            {(city || type || sort !== "latest" || q || listingType || maxPrice !== null) && (
-              <Link
-                href="/customer/properties"
-                className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"
-                title="Reset Filters"
-              >
-                Reset
-              </Link>
-            )}
-          </div>
-        </form>
+        <CustomerPropertiesFilterForm availableCities={availableCities} types={TYPES} initialFilters={{ q, city, type, listingType, sort }} />
       </div>
 
       {/* ─── Listings Grid ─── */}

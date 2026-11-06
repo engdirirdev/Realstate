@@ -18,26 +18,45 @@ export async function GET(request: NextRequest) {
         ? {}
         : { customerId: user.id };
 
-    const inquiries = await prisma.inquiry.findMany({
-      where,
-      include: {
-        property: {
-          select: {
-            id: true,
-            title: true,
-            city: true,
-            price: true,
-            type: true,
-            images: { take: 1, orderBy: { order: "asc" } },
-          },
-        },
-        customer: { select: { id: true, name: true, email: true, phone: true } },
-        manager: { select: { id: true, name: true, email: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const { searchParams } = new URL(request.url);
+    const pageParam = searchParams.get("page");
+    const pageSizeParam = searchParams.get("pageSize");
+    const page = Math.max(1, parseInt(pageParam || "1", 10));
+    const pageSize = pageSizeParam ? Math.min(100, Math.max(1, parseInt(pageSizeParam, 10))) : 25;
+    const skip = (page - 1) * pageSize;
 
-    return NextResponse.json({ success: true, inquiries });
+    const [inquiries, total] = await Promise.all([
+      prisma.inquiry.findMany({
+        where,
+        include: {
+          property: {
+            select: {
+              id: true,
+              title: true,
+              city: true,
+              price: true,
+              type: true,
+              images: { take: 1, orderBy: { order: "asc" } },
+            },
+          },
+          customer: { select: { id: true, name: true, email: true, phone: true } },
+          manager: { select: { id: true, name: true, email: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        take: pageSize,
+        skip,
+      }),
+      prisma.inquiry.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      success: true,
+      inquiries,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    });
   } catch (error) {
     console.error("[GET /api/inquiries]", error);
     return NextResponse.json(

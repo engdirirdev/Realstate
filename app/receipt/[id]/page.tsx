@@ -95,7 +95,7 @@ export default async function ReceiptPage({ params }: Props) {
               </span>
               <p className="font-mono text-xs font-bold text-[#07111F]">{receipt.receiptNo}</p>
               <p className="text-[11px] text-[#6B7280]">
-                Issued {new Date(receipt.issuedAt).toLocaleDateString()} at {new Date(receipt.issuedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                Issued {new Date(receipt.issuedAt).toLocaleDateString("en-US")} at {new Date(receipt.issuedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </p>
             </div>
           </div>
@@ -142,8 +142,8 @@ export default async function ReceiptPage({ params }: Props) {
                             Rental Lease ({details.periods || 1} × {details.rentalPeriod || "Monthly"})
                           </p>
                           <p className="text-[11px] text-[#6B7280]">
-                            Period: {details.startDate ? new Date(details.startDate).toLocaleDateString() : ""} →{" "}
-                            {details.endDate ? new Date(details.endDate).toLocaleDateString() : ""}
+                            Period: {details.startDate ? new Date(details.startDate).toLocaleDateString("en-US") : ""} →{" "}
+                            {details.endDate ? new Date(details.endDate).toLocaleDateString("en-US") : ""}
                           </p>
                         </td>
                         <td className="p-3 text-right font-semibold text-[#07111F]">

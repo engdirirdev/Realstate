@@ -14,6 +14,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "AI Price Prediction – Customer Portal | Kiro-Maal Real Estate",
+  robots: { index: false, follow: false },
 };
 
 export default async function CustomerPredictionsPage() {

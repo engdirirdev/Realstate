@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { invalidatePropertyCache } from "@/lib/cache";
+import { cachedJsonResponse, CACHE_PROFILES } from "@/lib/api-cache";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -12,7 +14,11 @@ export async function GET(request: NextRequest, { params }: Props) {
       where: { propertyId: id },
       orderBy: { createdAt: "desc" },
     });
-    return NextResponse.json({ success: true, documents });
+    return cachedJsonResponse(
+      request,
+      { success: true, documents },
+      { profile: CACHE_PROFILES.PUBLIC_SHORT }
+    );
   } catch (error) {
     console.error("[GET /api/properties/[id]/documents]", error);
     return NextResponse.json({ error: "Failed to fetch documents" }, { status: 500 });
@@ -42,6 +48,8 @@ export async function POST(request: NextRequest, { params }: Props) {
         fileType: fileType ? String(fileType).toUpperCase() : "PDF",
       },
     });
+
+    await invalidatePropertyCache(id);
 
     return NextResponse.json({ success: true, document: doc });
   } catch (error) {

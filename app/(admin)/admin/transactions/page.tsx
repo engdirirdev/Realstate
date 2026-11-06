@@ -2,12 +2,16 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { ShieldCheck, CreditCard } from "lucide-react";
 import CentralTransactionsView from "@/components/transactions/CentralTransactionsView";
+import { getTransactionsDashboardData } from "@/lib/server/dashboard-data";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Payments & Transactions – Admin | Kiro-Maal Real Estate",
   description: "Unified financial payment logs, platform settlements, revenue metrics, and property transactions ledger.",
+  robots: { index: false, follow: false },
 };
+
+export const revalidate = 30;
 
 export default async function AdminTransactionsPage({
   searchParams,
@@ -23,6 +27,11 @@ export default async function AdminTransactionsPage({
       ? "ledger"
       : "payments";
 
+  const { paymentsData, ledgerData } = await getTransactionsDashboardData(
+    session.user.id,
+    (session.user as any).role
+  );
+
   return (
     <div className="space-y-6 w-full min-w-0">
       <div>
@@ -37,7 +46,12 @@ export default async function AdminTransactionsPage({
         </p>
       </div>
 
-      <CentralTransactionsView isAdmin={true} initialTab={initialTab} />
+      <CentralTransactionsView
+        isAdmin={true}
+        initialTab={initialTab}
+        initialPaymentsData={paymentsData}
+        initialLedgerData={ledgerData}
+      />
     </div>
   );
 }

@@ -149,20 +149,25 @@ function AuthContent({ initialTab = "login" }: AuthPageProps) {
           variant: "success",
         } as any);
 
-        const sessionRes = await fetch("/api/auth/session");
-        const sessionData = await sessionRes.json();
-        const userRole = sessionData?.user?.role;
-
-        router.refresh();
-
         const rawCallback = searchParams?.get("callbackUrl");
         if (rawCallback && isSafeCallbackUrl(rawCallback)) {
           router.push(rawCallback);
-        } else if (userRole === "ADMIN") {
-          router.push("/admin");
-        } else if (userRole === "CUSTOMER") {
-          router.push("/customer");
-        } else {
+          return;
+        }
+
+        try {
+          const sessionRes = await fetch("/api/auth/session");
+          const sessionData = await sessionRes.json();
+          const userRole = sessionData?.user?.role;
+
+          if (userRole === "ADMIN") {
+            router.push("/admin");
+          } else if (userRole === "CUSTOMER") {
+            router.push("/customer");
+          } else {
+            router.push("/dashboard");
+          }
+        } catch {
           router.push("/dashboard");
         }
       }

@@ -19,11 +19,14 @@ export default async function AdminMessagesPage() {
   const session = await auth();
   if (!session || (session.user as any)?.role !== "ADMIN") redirect("/dashboard");
 
-  const messages = await prisma.contactMessage.findMany({
-    orderBy: { createdAt: "desc" },
-  });
-
-  const unread = messages.filter((m) => !m.isRead).length;
+  const [messages, totalCount, unreadCount] = await Promise.all([
+    prisma.contactMessage.findMany({
+      take: 50,
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.contactMessage.count(),
+    prisma.contactMessage.count({ where: { isRead: false } }),
+  ]);
 
   return (
     <div className="space-y-5 w-full min-w-0">
@@ -35,7 +38,7 @@ export default async function AdminMessagesPage() {
           <MessageSquare className="h-7 w-7 text-[#C89B3C]" /> Inbound Inquiries &amp; Messages
         </h1>
         <p className="text-[#6B7280] text-sm mt-1">
-          {messages.length} total messages · {unread} unread client inquiries
+          {totalCount} total messages · {unreadCount} unread client inquiries
         </p>
       </div>
 

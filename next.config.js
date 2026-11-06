@@ -13,8 +13,8 @@ const nextConfig = {
   output: process.env.STANDALONE === "true" ? "standalone" : undefined,
 
   onDemandEntries: {
-    maxInactiveAge: 60 * 60 * 1000,
-    pagesBufferLength: 50,
+    maxInactiveAge: 15 * 60 * 1000,
+    pagesBufferLength: 10,
   },
 
   images: {
@@ -47,10 +47,22 @@ const nextConfig = {
         protocol: "https",
         hostname: "avatars.githubusercontent.com",
       },
+      {
+        protocol: "https",
+        hostname: "**.amazonaws.com",
+      },
+      {
+        protocol: "https",
+        hostname: "**.r2.cloudflarestorage.com",
+      },
+      {
+        protocol: "https",
+        hostname: "maps.googleapis.com",
+      },
     ],
   },
 
-  serverExternalPackages: ["@prisma/client", "prisma", "bcryptjs"],
+  serverExternalPackages: ["@prisma/client", "prisma", "bcryptjs", "sharp"],
 
   experimental: {
     optimizePackageImports: [
@@ -77,7 +89,8 @@ const nextConfig = {
   },
 
   async headers() {
-    return [
+    const isProd = process.env.NODE_ENV === "production";
+    const securityHeaders = [
       {
         // Global Security Headers for all HTTP requests
         source: "/:path*",
@@ -108,8 +121,11 @@ const nextConfig = {
           },
         ],
       },
-      {
-        // Cache static fonts, images, and media assets for 1 year immutable
+    ];
+
+    // Only apply static immutable cache in production builds to prevent dev fast-refresh chunk poisoning
+    if (isProd) {
+      securityHeaders.push({
         source: "/:all*(svg|jpg|jpeg|png|webp|avif|ico|woff|woff2|ttf)",
         headers: [
           {
@@ -117,18 +133,10 @@ const nextConfig = {
             value: "public, max-age=31536000, immutable",
           },
         ],
-      },
-      {
-        // Cache Next.js built static chunks for 1 year immutable
-        source: "/_next/static/:path*",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, max-age=31536000, immutable",
-          },
-        ],
-      },
-    ];
+      });
+    }
+
+    return securityHeaders;
   },
 };
 

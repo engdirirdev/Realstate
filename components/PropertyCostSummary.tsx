@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState , memo } from "react";
 import {
   Receipt,
   ShieldCheck,
@@ -22,7 +22,7 @@ interface PropertyCostSummaryProps {
   rentPeriod?: string | null;
 }
 
-export default function PropertyCostSummary({
+function PropertyCostSummary({
   propertyPrice,
   basePrice,
   companyServiceFee,
@@ -209,3 +209,5 @@ export default function PropertyCostSummary({
     </div>
   );
 }
+
+export default memo(PropertyCostSummary);

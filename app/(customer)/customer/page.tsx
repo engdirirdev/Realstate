@@ -8,6 +8,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { cachedDbQuery } from "@/lib/cache";
 import Link from "next/link";
 import {
   Heart,
@@ -30,8 +31,11 @@ import StatusBadge from "@/components/transactions/StatusBadge";
 import { formatPrice } from "@/lib/utils";
 import type { Metadata } from "next";
 
+export const revalidate = 30;
+
 export const metadata: Metadata = {
   title: "Customer Dashboard – Kiro-Maal Real Estate",
+  robots: { index: false, follow: false },
 };
 
 export default async function CustomerDashboardPage() {
@@ -41,11 +45,10 @@ export default async function CustomerDashboardPage() {
   const userId = session.user.id;
   const userName = session.user.name?.split(" ")[0] || "Customer";
 
-  // ─── Real Database Queries for Metrics & Feeds ───
+  // ─── Real Database Queries for Metrics & Feeds (Consolidated) ───
   const [
-    pendingRentalsCount,
+    rentalsByStatus,
     pendingPurchasesCount,
-    activeRentalsCount,
     pendingTransactions,
     paidPaymentsCount,
     userFavorites,
@@ -54,14 +57,15 @@ export default async function CustomerDashboardPage() {
     customerRentals,
     customerPurchases,
     recentPayments,
+    availableCities,
   ] = await Promise.all([
-    // 1. Pending Requests (Rentals + Purchases)
-    prisma.rentalRequest.count({
-      where: {
-        customerId: userId,
-        status: { in: ["PENDING", "UNDER_REVIEW"] },
-      },
+    // 1. Consolidated Rental Requests by Status
+    prisma.rentalRequest.groupBy({
+      by: ["status"],
+      where: { customerId: userId },
+      _count: { id: true },
     }),
+    // 2. Pending Purchases Count
     prisma.purchaseRequest.count({
       where: {
         customerId: userId,
@@ -69,12 +73,7 @@ export default async function CustomerDashboardPage() {
       },
     }),
 
-    // 3. Active Rentals Count
-    prisma.rentalRequest.count({
-      where: { customerId: userId, status: "ACTIVE" },
-    }),
-
-    // 4. Payments Pending (Sum and records of outstanding pending transactions)
+    // 3. Payments Pending (Sum and records of outstanding pending transactions)
     prisma.transaction.findMany({
       where: {
         customerId: userId,
@@ -83,7 +82,7 @@ export default async function CustomerDashboardPage() {
       select: { amount: true },
     }),
 
-    // 5. Total Paid Payments Count (Payment History)
+    // 4. Total Paid Payments Count (Payment History)
     prisma.payment.count({
       where: { customerId: userId, status: "PAID" },
     }),
@@ -100,7 +99,7 @@ export default async function CustomerDashboardPage() {
       take: 2,
     }),
 
-    // AI Recommendations - strictly Available + Approved + Active
+    // AI Recommendations - strictly Available + Approved + Active (Selective projection)
     prisma.recommendation.findMany({
       where: {
         userId,
@@ -112,21 +111,69 @@ export default async function CustomerDashboardPage() {
       },
       include: {
         property: {
-          include: { images: { take: 1, orderBy: { order: "asc" } } },
+          select: {
+            id: true,
+            title: true,
+            price: true,
+            basePrice: true,
+            companyServiceFee: true,
+            legalTransferFee: true,
+            brokerCommission: true,
+            currency: true,
+            city: true,
+            location: true,
+            type: true,
+            listingType: true,
+            bedrooms: true,
+            bathrooms: true,
+            area: true,
+            isFurnished: true,
+            parking: true,
+            status: true,
+            availabilityStatus: true,
+            isFeatured: true,
+            viewCount: true,
+            createdAt: true,
+            images: { take: 1, orderBy: { order: "asc" }, select: { id: true, url: true, isPrimary: true } },
+          },
         },
       },
       orderBy: { score: "desc" },
       take: 3,
     }),
 
-    // Fallback verified properties - strictly Available + Approved + Active
+    // Fallback verified properties - strictly Available + Approved + Active (Selective projection)
     prisma.property.findMany({
       where: {
         status: { in: ["APPROVED", "PUBLISHED"] },
         availabilityStatus: "AVAILABLE",
         isActive: true,
       },
-      include: { images: { take: 1, orderBy: { order: "asc" } } },
+      select: {
+        id: true,
+        title: true,
+        price: true,
+        basePrice: true,
+        companyServiceFee: true,
+        legalTransferFee: true,
+        brokerCommission: true,
+        currency: true,
+        city: true,
+        location: true,
+        type: true,
+        listingType: true,
+        bedrooms: true,
+        bathrooms: true,
+        area: true,
+        isFurnished: true,
+        parking: true,
+        status: true,
+        availabilityStatus: true,
+        isFeatured: true,
+        viewCount: true,
+        createdAt: true,
+        images: { take: 1, orderBy: { order: "asc" }, select: { id: true, url: true, isPrimary: true } },
+      },
       orderBy: { viewCount: "desc" },
       take: 3,
     }),
@@ -206,9 +253,33 @@ export default async function CustomerDashboardPage() {
       orderBy: { createdAt: "desc" },
       take: 2,
     }),
+
+    // Cached locations registry for instant HeroSearch (Zero extra client fetch)
+    cachedDbQuery(
+      ["locations", "all"],
+      async () => {
+        const locations = await prisma.location.findMany({
+          orderBy: { city: "asc" },
+          select: { city: true },
+        });
+        const registered = locations.map((l) => {
+          const c = l.city.trim();
+          return c.charAt(0).toUpperCase() + c.slice(1);
+        });
+        return registered.length > 0
+          ? Array.from(new Set(registered)).sort((a, b) => a.localeCompare(b))
+          : ["Mogadishu"];
+      },
+      { tags: ["locations"], revalidate: 86400 }
+    ),
   ]);
 
-  // Derived metrics
+  // Derived metrics from consolidated rentals groupBy
+  const pendingRentalsCount = rentalsByStatus
+    .filter((r) => r.status === "PENDING" || r.status === "UNDER_REVIEW")
+    .reduce((acc, curr) => acc + curr._count.id, 0);
+  const activeRentalsCount = rentalsByStatus.find((r) => r.status === "ACTIVE")?._count.id || 0;
+
   const pendingRequestsCount = pendingRentalsCount + pendingPurchasesCount;
   const paymentsDueAmount = pendingTransactions.reduce((acc, t) => acc + (t.amount || 0), 0);
 
@@ -254,7 +325,7 @@ export default async function CustomerDashboardPage() {
       iconColor: "text-amber-600",
       iconBg: "bg-amber-50",
       title: `Submitted rental request for "${rent.property.title}" (#${rent.requestNo})`,
-      time: new Date(rent.createdAt).toLocaleDateString(),
+      time: new Date(rent.createdAt).toLocaleDateString("en-US"),
       date: rent.createdAt,
     });
   }
@@ -266,7 +337,7 @@ export default async function CustomerDashboardPage() {
       iconColor: "text-blue-600",
       iconBg: "bg-blue-50",
       title: `Submitted purchase request for "${pur.property.title}" (#${pur.requestNo})`,
-      time: new Date(pur.createdAt).toLocaleDateString(),
+      time: new Date(pur.createdAt).toLocaleDateString("en-US"),
       date: pur.createdAt,
     });
   }
@@ -278,7 +349,7 @@ export default async function CustomerDashboardPage() {
       iconColor: "text-green-600",
       iconBg: "bg-green-50",
       title: `Completed payment of ${formatPrice(pay.amount)}`,
-      time: new Date(pay.createdAt).toLocaleDateString(),
+      time: new Date(pay.createdAt).toLocaleDateString("en-US"),
       date: pay.createdAt,
     });
   }
@@ -341,7 +412,7 @@ export default async function CustomerDashboardPage() {
   ];
 
   return (
-    <div className="space-y-7 pb-10">
+    <div suppressHydrationWarning className="space-y-7 pb-10">
       {/* ─── 1. Compact Welcome Section & Property Search ─── */}
       <div className="bg-[#07111F] rounded-3xl p-6 sm:p-7 border border-[#C89B3C]/30 shadow-md relative overflow-hidden text-white">
         {/* Subtle decorative glow */}
@@ -358,7 +429,7 @@ export default async function CustomerDashboardPage() {
 
         {/* Embedded Property Search Bar */}
         <div className="relative z-10 pt-1">
-          <CustomerHeroSearch />
+          <CustomerHeroSearch initialCities={availableCities} />
         </div>
       </div>
 

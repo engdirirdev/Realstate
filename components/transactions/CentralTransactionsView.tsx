@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef, useMemo, memo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -53,47 +53,78 @@ const fmt = (d?: string | null | Date) =>
 interface CentralTransactionsViewProps {
   isAdmin?: boolean;
   initialTab?: "payments" | "ledger";
+  initialPaymentsData?: {
+    payments: any[];
+    totalRevenue: number;
+    totalPaidTransactions: number;
+    totalDeals?: number;
+  };
+  initialLedgerData?: {
+    items: any[];
+    total: number;
+    totalPages: number;
+    revenue?: number | null;
+  };
 }
 
-export default function CentralTransactionsView({
+function CentralTransactionsView({
   isAdmin = false,
   initialTab = "payments",
+  initialPaymentsData,
+  initialLedgerData,
 }: CentralTransactionsViewProps) {
   const [activeTab, setActiveTab] = useState<"payments" | "ledger">(isAdmin ? initialTab : "payments");
   const [selectedPayment, setSelectedPayment] = useState<any | null>(null);
 
-  // --- Payment Gateway Logs State ---
+  // --- Payment Gateway Logs State (SSR pre-hydrated for 0ms render) ---
   const [paymentsQ, setPaymentsQ] = useState("");
+  const [debouncedPaymentsQ, setDebouncedPaymentsQ] = useState("");
   const [paymentsStatus, setPaymentsStatus] = useState("ALL");
   const [paymentsData, setPaymentsData] = useState<{
     payments: any[];
     totalRevenue: number;
     totalPaidTransactions: number;
     totalDeals?: number;
-  }>({
+  }>(initialPaymentsData || {
     payments: [],
     totalRevenue: 0,
     totalPaidTransactions: 0,
     totalDeals: 0,
   });
-  const [paymentsLoading, setPaymentsLoading] = useState(true);
+  const [paymentsLoading, setPaymentsLoading] = useState(initialPaymentsData ? false : true);
 
-  // --- Transactions Ledger State ---
+  // --- Transactions Ledger State (SSR pre-hydrated for 0ms render) ---
   const [ledgerType, setLedgerType] = useState<"ALL" | "SALE" | "RENTAL">(isAdmin ? "ALL" : "RENTAL");
   const [ledgerStatus, setLedgerStatus] = useState("ALL");
   const [ledgerQ, setLedgerQ] = useState("");
+  const [debouncedLedgerQ, setDebouncedLedgerQ] = useState("");
   const [ledgerPage, setLedgerPage] = useState(1);
   const [ledgerData, setLedgerData] = useState<{
     items: any[];
     total: number;
     totalPages: number;
     revenue?: number | null;
-  }>({
+  }>(initialLedgerData || {
     items: [],
     total: 0,
     totalPages: 1,
   });
-  const [ledgerLoading, setLedgerLoading] = useState(true);
+  const [ledgerLoading, setLedgerLoading] = useState(initialLedgerData ? false : true);
+
+  // 350ms Debounce search terms to eliminate typing network spikes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedPaymentsQ(paymentsQ);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [paymentsQ]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedLedgerQ(ledgerQ);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [ledgerQ]);
 
   // --- Load Payments Data ---
   const loadPayments = useCallback(async () => {
@@ -101,7 +132,7 @@ export default function CentralTransactionsView({
     try {
       const sp = new URLSearchParams();
       if (paymentsStatus !== "ALL") sp.set("status", paymentsStatus);
-      if (paymentsQ.trim()) sp.set("q", paymentsQ.trim());
+      if (debouncedPaymentsQ.trim()) sp.set("q", debouncedPaymentsQ.trim());
       const res = await fetch(`/api/payments?${sp}`);
       const json = await res.json();
       if (json.success) {
@@ -114,7 +145,7 @@ export default function CentralTransactionsView({
     } finally {
       setPaymentsLoading(false);
     }
-  }, [paymentsStatus, paymentsQ]);
+  }, [paymentsStatus, debouncedPaymentsQ]);
 
   // --- Load Ledger Data ---
   const loadLedger = useCallback(async () => {
@@ -123,7 +154,7 @@ export default function CentralTransactionsView({
       const sp = new URLSearchParams({ page: String(ledgerPage) });
       if (ledgerType !== "ALL") sp.set("type", ledgerType);
       if (ledgerStatus !== "ALL") sp.set("status", ledgerStatus);
-      if (ledgerQ.trim()) sp.set("q", ledgerQ.trim());
+      if (debouncedLedgerQ.trim()) sp.set("q", debouncedLedgerQ.trim());
       const res = await fetch(`/api/transactions?${sp}`);
       const json = await res.json();
       if (json.success) {
@@ -136,23 +167,34 @@ export default function CentralTransactionsView({
     } finally {
       setLedgerLoading(false);
     }
-  }, [ledgerType, ledgerStatus, ledgerPage, ledgerQ]);
+  }, [ledgerType, ledgerStatus, ledgerPage, debouncedLedgerQ]);
+
+  const isInitialPaymentsMount = useRef(true);
+  const isInitialLedgerMount = useRef(true);
 
   useEffect(() => {
+    if (isInitialPaymentsMount.current) {
+      isInitialPaymentsMount.current = false;
+      if (initialPaymentsData) return;
+    }
     const t = setTimeout(loadPayments, paymentsQ ? 300 : 0);
     return () => clearTimeout(t);
-  }, [loadPayments, paymentsQ]);
+  }, [loadPayments, paymentsQ, initialPaymentsData]);
 
   useEffect(() => {
     if (!isAdmin) return;
+    if (isInitialLedgerMount.current) {
+      isInitialLedgerMount.current = false;
+      if (initialLedgerData) return;
+    }
     const t = setTimeout(loadLedger, ledgerQ ? 300 : 0);
     return () => clearTimeout(t);
-  }, [loadLedger, ledgerQ, isAdmin]);
+  }, [loadLedger, ledgerQ, isAdmin, initialLedgerData]);
 
-  // Unified metrics
-  const totalSettlement = paymentsData.totalRevenue || ledgerData.revenue || 0;
-  const verifiedCount = paymentsData.totalPaidTransactions || 0;
-  const totalDealsCount = ledgerData.total || paymentsData.totalDeals || 0;
+  // Unified metrics (Memoized)
+  const totalSettlement = useMemo(() => paymentsData.totalRevenue || ledgerData.revenue || 0, [paymentsData.totalRevenue, ledgerData.revenue]);
+  const verifiedCount = useMemo(() => paymentsData.totalPaidTransactions || 0, [paymentsData.totalPaidTransactions]);
+  const totalDealsCount = useMemo(() => ledgerData.total || paymentsData.totalDeals || 0, [ledgerData.total, paymentsData.totalDeals]);
 
   return (
     <div className="space-y-6 w-full min-w-0 max-w-full">
@@ -332,8 +374,8 @@ export default function CentralTransactionsView({
             ) : (
               <>
                 {/* ─── DESKTOP & TABLET: HORIZONTAL SCROLL TABLE (Matching Bookings) ─── */}
-                <div className="hidden md:block w-full max-w-full overflow-x-auto">
-                  <table className={cn("w-full text-left border-collapse text-xs", isAdmin ? "min-w-[980px] lg:min-w-0" : "min-w-[880px] lg:min-w-0")}>
+                <div className="hidden md:block w-full max-w-full overflow-x-auto momentum-scroll">
+                  <table className={cn("w-full text-left border-collapse text-xs table-fixed-layout", isAdmin ? "min-w-[980px] lg:min-w-0" : "min-w-[880px] lg:min-w-0")}>
                     <thead className="bg-[#FAF6EC] text-[#475569] uppercase text-[10px] font-bold tracking-wider border-b border-[#E8E1D4]">
                       <tr>
                         <th className="py-2.5 pl-3 pr-2.5 w-[140px]">Transaction Ref</th>
@@ -712,8 +754,8 @@ export default function CentralTransactionsView({
             ) : (
               <>
                 {/* ─── DESKTOP & TABLET: HORIZONTAL SCROLL TABLE (Matching Bookings) ─── */}
-                <div className="hidden md:block w-full max-w-full overflow-x-auto">
-                  <table className={cn("w-full text-left border-collapse text-xs", isAdmin ? "min-w-[980px] lg:min-w-0" : "min-w-[880px] lg:min-w-0")}>
+                <div className="hidden md:block w-full max-w-full overflow-x-auto momentum-scroll">
+                  <table className={cn("w-full text-left border-collapse text-xs table-fixed-layout", isAdmin ? "min-w-[980px] lg:min-w-0" : "min-w-[880px] lg:min-w-0")}>
                     <thead className="bg-[#FAF6EC] text-[#475569] uppercase text-[10px] font-bold tracking-wider border-b border-[#E8E1D4]">
                       <tr>
                         <th className="py-2.5 pl-3 pr-2.5 w-[140px]">Txn No</th>
@@ -1186,3 +1228,5 @@ export default function CentralTransactionsView({
     </div>
   );
 }
+
+export default memo(CentralTransactionsView);

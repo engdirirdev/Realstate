@@ -1,3 +1,4 @@
+export const revalidate = 30;
 // ================================================================
 // PAGE NAME  : Customer Portal — My Bookings
 // ROUTE      : /customer/bookings
@@ -8,9 +9,11 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import Image from "next/image";
 import { Calendar, Building2, MapPin, CreditCard, CheckCircle2, Sparkles } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import type { Metadata } from "next";
+import { THUMBNAIL_BLUR_DATA_URL } from "@/lib/image-utils";
 
 export const metadata: Metadata = { title: "My Bookings – Customer Portal | Kiro-Maal Real Estate" };
 
@@ -18,16 +21,20 @@ export default async function CustomerBookingsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  const bookings = await prisma.booking.findMany({
-    where: { customerId: session.user.id },
-    include: {
-      property: {
-        select: { id: true, title: true, city: true, price: true, type: true, images: { take: 1, orderBy: { order: "asc" } } },
+  const [bookings, totalCount] = await Promise.all([
+    prisma.booking.findMany({
+      where: { customerId: session.user.id },
+      take: 50,
+      include: {
+        property: {
+          select: { id: true, title: true, city: true, price: true, type: true, images: { take: 1, orderBy: { order: "asc" } } },
+        },
+        payments: { select: { id: true, amount: true, status: true, transactionRef: true } },
       },
-      payments: { select: { id: true, amount: true, status: true, transactionRef: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.booking.count({ where: { customerId: session.user.id } }),
+  ]);
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -38,7 +45,7 @@ export default async function CustomerBookingsPage() {
         <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#07111F] flex items-center gap-2.5">
           <Calendar className="h-7 w-7 text-[#C89B3C]" /> My Property Reservations
         </h1>
-        <p className="text-[#6B7280] text-sm mt-1">{bookings.length} reservations created and tracked in escrow</p>
+        <p className="text-[#6B7280] text-sm mt-1">{totalCount} reservations created and tracked in escrow</p>
       </div>
 
       {bookings.length === 0 ? (
@@ -65,10 +72,14 @@ export default async function CustomerBookingsPage() {
                 <div className="flex items-center gap-4 min-w-0 flex-1">
                   <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-[#07111F] overflow-hidden shrink-0 border border-[#E8E1D4] relative">
                     {b.property.images[0] ? (
-                      <img
+                      <Image
                         src={b.property.images[0].url}
                         alt={b.property.title}
-                        className="w-full h-full object-cover"
+                        fill
+                        sizes="96px"
+                        placeholder="blur"
+                        blurDataURL={THUMBNAIL_BLUR_DATA_URL}
+                        className="object-cover"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-[#D9B45B]/60">

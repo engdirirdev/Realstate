@@ -1,23 +1,22 @@
-// ================================================================
-// PAGE NAME  : Customer Portal — My Rentals
-// ROUTE      : /customer/rentals
-// DESCRIPTION: Active, upcoming, and historical rental leases
-//              Kiro-Maal Real Estate Master Design System
-// ROLE       : CUSTOMER
-// ================================================================
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { Key, Sparkles } from "lucide-react";
 import CustomerRentalsView from "@/components/customer/CustomerRentalsView";
+import { getCustomerRentalsData } from "@/lib/server/dashboard-data";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "My Rentals – Customer Portal | Kiro-Maal Real Estate",
+  robots: { index: false, follow: false },
 };
+
+export const revalidate = 30;
 
 export default async function CustomerRentalsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
+
+  const rentals = await getCustomerRentalsData(session.user.id);
 
   return (
     <div className="space-y-6 max-w-6xl bg-[#F7F3EA] min-h-screen p-5 sm:p-7">
@@ -33,7 +32,7 @@ export default async function CustomerRentalsPage() {
         </p>
       </div>
 
-      <CustomerRentalsView />
+      <CustomerRentalsView initialRentals={rentals} />
     </div>
   );
 }

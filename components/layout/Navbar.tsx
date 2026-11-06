@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
@@ -110,7 +111,7 @@ export default function Navbar() {
                         className="h-8 w-8 rounded-full ring-2 ring-[#C89B3C]/50 overflow-hidden flex items-center justify-center text-xs bg-[#F7F3EA] text-[#C89B3C] font-bold shrink-0"
                       >
                         {session.user?.image ? (
-                          <img src={session.user.image} alt={session.user.name || "User"} className="h-full w-full object-cover" />
+                          <Image src={session.user.image} alt={session.user.name || "User"} width={32} height={32} className="h-full w-full object-cover" />
                         ) : (
                           <span suppressHydrationWarning>{initials}</span>
                         )}

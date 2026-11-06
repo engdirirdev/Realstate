@@ -5,9 +5,10 @@ import Image from "next/image";
 import { useState, useCallback, memo } from "react";
 import { Heart, MapPin, BedDouble, Bath, SquareStack, Sparkles } from "lucide-react";
 
-import { useSession } from "next-auth/react";
+import { getSession } from "next-auth/react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { PROPERTY_CARD_BLUR_DATA_URL, DEFAULT_PROPERTY_IMAGE } from "@/lib/image-utils";
 
 export interface PropertyCardData {
   id: string;
@@ -50,7 +51,6 @@ function PropertyCard({
   isFavorited,
   priority = false,
 }: PropertyCardProps) {
-  const { data: session } = useSession();
   const { toast } = useToast();
   const [isFav, setIsFav] = useState(isFavorited ?? property.isFavorited ?? false);
   const [savingFav, setSavingFav] = useState(false);
@@ -66,17 +66,16 @@ function PropertyCard({
       : property.price;
   const displayPrice = isRent ? baseRentalRate : totalPurchasePrice;
   const isAvailable = !property.status || property.status === "APPROVED" || property.status === "PUBLISHED";
-  const isLand = String(property.type).toUpperCase() === "LAND";
+  const isLand = String(property.type).toUpperCase() === "LAND" || property.bedrooms === 0;
   const rentUnit = property.rentPeriod?.toLowerCase().replace("ly", "").replace("dai", "day") || "month";
-  const imageUrl =
-    property.images?.[0]?.url ||
-    "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800";
+  const imageUrl = property.images?.[0]?.url || DEFAULT_PROPERTY_IMAGE;
   const [imgSrc, setImgSrc] = useState(imageUrl);
 
   const handleFavoriteClick = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
+    const session = await getSession();
     if (!session) {
       toast({
         title: "Please sign in",
@@ -112,10 +111,11 @@ function PropertyCard({
     } finally {
       setSavingFav(false);
     }
-  }, [session, isFav, property.id, property.title, onFavoriteToggle, toast]);
+  }, [isFav, property.id, property.title, onFavoriteToggle, toast]);
 
   return (
     <div
+      suppressHydrationWarning
       className={cn(
         "group relative bg-[#FCFBF7] rounded-2xl border border-[#E8E1D4] overflow-hidden shadow-xs hover:shadow-xl hover:border-[#C89B3C]/50 hover:-translate-y-1 transition-all duration-300 flex flex-col",
         className
@@ -129,7 +129,10 @@ function PropertyCard({
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1536px) 33vw, 25vw"
           className="object-cover group-hover:scale-105 transition-transform duration-500"
           priority={priority}
-          onError={() => setImgSrc("https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800")}
+          loading={priority ? "eager" : "lazy"}
+          placeholder="blur"
+          blurDataURL={PROPERTY_CARD_BLUR_DATA_URL}
+          onError={() => setImgSrc(DEFAULT_PROPERTY_IMAGE)}
         />
 
         {/* Top Badges */}
@@ -201,8 +204,9 @@ function PropertyCard({
           <div className="flex items-baseline justify-between mb-3">
             <div>
               <div className="text-lg font-extrabold text-[#07111F]">
-                <span className="text-[#C89B3C]">$</span>{displayPrice?.toLocaleString()}
-                {isRent && <span className="text-xs font-normal text-[#6B7280]"> /{rentUnit}</span>}
+                <span className="text-[#C89B3C]">$</span>
+                <span>{displayPrice != null ? displayPrice.toLocaleString("en-US") : "0"}</span>
+                {isRent && <span className="text-xs font-normal text-[#6B7280]">{` /${rentUnit}`}</span>}
               </div>
               <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider block mt-0.5">
                 {isRent ? "Rental Rate" : "Total Purchase Price"}
@@ -214,24 +218,27 @@ function PropertyCard({
           </div>
 
           {/* Specs */}
-              {isLand ? (
+          {isLand ? (
             <div className="flex items-center justify-center gap-2 text-xs text-[#07111F] font-medium bg-[#F7F3EA]/70 py-2 px-2.5 rounded-xl border border-[#E8E1D4]">
               <SquareStack className="w-3.5 h-3.5 text-[#C89B3C]" />
-              <span>Land Plot: <strong>{property.area} m²</strong></span>
+              <span className="inline-flex items-center gap-1">
+                <span>{String(property.type).toUpperCase() === "LAND" ? "Land Plot:" : "Total Area:"}</span>
+                <strong className="font-bold">{`${property.area} m²`}</strong>
+              </span>
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-2 text-xs text-[#07111F] font-medium bg-[#F7F3EA]/70 py-2 px-2.5 rounded-xl border border-[#E8E1D4]">
               <div className="flex items-center gap-1.5 justify-center">
                 <BedDouble className="w-3.5 h-3.5 text-[#6B7280]" />
-                <span>{property.bedrooms} Beds</span>
+                <span>{`${property.bedrooms} Beds`}</span>
               </div>
               <div className="flex items-center gap-1.5 justify-center border-x border-[#E8E1D4]">
                 <Bath className="w-3.5 h-3.5 text-[#6B7280]" />
-                <span>{property.bathrooms} Baths</span>
+                <span>{`${property.bathrooms} Baths`}</span>
               </div>
               <div className="flex items-center gap-1.5 justify-center">
                 <SquareStack className="w-3.5 h-3.5 text-[#6B7280]" />
-                <span>{property.area} m²</span>
+                <span>{`${property.area} m²`}</span>
               </div>
             </div>
           )}

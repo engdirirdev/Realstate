@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { LayoutDashboard, RotateCcw, AlertCircle, RefreshCw } from "lucide-react";
 
@@ -25,7 +25,7 @@ export default function DashboardError({
         <h2 className="text-2xl font-bold tracking-tight text-foreground mb-1">
           Dashboard Operation Interrupted
         </h2>
-        <p className="text-emerald-600 dark:text-emerald-400 text-sm font-medium mb-3">
+        <p className="text-[#C89B3C] dark:text-[#D9B45B] text-sm font-medium mb-3">
           Khalad ayaa ka dhacay maamulka hawlaha dashboard-ka
         </p>
 

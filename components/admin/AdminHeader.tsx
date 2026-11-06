@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { signOut } from "next-auth/react";
 import {
   Search,
@@ -119,7 +120,7 @@ export default function AdminHeader({
                   className="w-9 h-9 rounded-full ring-2 ring-[#C89B3C]/30 group-hover:ring-[#C89B3C] transition-all overflow-hidden flex items-center justify-center text-xs bg-gradient-to-tr from-[#C99126] to-[#E8B849] text-white font-extrabold shadow-inner shrink-0"
                 >
                   {userImage ? (
-                    <img src={userImage} alt={userName || "Admin"} className="w-full h-full object-cover" />
+                    <Image src={userImage} alt={userName || "Admin"} width={36} height={36} className="w-full h-full object-cover" />
                   ) : (
                     <span suppressHydrationWarning>{initial}</span>
                   )}

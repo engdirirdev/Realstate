@@ -11,6 +11,7 @@ import path from "path";
 import { requireRole } from "@/lib/auth-guards";
 import { checkRateLimit, createRateLimitResponse } from "@/lib/rate-limiter";
 import { getStorageProvider } from "@/lib/storage-provider";
+import { optimizeUploadBuffer } from "@/lib/server/image-compression";
 
 /**
  * Strict whitelist of allowed safe media extensions.
@@ -149,9 +150,19 @@ export async function POST(request: NextRequest) {
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
 
-        const result = await storage.upload(buffer, file.name, {
+        // Server-Side Compression: Auto-orient, downsample 8K to 2.5K, and compress to high-efficiency WebP
+        const { buffer: processedBuffer, contentType: finalMime, ext: finalExt } = await optimizeUploadBuffer(
+          buffer,
+          mime,
+          file.name
+        );
+
+        const baseName = path.basename(file.name, path.extname(file.name));
+        const targetFilename = `${baseName}${finalExt}`;
+
+        const result = await storage.upload(processedBuffer, targetFilename, {
           folder: "properties",
-          contentType: mime,
+          contentType: finalMime,
         });
 
         return result.url;

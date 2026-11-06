@@ -481,6 +481,69 @@ export function cityHasApprovedInventory(cityName: string): boolean {
   return resolved ? resolved.isInDatabase : false;
 }
 
+/**
+ * Returns all database representation variants and canonical spellings for a given city.
+ * Used for high-speed indexed Prisma queries (e.g. city IN ('Abudwak', 'Caabudwaaq')).
+ */
+export function getCityDbVariants(cityInput: string): string[] {
+  if (!cityInput || typeof cityInput !== "string") return [];
+  const raw = cityInput.trim();
+  const lower = raw.toLowerCase();
+  const resolved = resolveLocation(raw);
+  const key = (resolved ? resolved.canonicalCity : raw).toLowerCase();
+
+  const variantMap: Record<string, string[]> = {
+    caabudwaaq: ["Abudwak", "Caabudwaaq", "Abudwaaq", "Cabudwaaq"],
+    abudwak: ["Abudwak", "Caabudwaaq", "Abudwaaq", "Cabudwaaq"],
+    burao: ["Burao", "Burco"],
+    burco: ["Burao", "Burco"],
+    mogadishu: ["Mogadishu", "Muqdisho", "Xamar", "Banaadir"],
+    muqdisho: ["Mogadishu", "Muqdisho", "Xamar", "Banaadir"],
+    xamar: ["Mogadishu", "Muqdisho", "Xamar", "Banaadir"],
+    hargeisa: ["Hargeisa", "Hargeysa", "Hargaysa"],
+    hargeysa: ["Hargeisa", "Hargeysa", "Hargaysa"],
+    bosaso: ["Bosaso", "Boosaaso", "Bosaaso"],
+    boosaaso: ["Bosaso", "Boosaaso", "Bosaaso"],
+    kismayo: ["Kismayo", "Kismaayo"],
+    kismaayo: ["Kismayo", "Kismaayo"],
+    berbera: ["Berbera", "Barbera"],
+    garowe: ["Garowe", "Garoowe"],
+    garoowe: ["Garowe", "Garoowe"],
+    baydhabo: ["Baydhabo", "Baidoa"],
+    baidoa: ["Baydhabo", "Baidoa"],
+  };
+
+  const matched = variantMap[key] || variantMap[lower];
+  if (matched) return matched;
+
+  return resolved ? [resolved.canonicalCity] : [raw];
+}
+
+/**
+ * Returns all search synonym terms and neighborhood aliases for a given district.
+ */
+export function getDistrictAliases(districtInput: string): string[] {
+  if (!districtInput || typeof districtInput !== "string") return [];
+  const raw = districtInput.trim();
+  const lower = raw.toLowerCase();
+
+  for (const dist of SOMALI_DISTRICT_DIRECTORY) {
+    const isDirectMatch = dist.canonicalDistrict.toLowerCase() === lower;
+    const isAliasMatch = dist.aliases.some(
+      (a) => a.toLowerCase() === lower || lower.includes(a.toLowerCase())
+    );
+    if (isDirectMatch || isAliasMatch) {
+      return Array.from(new Set([dist.canonicalDistrict, ...dist.aliases]));
+    }
+  }
+
+  if (lower.includes("horseed")) return ["Horseed", "Xaafada Horseed"];
+  if (lower.includes("habaana")) return ["Habaana", "Xaafada Habaana"];
+  if (lower.includes("korjoog")) return ["Korjoog", "Xaafada Korjoog"];
+
+  return [raw];
+}
+
 function escapeRegExp(string: string): string {
   return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

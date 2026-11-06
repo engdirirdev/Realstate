@@ -1,3 +1,4 @@
+export const revalidate = 30;
 // ================================================================
 // PAGE NAME  : Admin Dashboard — Property Management
 // ROUTE      : /admin/properties
@@ -11,9 +12,11 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import Image from "next/image";
 import { Building2, CheckCircle2, XCircle, Clock, Eye, Sparkles, Pencil } from "lucide-react";
 import { formatPrice, getPropertyTypeLabel } from "@/lib/utils";
 import AdminPropertyReviewModal from "@/components/AdminPropertyReviewModal";
+import { THUMBNAIL_BLUR_DATA_URL } from "@/lib/image-utils";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Manage Properties – Admin | Kiro-Maal Real Estate" };
@@ -45,17 +48,16 @@ export default async function AdminPropertiesPage({
   const [
     properties,
     totalFiltered,
-    allCount,
-    pendingCount,
-    approvedCount,
-    rentedCount,
-    soldCount,
-    rejectedCount,
+    statusGroupCounts,
   ] = await Promise.all([
     prisma.property.findMany({
       where: whereClause,
       include: {
-        images: { orderBy: { order: "asc" } },
+        images: {
+          take: 1,
+          orderBy: { order: "asc" },
+          select: { url: true },
+        },
         manager: { select: { id: true, name: true, email: true } },
       },
       orderBy: { createdAt: "desc" },
@@ -63,21 +65,18 @@ export default async function AdminPropertiesPage({
       take: pageSize,
     }),
     prisma.property.count({ where: whereClause }),
-    prisma.property.count(),
-    prisma.property.count({ where: { status: "PENDING" } }),
-    prisma.property.count({ where: { status: "APPROVED" } }),
-    prisma.property.count({
-      where: {
-        OR: [{ status: "RENTED" }, { availabilityStatus: "RENTED" }],
-      },
+    prisma.property.groupBy({
+      by: ["status", "availabilityStatus"],
+      _count: { id: true },
     }),
-    prisma.property.count({
-      where: {
-        OR: [{ status: "SOLD" }, { availabilityStatus: "SOLD" }],
-      },
-    }),
-    prisma.property.count({ where: { status: "REJECTED" } }),
   ]);
+
+  const allCount = statusGroupCounts.reduce((acc, curr) => acc + curr._count.id, 0);
+  const pendingCount = statusGroupCounts.filter((c) => c.status === "PENDING").reduce((acc, curr) => acc + curr._count.id, 0);
+  const approvedCount = statusGroupCounts.filter((c) => c.status === "APPROVED" || c.status === "PUBLISHED").reduce((acc, curr) => acc + curr._count.id, 0);
+  const rentedCount = statusGroupCounts.filter((c) => c.status === "RENTED" || c.availabilityStatus === "RENTED").reduce((acc, curr) => acc + curr._count.id, 0);
+  const soldCount = statusGroupCounts.filter((c) => c.status === "SOLD" || c.availabilityStatus === "SOLD").reduce((acc, curr) => acc + curr._count.id, 0);
+  const rejectedCount = statusGroupCounts.filter((c) => c.status === "REJECTED").reduce((acc, curr) => acc + curr._count.id, 0);
 
   const totalPages = Math.ceil(totalFiltered / pageSize) || 1;
 
@@ -138,8 +137,18 @@ export default async function AdminPropertiesPage({
 
       {/* Table */}
       <div className="bg-[#FCFBF7] rounded-2xl shadow-sm border border-[#E8E1D4] overflow-hidden w-full">
-        <div className="w-full overflow-x-auto">
-          <table className="w-full text-sm">
+        <div className="w-full overflow-x-auto momentum-scroll">
+          <table className="w-full text-sm table-fixed-layout min-w-[920px]">
+            <colgroup>
+              <col className="w-[240px]" />
+              <col className="w-[120px]" />
+              <col className="w-[130px]" />
+              <col className="w-[110px]" />
+              <col className="w-[100px]" />
+              <col className="w-[100px]" />
+              <col className="w-[100px]" />
+              <col className="w-[120px]" />
+            </colgroup>
             <thead className="bg-[#F7F3EA] border-b border-[#E8E1D4]">
               <tr>
                 <th className="text-left px-3.5 py-3 font-bold uppercase tracking-wider text-[11px] text-[#07111F]">Property</th>
@@ -169,9 +178,17 @@ export default async function AdminPropertiesPage({
                     <tr key={p.id} className="hover:bg-[#F7F3EA]/50 transition-colors">
                       <td className="px-3.5 py-2.5">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-10 h-10 rounded-lg overflow-hidden bg-[#F7F3EA] border border-[#E8E1D4] shrink-0">
+                          <div className="w-10 h-10 rounded-lg overflow-hidden bg-[#F7F3EA] border border-[#E8E1D4] shrink-0 relative">
                             {img ? (
-                              <img src={img} alt={p.title} className="w-full h-full object-cover" />
+                              <Image
+                                src={img}
+                                alt={p.title}
+                                fill
+                                sizes="40px"
+                                placeholder="blur"
+                                blurDataURL={THUMBNAIL_BLUR_DATA_URL}
+                                className="object-cover"
+                              />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center">
                                 <Building2 className="h-4 w-4 text-[#9CA3AF]" />

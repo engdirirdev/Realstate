@@ -40,7 +40,22 @@ export async function GET() {
         take: 4,
         orderBy: { createdAt: "desc" },
         include: {
-          property: { include: { images: { orderBy: { order: "asc" }, take: 1 } } },
+          property: {
+            select: {
+              id: true,
+              title: true,
+              price: true,
+              currency: true,
+              city: true,
+              location: true,
+              type: true,
+              listingType: true,
+              bedrooms: true,
+              bathrooms: true,
+              area: true,
+              images: { orderBy: { order: "asc" }, take: 1, select: { url: true } },
+            },
+          },
         },
       }),
       prisma.searchHistory.findMany({
@@ -53,7 +68,22 @@ export async function GET() {
         take: 4,
         orderBy: { score: "desc" },
         include: {
-          property: { include: { images: { orderBy: { order: "asc" }, take: 1 } } },
+          property: {
+            select: {
+              id: true,
+              title: true,
+              price: true,
+              currency: true,
+              city: true,
+              location: true,
+              type: true,
+              listingType: true,
+              bedrooms: true,
+              bathrooms: true,
+              area: true,
+              images: { orderBy: { order: "asc" }, take: 1, select: { url: true } },
+            },
+          },
         },
       }),
       prisma.pricePrediction.findMany({
@@ -68,27 +98,42 @@ export async function GET() {
       }),
     ]);
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        user,
-        stats: {
-          favorites: favoritesCount,
-          searches: searchHistoryCount,
-          recommendations: recommendationsCount,
-          predictions: predictionsCount,
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          user,
+          stats: {
+            favorites: favoritesCount,
+            searches: searchHistoryCount,
+            recommendations: recommendationsCount,
+            predictions: predictionsCount,
+          },
+          recentFavorites: recentFavorites.map((f) => f.property),
+          recentSearches,
+          recommendations: recommendations.map((r) => {
+            let reasons: string[] = [];
+            try {
+              reasons = typeof r.reasons === "string" ? JSON.parse(r.reasons) : r.reasons;
+            } catch {
+              reasons = [];
+            }
+            return {
+              property: r.property,
+              score: r.score,
+              reasons,
+            };
+          }),
+          recentPredictions,
+          notifications,
         },
-        recentFavorites: recentFavorites.map((f) => f.property),
-        recentSearches,
-        recommendations: recommendations.map((r) => ({
-          property: r.property,
-          score: r.score,
-          reasons: JSON.parse(r.reasons),
-        })),
-        recentPredictions,
-        notifications,
       },
-    });
+      {
+        headers: {
+          "Cache-Control": "private, no-cache, no-store, must-revalidate",
+        },
+      }
+    );
   } catch (error) {
     console.error("[GET /api/user/dashboard]", error);
     return NextResponse.json({ success: false, error: "Failed to load dashboard." }, { status: 500 });

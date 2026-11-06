@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Sparkles,
   Building2,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 import { getPropertyTypeLabel } from "@/lib/utils";
 import PropertyAvailabilityBadge from "./PropertyAvailabilityBadge";
+import { PROPERTY_CARD_BLUR_DATA_URL } from "@/lib/image-utils";
 
 export interface RelatedPropertyItem {
   id: string;
@@ -148,10 +150,14 @@ export default function RelatedPropertiesSection({
                 {/* Image & Badges */}
                 <div className="relative aspect-4/3 w-full bg-[#F7F3EA] overflow-hidden">
                   {mainImg ? (
-                    <img
+                    <Image
                       src={mainImg}
                       alt={item.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                      className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      placeholder="blur"
+                      blurDataURL={PROPERTY_CARD_BLUR_DATA_URL}
                       loading="lazy"
                     />
                   ) : (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState , memo } from "react";
 import { Flag, Share2, Check, Loader2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -13,7 +13,7 @@ interface PropertyShareAndReportProps {
   propertyTitle: string;
 }
 
-export default function PropertyShareAndReport({ propertyId, propertyTitle }: PropertyShareAndReportProps) {
+function PropertyShareAndReport({ propertyId, propertyTitle }: PropertyShareAndReportProps) {
   const [copied, setCopied] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [reason, setReason] = useState("MISLEADING");
@@ -130,3 +130,5 @@ export default function PropertyShareAndReport({ propertyId, propertyTitle }: Pr
     </>
   );
 }
+
+export default memo(PropertyShareAndReport);

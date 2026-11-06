@@ -6,12 +6,12 @@ import { auth } from "@/auth";
 export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
   const { propertyId } = await request.json();
   if (!propertyId) {
-    return NextResponse.json({ error: "propertyId is required" }, { status: 400 });
+    return NextResponse.json({ success: false, error: "propertyId is required" }, { status: 400 });
   }
 
   const existing = await prisma.favorite.findUnique({
@@ -31,18 +31,41 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
   const favorites = await prisma.favorite.findMany({
     where: { userId: session.user.id },
     include: {
       property: {
-        include: { images: { take: 1, orderBy: { order: "asc" } } },
+        select: {
+          id: true,
+          title: true,
+          price: true,
+          currency: true,
+          city: true,
+          location: true,
+          type: true,
+          listingType: true,
+          bedrooms: true,
+          bathrooms: true,
+          area: true,
+          status: true,
+          availabilityStatus: true,
+          isFeatured: true,
+          images: { take: 1, orderBy: { order: "asc" }, select: { id: true, url: true, isPrimary: true } },
+        },
       },
     },
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json({ success: true, favorites });
+  return NextResponse.json(
+    { success: true, favorites },
+    {
+      headers: {
+        "Cache-Control": "private, no-cache, no-store, must-revalidate",
+      },
+    }
+  );
 }

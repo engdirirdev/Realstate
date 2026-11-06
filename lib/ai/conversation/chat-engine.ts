@@ -24,8 +24,10 @@ import {
   validatePropertyAgainstQuery,
   attachActiveResultSet,
   isPureConversationalGreeting,
+  evaluateSearchReadiness,
 } from "./state-manager";
-import { resolveLocation } from "../nlu/location-resolver";
+import { extractEntities } from "../nlu/entity-extractor";
+import { resolveLocation, getCityDbVariants, getDistrictAliases } from "../nlu/location-resolver";
 import { generateGroundedAIDAResponse } from "../orchestration/response-generator";
 import { validateGrounding } from "../orchestration/grounding-validator";
 import {
@@ -151,9 +153,23 @@ async function executePropertySearchTool(
     searchFilter.listingType = String(listingType).toUpperCase();
   }
 
-  const targetCity = toolArgs.city || state.slots.city;
+  const rawCity = toolArgs.city || state.slots.city;
+  let targetCity = rawCity;
+  if (rawCity) {
+    const loc = resolveLocation(rawCity);
+    if (loc?.canonicalCity) {
+      targetCity = loc.canonicalCity;
+    }
+  }
   if (targetCity) {
-    searchFilter.city = { contains: targetCity };
+    const cityVariants = getCityDbVariants(targetCity);
+    if (cityVariants.length > 1) {
+      searchFilter.city = { in: cityVariants };
+    } else if (cityVariants.length === 1) {
+      searchFilter.city = cityVariants[0];
+    } else {
+      searchFilter.city = { contains: targetCity };
+    }
   }
 
   const targetDistrict = toolArgs.district || state.slots.district;
@@ -164,12 +180,20 @@ async function executePropertySearchTool(
   const uniqueExcluded = Array.from(new Set(excluded));
 
   if (targetDistrict && !uniqueExcluded.includes(targetDistrict)) {
-    searchFilter.OR = [
-      { location: { contains: targetDistrict } },
-      { address: { contains: targetDistrict } },
-      { title: { contains: targetDistrict } },
-      { description: { contains: targetDistrict } },
-    ];
+    const districtTerms = getDistrictAliases(targetDistrict);
+    const districtClause = {
+      OR: districtTerms.flatMap((term) => [
+        { location: { contains: term } },
+        { address: { contains: term } },
+        { title: { contains: term } },
+        { description: { contains: term } },
+      ]),
+    };
+    if (searchFilter.AND) {
+      (searchFilter.AND as any[]).push(districtClause);
+    } else {
+      searchFilter.AND = [districtClause];
+    }
   }
 
   // HARD CONSTRAINT: Excluded locations must NEVER be matched in database
@@ -193,12 +217,12 @@ async function executePropertySearchTool(
     }
   }
 
-  const maxBudget = toolArgs.maxPrice !== undefined ? toolArgs.maxPrice : state.slots.maxPrice;
+  const maxBudget = typeof toolArgs.maxPrice === "number" ? toolArgs.maxPrice : typeof state.slots.maxPrice === "number" ? state.slots.maxPrice : undefined;
   if (maxBudget !== undefined) {
     searchFilter.price = { ...(searchFilter.price || {}), lte: maxBudget };
   }
 
-  const minBudget = toolArgs.minPrice !== undefined ? toolArgs.minPrice : state.slots.minPrice;
+  const minBudget = typeof toolArgs.minPrice === "number" ? toolArgs.minPrice : typeof state.slots.minPrice === "number" ? state.slots.minPrice : undefined;
   if (minBudget !== undefined) {
     searchFilter.price = { ...(searchFilter.price || {}), gte: minBudget };
   }
@@ -216,38 +240,43 @@ async function executePropertySearchTool(
         take: 20,
         orderBy: { createdAt: "desc" },
       }),
-      new Promise<any[]>((resolve) => setTimeout(() => resolve([]), 800)),
+      new Promise<any[]>((resolve) => setTimeout(() => resolve([]), 3000)),
     ]);
   } catch {
     matchedProps = [];
   }
 
   // Convert into standardized ResultItem format
-  const rawItems: (ResultItem & { location?: string; address?: string | null })[] = matchedProps.map((p, index) => ({
-    rank: index + 1,
-    id: p.id,
-    title: p.title,
-    price: p.price,
-    formattedPrice: formatPrice(p.price),
-    city: p.city,
-    type: p.type,
-    typeLabel: p.type.charAt(0) + p.type.slice(1).toLowerCase(),
-    bedrooms: p.bedrooms,
-    bathrooms: p.bathrooms,
-    area: p.area,
-    areaSize: p.area,
-    furnished: !!p.isFurnished,
-    parking: (p.parking || 0) > 0,
-    parkingSpaces: p.parking || 0,
-    status: p.status,
-    statusLabel: p.status === "APPROVED" ? "Available" : p.status,
-    statusEmoji: "🟢",
-    imageUrl: p.images[0]?.url || null,
-    managerName: (p as any).manager?.name || "Verified Manager",
-    description: p.description || "",
-    location: p.location,
-    address: p.address,
-  }));
+  const rawItems: (ResultItem & { location?: string; address?: string | null; aiMatchScore?: number; listingType?: string })[] = matchedProps.map((p, index) => {
+    const isLand = String(p.type).toUpperCase() === "LAND";
+    return {
+      rank: index + 1,
+      id: p.id,
+      title: p.title,
+      price: p.price,
+      formattedPrice: formatPrice(p.price),
+      city: p.city,
+      type: p.type,
+      typeLabel: isLand ? "Land" : p.type.charAt(0) + p.type.slice(1).toLowerCase(),
+      bedrooms: isLand ? 0 : p.bedrooms,
+      bathrooms: isLand ? 0 : p.bathrooms,
+      area: p.area,
+      areaSize: p.area,
+      furnished: isLand ? false : !!p.isFurnished,
+      parking: (p.parking || 0) > 0,
+      parkingSpaces: p.parking || 0,
+      status: p.status,
+      statusLabel: p.status === "APPROVED" ? "Available" : p.status,
+      statusEmoji: "🟢",
+      imageUrl: p.images[0]?.url || null,
+      managerName: (p as any).manager?.name || "Verified Manager",
+      description: p.description || "",
+      location: p.location,
+      address: p.address,
+      listingType: (p as any).listingType === "FOR_RENT" || p.price < 5000 ? "For Rent" : "For Sale",
+      aiMatchScore: 95,
+    };
+  });
 
   // CRITICAL: Post-Search Hard Constraint Validation
   // Strictly reject any property in an excluded location or violating budget
@@ -320,7 +349,16 @@ async function executePropertySearchTool(
   });
 
   scoredProps.sort((a, b) => b.score - a.score);
-  const finalProps = scoredProps.slice(0, 5).map((entry, idx) => ({ ...entry.item, rank: idx + 1 }));
+  const finalProps = scoredProps.slice(0, 5).map((entry, idx) => {
+    const dynamicScore = Math.min(99, Math.max(82, Math.round(94 + entry.score * 1.2 - idx * 2)));
+    return {
+      ...entry.item,
+      rank: idx + 1,
+      aiMatchScore: (entry.item as any).aiMatchScore && (entry.item as any).aiMatchScore !== 95
+        ? (entry.item as any).aiMatchScore
+        : dynamicScore,
+    };
+  });
 
   return {
     properties: finalProps,
@@ -398,7 +436,24 @@ export async function processConversationalTurn(
     };
   }
 
-  // 2c. Explicit City Extraction & Cross-City Slot Reset
+  // 2c. Immediate Deterministic Entity Extraction & Slot Enrichment
+  const currentEntities = extractEntities(message);
+  if (currentEntities.purpose && !state.slots.purpose) state.slots.purpose = currentEntities.purpose;
+  if (currentEntities.propertyType && !state.slots.propertyType) state.slots.propertyType = currentEntities.propertyType;
+  if (currentEntities.price) {
+    if (typeof currentEntities.price === "number") {
+      state.slots.maxPrice = currentEntities.price;
+    } else if (typeof (currentEntities.price as any).maxPrice === "number") {
+      state.slots.maxPrice = (currentEntities.price as any).maxPrice;
+      if ((currentEntities.price as any).period) {
+        state.slots.pricePeriod = (currentEntities.price as any).period;
+      }
+    }
+  }
+  if ((currentEntities as any).pricePeriod) state.slots.pricePeriod = (currentEntities as any).pricePeriod;
+  if (typeof currentEntities.bedrooms === "number") state.slots.bedrooms = currentEntities.bedrooms;
+
+  // 2d. Explicit City Extraction & Cross-City Slot Reset
   // If the user's current turn explicitly specifies a city (e.g. "show houses in mogadishu"),
   // overwrite the city slot immediately and wipe any contradictory previous city filters!
   const explicitLoc = resolveLocation(message);
@@ -413,6 +468,33 @@ export async function processConversationalTurn(
     state.slots.city = newCity;
     if (explicitLoc.district) {
       state.slots.district = explicitLoc.district;
+    }
+  }
+
+  // Direct property ID security guard for non-approved or private properties
+  const idMatch = message.match(/\b(cm[a-z0-9]{20,})\b/i);
+  if (idMatch) {
+    const queriedId = idMatch[1];
+    const targetProperty = await prisma.property.findUnique({
+      where: { id: queriedId },
+      include: { images: true },
+    });
+    if (!targetProperty || (targetProperty.status !== "APPROVED" && targetProperty.status !== "PUBLISHED")) {
+      const isSomali = activeLanguage === "so";
+      return {
+        reply: isSomali
+          ? "Waan ka xumahay, hantida aad raadinayso lama heli karo ama ma aha mid hadda u furan daawashada dadweynaha."
+          : "I apologize, the property you are inquiring about is not available for public viewing or does not exist in our verified inventory.",
+        properties: [],
+        totalMatches: 0,
+        shouldRenderPropertyCards: false,
+        responseType: "PROPERTY_DETAIL" as ResponseType,
+        state,
+        intent: "PROPERTY_DETAIL",
+        topic: state.currentTopic,
+        confidence: 0.95,
+        language: activeLanguage,
+      };
     }
   }
 
@@ -476,27 +558,28 @@ export async function processConversationalTurn(
   // 4. Update Conversation State as Pure Data from AI's understanding
   if (conversationalDecision.contextUpdates) {
     const cu = conversationalDecision.contextUpdates;
-    if (cu.city !== undefined) state.slots.city = cu.city;
-    if (cu.district !== undefined) state.slots.district = cu.district;
-    if (cu.maxPrice !== undefined) state.slots.maxPrice = cu.maxPrice;
-    if (cu.minPrice !== undefined) state.slots.minPrice = cu.minPrice;
-    if (cu.purpose !== undefined) state.slots.purpose = cu.purpose;
-    if (cu.propertyType !== undefined) state.slots.propertyType = cu.propertyType;
-    if (cu.bedrooms !== undefined) state.slots.bedrooms = cu.bedrooms;
-    if (cu.furnished !== undefined) state.slots.furnished = cu.furnished;
-    if (cu.parking !== undefined) state.slots.parking = cu.parking;
-    if (cu.proximity !== undefined) state.slots.proximity = cu.proximity;
-    if (cu.excludedLocations !== undefined) {
+    if (cu.city !== undefined && cu.city !== null) state.slots.city = cu.city;
+    if (cu.district !== undefined && cu.district !== null) state.slots.district = cu.district;
+    if (typeof cu.maxPrice === "number") state.slots.maxPrice = cu.maxPrice;
+    if (typeof cu.minPrice === "number") state.slots.minPrice = cu.minPrice;
+    if (cu.purpose !== undefined && cu.purpose !== null) state.slots.purpose = cu.purpose;
+    if (cu.propertyType !== undefined && cu.propertyType !== null) state.slots.propertyType = cu.propertyType;
+    if (typeof cu.bedrooms === "number") state.slots.bedrooms = cu.bedrooms;
+    if (cu.pricePeriod !== undefined && cu.pricePeriod !== null) state.slots.pricePeriod = cu.pricePeriod;
+    if (cu.furnished !== undefined && cu.furnished !== null) state.slots.furnished = cu.furnished;
+    if (cu.parking !== undefined && cu.parking !== null) state.slots.parking = cu.parking;
+    if (cu.proximity !== undefined && cu.proximity !== null) state.slots.proximity = cu.proximity;
+    if (cu.excludedLocations !== undefined && cu.excludedLocations !== null) {
       state.slots.excludedLocations = cu.excludedLocations;
       // Remove any excluded location from active district
       if (state.slots.district && state.slots.excludedLocations.includes(state.slots.district)) {
         delete state.slots.district;
       }
     }
-    if (cu.softPreferences !== undefined) {
+    if (cu.softPreferences !== undefined && cu.softPreferences !== null) {
       state.slots.softPreferences = cu.softPreferences;
     }
-    if (cu.userReasoning !== undefined) {
+    if (cu.userReasoning !== undefined && cu.userReasoning !== null) {
       state.slots.userReasoning = cu.userReasoning;
     }
     if (cu.referencedPropertyId) {
@@ -535,6 +618,30 @@ export async function processConversationalTurn(
       state.slots.proximity = toolArgs.proximity;
     }
 
+    // 5a. Search Readiness Guard: Ensure interview criteria are complete before running database retrieval
+    const extracted = extractEntities(message);
+    const readiness = evaluateSearchReadiness(state, message, extracted, activeLanguage);
+    if (!readiness.isReady && readiness.clarificationQuestion) {
+      return {
+        reply: readiness.clarificationQuestion,
+        properties: [],
+        totalMatches: 0,
+        shouldRenderPropertyCards: false,
+        shouldRenderCards: false,
+        responseType: readiness.responseType || "CLARIFICATION",
+        state,
+        updatedState: state,
+        intent: readiness.responseType || "CLARIFICATION",
+        topic: state.currentTopic,
+        confidence: 0.95,
+        language: activeLanguage,
+        conversationLanguage: activeLanguage,
+        languageConfidence: 0.95,
+        activeSearchCriteria: state.slots,
+        referencedPropertyIds: [],
+      };
+    }
+
     // Application executes tool independently with hard constraints
     const searchResult = await executePropertySearchTool(toolArgs, state);
     returnedProperties = searchResult.properties;
@@ -567,21 +674,25 @@ export async function processConversationalTurn(
           ? `بحثت في قاعدة بياناتنا المؤكدة، لكن لم أجد عقارات في ${targetLocName} تطابق معاييرك حالياً.`
           : (state.slots.excludedLocations && state.slots.excludedLocations.length > 0
               ? `Waxaan hubiyey guryaha ${targetLocName} ee miisaaniyaddaada ($${state.slots.maxPrice || 500}). Maadaama aad ${state.slots.excludedLocations.join(", ")} ka saartay, ma helin guri buuxiya dhammaan shuruudahaas oo ku jira miisaaniyaddaada. Ma rabtaa inaan miisaaniyadda wax yar kor u qaadno mise goobo kale ayaan eegnaa?`
-              : `Waan baaray xog-ururintayada, laakiin kuma helin guri buuxiya dhammaan shuruudahaaga miisaaniyaddaada.`));
+              : `Waxaan hubiyey guryaha ${targetLocName}, laakiin kuma helin guri buuxiya dhammaan shuruudahaaga ($${state.slots.maxPrice || 500}). Ma rabtaa inaan kordhino baaritaanka mise goobo kale ayaan eegnaa?`));
 
-    const groundedAI = await generateGroundedAIDAResponse(
-      {
-        userMessage: message,
-        language: activeLanguage,
-        intent: "REAL_ESTATE_SEARCH",
-        verifiedProperties: returnedProperties,
-        contextSlots: state.slots,
-        lastAssistantMessage: lastAssistantMsg,
-        conversationHistory: history.map((h) => ({ role: h.role, content: h.content })),
-      },
-      fallbackReply
-    );
-    reply = groundedAI?.replyText || fallbackReply;
+    if (returnedProperties.length === 0) {
+      reply = fallbackReply;
+    } else {
+      const groundedAI = await generateGroundedAIDAResponse(
+        {
+          userMessage: message,
+          language: activeLanguage,
+          intent: "REAL_ESTATE_SEARCH",
+          verifiedProperties: returnedProperties,
+          contextSlots: state.slots,
+          lastAssistantMessage: lastAssistantMsg,
+          conversationHistory: history.map((h) => ({ role: h.role, content: h.content })),
+        },
+        fallbackReply
+      );
+      reply = groundedAI?.replyText || fallbackReply;
+    }
   } else {
     // -------------------------------------------------------------------------
     // AI TEXT RESPONSE
@@ -594,14 +705,27 @@ export async function processConversationalTurn(
     totalMatches = 0;
     shouldRenderPropertyCards = false;
 
-    if (!conversationalDecision.contextUpdates?.responseType) {
+    const readiness = evaluateSearchReadiness(state, message, extractEntities(message), activeLanguage);
+    if (readiness && readiness.responseType && readiness.responseType !== "PROPERTY_RESULTS") {
+      responseType = readiness.responseType;
+      if (readiness.clarificationQuestion) {
+        reply = readiness.clarificationQuestion;
+      }
+    } else if (conversationalDecision.contextUpdates?.responseType) {
+      let rType: any = conversationalDecision.contextUpdates.responseType;
+      if (rType === "REQUIREMENT_UPDATE") rType = "CLARIFICATION";
+      if (rType === "GREETING" && (state.slots.purpose || state.slots.propertyType || state.slots.city || state.slots.maxPrice)) {
+        rType = "CLARIFICATION";
+      }
+      responseType = rType;
+    } else {
       const lower = message.toLowerCase();
-      if (lower.match(/^(asc|salaam|hello|hi|hey|assalamu|nabad)\b/i)) {
+      if (lower.match(/^(asc|salaam|hello|hi|hey|assalamu|nabad)\b/i) && !state.slots.purpose && !state.slots.city) {
         responseType = "GREETING";
       } else if (lower.includes("ku fiican") || lower.includes("advice") || lower.includes("talo")) {
         responseType = "ADVICE";
       } else if (conversationalDecision.contextUpdates && Object.keys(conversationalDecision.contextUpdates).length > 0) {
-        responseType = "REQUIREMENT_UPDATE";
+        responseType = "CLARIFICATION";
       } else {
         responseType = "GENERAL_CONVERSATION";
       }
@@ -641,7 +765,7 @@ export async function processConversationalTurn(
 
   return {
     reply,
-    properties: returnedProperties,
+    properties: shouldRenderPropertyCards ? returnedProperties : [],
     intent: responseType === "PROPERTY_RESULTS" ? "REAL_ESTATE_SEARCH" : responseType,
     topic: state.currentTopic,
     confidence: 0.95,

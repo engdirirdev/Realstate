@@ -1,24 +1,21 @@
-// ================================================================
-// PAGE NAME  : Customer Portal — My Purchases
-// ROUTE      : /customer/purchases
-// DESCRIPTION: Property purchase applications, approvals, escrow payments,
-//              and completed asset acquisitions
-//              Kiro-Maal Real Estate Master Design System
-// ROLE       : CUSTOMER
-// ================================================================
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { ShoppingBag, Sparkles } from "lucide-react";
 import CustomerPurchasesView from "@/components/customer/CustomerPurchasesView";
+import { getCustomerPurchasesData } from "@/lib/server/dashboard-data";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "My Purchases – Customer Portal | Kiro-Maal Real Estate",
 };
 
+export const revalidate = 30;
+
 export default async function CustomerPurchasesPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
+
+  const purchases = await getCustomerPurchasesData(session.user.id);
 
   return (
     <div className="space-y-6 max-w-6xl bg-[#F7F3EA] min-h-screen p-5 sm:p-7">
@@ -34,7 +31,7 @@ export default async function CustomerPurchasesPage() {
         </p>
       </div>
 
-      <CustomerPurchasesView />
+      <CustomerPurchasesView initialPurchases={purchases} />
     </div>
   );
 }

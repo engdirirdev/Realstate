@@ -191,6 +191,7 @@ export default function DynamicPropertyForm({
       }
     }
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData?.id]);
 
   const handleCategorySelect = (cat: CategoryOption) => {
@@ -363,6 +364,7 @@ export default function DynamicPropertyForm({
         } catch {}
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData?.id, initialData?.updatedAt]);
 
   // Reset or initialize type-specific fields when Property Type changes

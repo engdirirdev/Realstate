@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { invalidatePropertyCache } from "@/lib/cache";
+import { cachedJsonResponse, CACHE_PROFILES } from "@/lib/api-cache";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -20,7 +22,11 @@ export async function GET(request: NextRequest, { params }: Props) {
       ? reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length
       : 5.0;
 
-    return NextResponse.json({ success: true, reviews, averageRating, total: reviews.length });
+    return cachedJsonResponse(
+      request,
+      { success: true, reviews, averageRating, total: reviews.length },
+      { profile: CACHE_PROFILES.PUBLIC_SHORT }
+    );
   } catch (error) {
     console.error("[GET /api/properties/[id]/reviews]", error);
     return NextResponse.json({ error: "Failed to fetch reviews" }, { status: 500 });
@@ -53,6 +59,8 @@ export async function POST(request: NextRequest, { params }: Props) {
         user: { select: { id: true, name: true, image: true } },
       },
     });
+
+    await invalidatePropertyCache(id);
 
     return NextResponse.json({ success: true, review });
   } catch (error) {

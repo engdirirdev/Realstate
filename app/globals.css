@@ -49,6 +49,8 @@
 
   html {
     scroll-behavior: smooth;
+    scrollbar-gutter: stable;
+    -webkit-text-size-adjust: 100%;
   }
 
   a {
@@ -224,6 +226,30 @@
   /* GPU Compositing for Smooth Modal & Table Scrolling */
   .gpu-accelerated {
     backface-visibility: hidden;
+    transform: translateZ(0);
+  }
+
+  /* Performance: Skip layout & paint for off-screen elements until scrolled near */
+  .content-visibility-auto {
+    content-visibility: auto;
+    contain-intrinsic-size: 1px 360px;
+  }
+
+  /* High-performance fixed table layout */
+  .table-fixed-layout {
+    table-layout: fixed;
+  }
+
+  /* Mobile momentum scrolling */
+  .momentum-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* Touch target minimum size for mobile accessibility (WCAG 2.1 AAA) */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
   }
 }
 

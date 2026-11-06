@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { invalidatePropertyCache } from "@/lib/cache";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -130,6 +131,8 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       }).catch(() => {});
     }
 
+    await invalidatePropertyCache(id);
+
     return NextResponse.json({ success: true, property });
   } catch (error) {
     console.error("[PATCH /api/admin/properties/[id]]", error);
@@ -146,6 +149,7 @@ export async function DELETE(request: NextRequest, { params }: Props) {
     }
 
     await prisma.property.delete({ where: { id } });
+    await invalidatePropertyCache(id);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[DELETE /api/admin/properties/[id]]", error);

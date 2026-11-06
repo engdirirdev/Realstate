@@ -29,6 +29,7 @@ import {
 import { formatPrice } from "@/lib/utils";
 import dynamic from "next/dynamic";
 import type { Metadata } from "next";
+import { THUMBNAIL_BLUR_DATA_URL } from "@/lib/image-utils";
 
 const AdminCharts = dynamic(() => import("@/components/admin/AdminCharts"), {
   loading: () => (
@@ -39,8 +40,11 @@ const AdminCharts = dynamic(() => import("@/components/admin/AdminCharts"), {
   ),
 });
 
+export const revalidate = 30;
+
 export const metadata: Metadata = {
   title: "Admin Dashboard – Kiro-Maal Real Estate",
+  robots: { index: false, follow: false },
 };
 
 // Mini Golden Bar Chart Component
@@ -86,66 +90,64 @@ export default async function AdminPage() {
   const currentYear = new Date().getFullYear();
   const yearStart = new Date(currentYear, 0, 1);
 
-  // Fetch all real database metrics concurrently (identical queries preserved)
+  // Fetch consolidated database metrics concurrently (consolidated aggregations)
   const [
-    totalProperties,
-    propertiesSold,
-    propertiesRented,
-    totalCustomers,
+    propertyStatusCounts,
+    rentalStatusCounts,
+    paymentStatusCounts,
+    userCounts,
     totalRevenueAgg,
     pendingInquiries,
-    pendingProperties,
     pendingPurchaseRequests,
     todayBookings,
-    activeAgents,
     propertiesByType,
     paymentsThisYear,
     recentPropertiesList,
     recentCustomersList,
-    totalRentals,
-    pendingRentals,
-    activeRentals,
-    completedRentals,
-    rejectedRentals,
-    paymentPendingRentals,
-    paymentPaidRentals,
   ] = await Promise.all([
-    // 1. Total Properties
-    prisma.property.count(),
-    // 2. Properties Sold
-    prisma.property.count({ where: { status: "SOLD" } }),
-    // 3. Properties Rented
-    prisma.property.count({ where: { status: "RENTED" } }),
-    // 4. Total Customers
-    prisma.user.count({ where: { role: "CUSTOMER" } }),
+    // 1. Property status breakdown (replaces 4 separate count queries)
+    prisma.property.groupBy({
+      by: ["status"],
+      _count: { id: true },
+    }),
+    // 2. Rental request status breakdown (replaces 5 separate count queries)
+    prisma.rentalRequest.groupBy({
+      by: ["status"],
+      _count: { id: true },
+    }),
+    // 3. Payment status breakdown (replaces 2 separate count queries)
+    prisma.payment.groupBy({
+      by: ["status"],
+      _count: { id: true },
+    }),
+    // 4. Users breakdown by role and active status (replaces 2 count queries)
+    prisma.user.groupBy({
+      by: ["role", "isActive"],
+      _count: { id: true },
+    }),
     // 5. Total Revenue
     prisma.payment.aggregate({
       where: { status: "PAID" },
       _sum: { amount: true },
     }),
-    // 6. Pending Inquiries, Properties & Purchase Proposals
+    // 6. Pending Inquiries & Purchase Proposals
     prisma.inquiry.count({ where: { status: "NEW" } }),
-    prisma.property.count({ where: { status: "PENDING" } }),
     prisma.purchaseRequest.count({ where: { status: { in: ["PENDING", "UNDER_REVIEW"] } } }),
     // 7. Today's Appointments
     prisma.booking.count({
       where: { createdAt: { gte: startOfDay } },
     }),
-    // 8. Active Agents / Managers
-    prisma.user.count({
-      where: { role: { in: ["USER", "ADMIN"] }, isActive: true },
-    }),
-    // Property Types distribution
+    // 8. Property Types distribution
     prisma.property.groupBy({
       by: ["type"],
       _count: { id: true },
     }),
-    // Payments for current year
+    // 9. Payments for current year
     prisma.payment.findMany({
       where: { status: "PAID", createdAt: { gte: yearStart } },
       select: { amount: true, createdAt: true },
     }),
-    // Recent Properties (Selective projection: exclude unneeded manager joins and descriptions)
+    // 10. Recent Properties (Selective projection: exclude unneeded manager joins and descriptions)
     prisma.property.findMany({
       orderBy: { createdAt: "desc" },
       take: 5,
@@ -159,7 +161,7 @@ export default async function AdminPage() {
         images: { take: 1, orderBy: { order: "asc" }, select: { url: true } },
       },
     }),
-    // Recent Customers (Selective projection: exclude password and preferences)
+    // 11. Recent Customers (Selective projection: exclude password and preferences)
     prisma.user.findMany({
       where: { role: "CUSTOMER" },
       orderBy: { createdAt: "desc" },
@@ -172,15 +174,36 @@ export default async function AdminPage() {
         createdAt: true,
       },
     }),
-    // Section 14 Rental Bookings & Payment Metrics
-    prisma.rentalRequest.count(),
-    prisma.rentalRequest.count({ where: { status: { in: ["PENDING", "UNDER_REVIEW"] } } }),
-    prisma.rentalRequest.count({ where: { status: "ACTIVE" } }),
-    prisma.rentalRequest.count({ where: { status: { in: ["COMPLETED", "EXPIRED"] } } }),
-    prisma.rentalRequest.count({ where: { status: "REJECTED" } }),
-    prisma.payment.count({ where: { status: "PENDING" } }),
-    prisma.payment.count({ where: { status: "PAID" } }),
   ]);
+
+  // Derived Property Metrics from consolidated groupBy
+  const totalProperties = propertyStatusCounts.reduce((acc, curr) => acc + curr._count.id, 0);
+  const propertiesSold = propertyStatusCounts.find((p) => p.status === "SOLD")?._count.id || 0;
+  const propertiesRented = propertyStatusCounts.find((p) => p.status === "RENTED")?._count.id || 0;
+  const pendingProperties = propertyStatusCounts.find((p) => p.status === "PENDING")?._count.id || 0;
+
+  // Derived Rental Metrics from consolidated groupBy
+  const totalRentals = rentalStatusCounts.reduce((acc, curr) => acc + curr._count.id, 0);
+  const pendingRentals = rentalStatusCounts
+    .filter((r) => r.status === "PENDING" || r.status === "UNDER_REVIEW")
+    .reduce((acc, curr) => acc + curr._count.id, 0);
+  const activeRentals = rentalStatusCounts.find((r) => r.status === "ACTIVE")?._count.id || 0;
+  const completedRentals = rentalStatusCounts
+    .filter((r) => r.status === "COMPLETED" || r.status === "EXPIRED")
+    .reduce((acc, curr) => acc + curr._count.id, 0);
+  const rejectedRentals = rentalStatusCounts.find((r) => r.status === "REJECTED")?._count.id || 0;
+
+  // Derived Payment Counts from consolidated groupBy
+  const paymentPendingRentals = paymentStatusCounts.find((p) => p.status === "PENDING")?._count.id || 0;
+  const paymentPaidRentals = paymentStatusCounts.find((p) => p.status === "PAID")?._count.id || 0;
+
+  // Derived User Metrics from consolidated groupBy
+  const totalCustomers = userCounts
+    .filter((u) => u.role === "CUSTOMER")
+    .reduce((acc, curr) => acc + curr._count.id, 0);
+  const activeAgents = userCounts
+    .filter((u) => (u.role === "USER" || u.role === "ADMIN") && u.isActive)
+    .reduce((acc, curr) => acc + curr._count.id, 0);
 
   const totalRevenue = totalRevenueAgg._sum.amount || 0;
   const pendingRequests = pendingInquiries + pendingProperties + pendingPurchaseRequests;
@@ -257,7 +280,7 @@ export default async function AdminPage() {
   });
 
   return (
-    <div className="space-y-6 pb-12 font-sans">
+    <div suppressHydrationWarning className="space-y-6 pb-12 font-sans">
       {/* ─────────────────────────────────────────────────────────────
           1. HERO / WELCOME BANNER (Exact Match to Screenshot)
           ───────────────────────────────────────────────────────────── */}
@@ -678,10 +701,14 @@ export default async function AdminPage() {
                   <div className="flex items-center gap-3.5 min-w-0">
                     <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-100 shrink-0 border border-[#E6DED4] relative">
                       {property.images[0]?.url ? (
-                        <img
+                        <Image
                           src={property.images[0].url}
                           alt={property.title}
-                          className="w-full h-full object-cover"
+                          fill
+                          sizes="48px"
+                          placeholder="blur"
+                          blurDataURL={THUMBNAIL_BLUR_DATA_URL}
+                          className="object-cover"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400">
@@ -782,12 +809,16 @@ export default async function AdminPage() {
                   <div className="flex items-center gap-3 min-w-0">
                     <div
                       suppressHydrationWarning
-                      className="w-10 h-10 rounded-full bg-[#C99126] text-white font-extrabold text-xs flex items-center justify-center shrink-0 shadow-2xs"
+                      className="w-10 h-10 rounded-full bg-[#C99126] text-white font-extrabold text-xs flex items-center justify-center shrink-0 shadow-2xs relative overflow-hidden"
                     >
                       {customer.image ? (
-                        <img
+                        <Image
                           src={customer.image}
-                          alt={customer.name}
+                          alt={customer.name || "Customer"}
+                          fill
+                          sizes="40px"
+                          placeholder="blur"
+                          blurDataURL={THUMBNAIL_BLUR_DATA_URL}
                           className="w-full h-full object-cover rounded-full"
                         />
                       ) : (

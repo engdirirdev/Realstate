@@ -140,8 +140,6 @@ export async function POST(request: NextRequest) {
           );
         }
         activeSessionId = existingSession.id;
-      } else {
-        activeSessionId = requestedSessionId;
       }
     }
 
@@ -163,7 +161,7 @@ export async function POST(request: NextRequest) {
 
     // Persist USER message asynchronously in background (non-blocking)
     if (activeSessionId) {
-      prisma.chatMessage.create({
+      await prisma.chatMessage.create({
         data: {
           sessionId: activeSessionId,
           role: "user",
@@ -213,7 +211,7 @@ export async function POST(request: NextRequest) {
 
     // 7. Persist ASSISTANT message asynchronously in background (non-blocking for instant response)
     if (activeSessionId) {
-      prisma.chatMessage.create({
+      await prisma.chatMessage.create({
         data: {
           sessionId: activeSessionId,
           role: "assistant",

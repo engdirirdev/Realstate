@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser, requirePermission } from "@/lib/auth-guards";
 import { PERMISSIONS } from "@/lib/rbac";
-import { resolveLocation } from "@/lib/ai/nlu/location-resolver";
+import {
+  resolveLocation,
+  getCityDbVariants,
+  getDistrictAliases,
+} from "@/lib/ai/nlu/location-resolver";
 import { cachedDbQuery, invalidatePropertyCache } from "@/lib/cache";
 import { cachedJsonResponse, CACHE_PROFILES } from "@/lib/api-cache";
 
@@ -83,51 +87,82 @@ export async function GET(request: NextRequest) {
 
     const andClauses: any[] = [];
 
-    // 1. Keyword search (q / search)
+    // 1. Keyword search (q / search) with multi-token precision matching
     const query = (searchParams.get("search") || searchParams.get("q") || "").trim();
     if (query) {
-      andClauses.push({
-        OR: [
-          { title: { contains: query } },
-          { description: { contains: query } },
-          { location: { contains: query } },
-          { address: { contains: query } },
-          { city: { contains: query } },
-        ],
-      });
+      const rawTerms = query.split(/\s+/).map((t) => t.trim()).filter((t) => t.length > 1);
+      const stopWords = new Set(["oo", "ku", "ah", "ee", "ka", "in", "at", "for", "the", "and", "with", "la", "waa"]);
+      const filteredTerms = rawTerms.filter((t) => !stopWords.has(t.toLowerCase()));
+      const termsToMatch = filteredTerms.length > 0 ? filteredTerms : rawTerms;
+
+      if (termsToMatch.length <= 1) {
+        andClauses.push({
+          OR: [
+            { title: { contains: query } },
+            { description: { contains: query } },
+            { location: { contains: query } },
+            { address: { contains: query } },
+            { city: { contains: query } },
+          ],
+        });
+      } else {
+        andClauses.push({
+          OR: [
+            { title: { contains: query } },
+            { description: { contains: query } },
+            {
+              AND: termsToMatch.map((term) => ({
+                OR: [
+                  { title: { contains: term } },
+                  { description: { contains: term } },
+                  { location: { contains: term } },
+                  { address: { contains: term } },
+                  { city: { contains: term } },
+                ],
+              })),
+            },
+          ],
+        });
+      }
     }
 
-    // 2. City & District resolution
+    // 2. City & District resolution with canonical DB alias expansion
     const rawLocation = (searchParams.get("city") || searchParams.get("location") || "").trim();
     const explicitDistrict = (searchParams.get("district") || "").trim();
 
     if (rawLocation) {
       const resolved = resolveLocation(rawLocation);
-      if (resolved) {
-        where.city = { contains: resolved.canonicalCity };
-        if (resolved.district) {
-          andClauses.push({
-            OR: [
-              { location: { contains: resolved.district } },
-              { address: { contains: resolved.district } },
-              { title: { contains: resolved.district } },
-              { description: { contains: resolved.district } },
-            ],
-          });
-        }
+      const cityVariants = getCityDbVariants(resolved ? resolved.canonicalCity : rawLocation);
+
+      if (cityVariants.length > 1) {
+        where.city = { in: cityVariants };
+      } else if (cityVariants.length === 1) {
+        where.city = cityVariants[0];
       } else {
         where.city = { contains: rawLocation };
       }
-    }
 
-    if (explicitDistrict) {
+      const targetDistrict = resolved?.district || explicitDistrict;
+      if (targetDistrict) {
+        const districtTerms = getDistrictAliases(targetDistrict);
+        andClauses.push({
+          OR: districtTerms.flatMap((term) => [
+            { location: { contains: term } },
+            { address: { contains: term } },
+            { title: { contains: term } },
+            { description: { contains: term } },
+          ]),
+        });
+      }
+    } else if (explicitDistrict) {
+      const districtTerms = getDistrictAliases(explicitDistrict);
       andClauses.push({
-        OR: [
-          { location: { contains: explicitDistrict } },
-          { address: { contains: explicitDistrict } },
-          { title: { contains: explicitDistrict } },
-          { description: { contains: explicitDistrict } },
-        ],
+        OR: districtTerms.flatMap((term) => [
+          { location: { contains: term } },
+          { address: { contains: term } },
+          { title: { contains: term } },
+          { description: { contains: term } },
+        ]),
       });
     }
 
@@ -144,10 +179,14 @@ export async function GET(request: NextRequest) {
     // 4. Bedrooms
     const bedrooms = searchParams.get("bedrooms");
     const exactBedrooms = searchParams.get("exactBedrooms") === "true";
-    if (bedrooms !== null && bedrooms !== "") {
+    if (bedrooms !== null && bedrooms !== "" && type?.toUpperCase() !== "LAND") {
       const bedNum = Number(bedrooms);
       if (!isNaN(bedNum)) {
-        where.bedrooms = exactBedrooms ? bedNum : { gte: bedNum };
+        if (bedNum === 0) {
+          where.bedrooms = 0;
+        } else {
+          where.bedrooms = exactBedrooms ? bedNum : { gte: bedNum };
+        }
       }
     }
 
@@ -160,13 +199,21 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 6. Price Range
+    // 6. Price Range with boundary inversion auto-protection
     const minPrice = searchParams.get("minPrice");
     const maxPrice = searchParams.get("maxPrice");
     if (minPrice || maxPrice) {
-      where.price = {};
-      if (minPrice && !isNaN(Number(minPrice))) where.price.gte = Number(minPrice);
-      if (maxPrice && !isNaN(Number(maxPrice))) where.price.lte = Number(maxPrice);
+      const minVal = minPrice && !isNaN(Number(minPrice)) ? Number(minPrice) : undefined;
+      const maxVal = maxPrice && !isNaN(Number(maxPrice)) ? Number(maxPrice) : undefined;
+
+      if (minVal !== undefined && maxVal !== undefined) {
+        const [effMin, effMax] = minVal > maxVal ? [maxVal, minVal] : [minVal, maxVal];
+        where.price = { gte: effMin, lte: effMax };
+      } else if (minVal !== undefined) {
+        where.price = { gte: minVal };
+      } else if (maxVal !== undefined) {
+        where.price = { lte: maxVal };
+      }
     }
 
     // 7. Amenities & Features

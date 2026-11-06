@@ -167,7 +167,47 @@ export class S3CloudStorageProvider implements IStorageProvider {
   }
 }
 
-// ── 3. Factory Selector ─────────────────────────────────────────────
+// ── 3. Factory Selector & CDN Resolver ─────────────────────────────
+
+/**
+ * Resolves a storage key or path to an edge-accelerated CDN URL.
+ */
+export function resolveCdnUrl(pathOrKey: string): string {
+  if (!pathOrKey) return "";
+  if (pathOrKey.startsWith("http://") || pathOrKey.startsWith("https://")) {
+    return pathOrKey;
+  }
+
+  const cdnBase = process.env.CDN_URL || process.env.NEXT_PUBLIC_CDN_URL;
+  if (cdnBase) {
+    const cleanBase = cdnBase.replace(/\/$/, "");
+    const cleanPath = pathOrKey.replace(/^\//, "");
+    return `${cleanBase}/${cleanPath}`;
+  }
+
+  // Fallback to local uploads
+  return pathOrKey.startsWith("/") ? pathOrKey : `/${pathOrKey}`;
+}
+
+/**
+ * Returns active storage provider telemetry and readiness.
+ */
+export function getStorageTierMetrics(): {
+  provider: "local" | "s3";
+  isCloudActive: boolean;
+  bucket?: string;
+  cdnAccelerated: boolean;
+} {
+  const bucket = process.env.S3_BUCKET || process.env.CLOUDFLARE_R2_BUCKET;
+  const cdn = Boolean(process.env.CDN_URL || process.env.NEXT_PUBLIC_CDN_URL);
+
+  return {
+    provider: bucket ? "s3" : "local",
+    isCloudActive: Boolean(bucket),
+    bucket: bucket || undefined,
+    cdnAccelerated: cdn,
+  };
+}
 
 /**
  * Returns the active storage provider based on environment variables.

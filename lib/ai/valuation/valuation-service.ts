@@ -137,7 +137,7 @@ export async function findComparableProperties(
   // Query strictly APPROVED properties
   const candidates = await prisma.property.findMany({
     where: {
-      status: "APPROVED",
+      status: { in: ["APPROVED", "PUBLISHED"] },
       id: params.excludePropertyId ? { not: params.excludePropertyId } : undefined,
     },
     select: {
@@ -226,7 +226,7 @@ export async function estimatePropertyPrice(
       throw new Error(`Property not found with ID: ${input.propertyId}`);
     }
     // Only approved properties can be accessed by public estimation
-    if (prop.status !== "APPROVED") {
+    if (prop.status !== "APPROVED" && prop.status !== "PUBLISHED") {
       throw new Error(`Valuation unavailable: Property status is ${prop.status}`);
     }
 

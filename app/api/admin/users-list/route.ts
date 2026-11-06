@@ -36,14 +36,16 @@ export async function GET(request: NextRequest) {
 
     const pageParam = searchParams.get("page");
     const pageSizeParam = searchParams.get("pageSize");
-    const page = pageParam ? Math.max(1, parseInt(pageParam, 10)) : undefined;
+    const page = Math.max(1, parseInt(pageParam || "1", 10));
     const pageSize = pageSizeParam ? Math.min(100, Math.max(1, parseInt(pageSizeParam, 10))) : 25;
+    const skip = (page - 1) * pageSize;
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({
         where,
         orderBy: { createdAt: "desc" },
-        ...(page ? { take: pageSize, skip: (page - 1) * pageSize } : {}),
+        take: pageSize,
+        skip,
         select: {
           id: true,
           name: true,
@@ -67,7 +69,14 @@ export async function GET(request: NextRequest) {
       prisma.user.count({ where }),
     ]);
 
-    return NextResponse.json({ success: true, users, total, page: page || 1, pageSize });
+    return NextResponse.json({
+      success: true,
+      users,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    });
   } catch (error) {
     console.error("[GET /api/admin/users-list]", error);
     return NextResponse.json({ success: false, error: "Failed to load users." }, { status: 500 });

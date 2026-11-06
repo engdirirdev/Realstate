@@ -353,7 +353,38 @@ export function createErrorResponse(
 }
 
 /**
- * Resilient retry wrapper with exponential backoff for transient external failures.
+ * Determines if an error is considered transient and safely retryable.
+ */
+export function isRetryableError(error: unknown): boolean {
+  if (!error) return false;
+
+  // AppError status check (retry 5xx server errors and 429 rate limits, skip 4xx client errors)
+  if (error instanceof AppError) {
+    return error.status >= 500 || error.status === 429;
+  }
+
+  // Network or system error strings
+  const message = error instanceof Error ? error.message : String(error);
+  const retryablePatterns = [
+    /econnreset/i,
+    /etimedout/i,
+    /econnrefused/i,
+    /network\s*error/i,
+    /fetch\s*failed/i,
+    /socket\s*hang\s*up/i,
+    /rate\s*limit/i,
+    /timeout/i,
+    /503/i,
+    /502/i,
+    /504/i,
+    /P2024/i, // Prisma connection pool timeout
+  ];
+
+  return retryablePatterns.some((pattern) => pattern.test(message));
+}
+
+/**
+ * Resilient retry wrapper with exponential backoff and randomized jitter for transient failures.
  */
 export async function withRetry<T>(
   fn: () => Promise<T>,
@@ -361,12 +392,16 @@ export async function withRetry<T>(
     retries?: number;
     delayMs?: number;
     backoffFactor?: number;
+    jitter?: boolean;
+    shouldRetry?: (error: unknown) => boolean;
     onRetry?: (attempt: number, error: unknown) => void;
   } = {}
 ): Promise<T> {
   const retries = options.retries ?? 3;
   let delay = options.delayMs ?? 300;
   const factor = options.backoffFactor ?? 2;
+  const useJitter = options.jitter ?? true;
+  const shouldRetry = options.shouldRetry ?? isRetryableError;
 
   let lastError: unknown;
 
@@ -375,7 +410,7 @@ export async function withRetry<T>(
       return await fn();
     } catch (err) {
       lastError = err;
-      if (attempt === retries) break;
+      if (attempt === retries || !shouldRetry(err)) break;
 
       if (options.onRetry) {
         options.onRetry(attempt, err);
@@ -385,7 +420,11 @@ export async function withRetry<T>(
         });
       }
 
-      await new Promise((resolve) => setTimeout(resolve, delay));
+      const effectiveDelay = useJitter
+        ? delay + Math.random() * 0.25 * delay
+        : delay;
+
+      await new Promise((resolve) => setTimeout(resolve, effectiveDelay));
       delay *= factor;
     }
   }

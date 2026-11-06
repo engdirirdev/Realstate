@@ -168,45 +168,35 @@ export function createDataSplits(
     throw new Error(`Training split too small (${trainCount} items). Total items: ${n}`);
   }
 
-  // Group deterministically by property type to guarantee complete category coverage
-  const typeGroups: Record<string, RawPropertyRecord[]> = {};
-  for (const r of sorted) {
-    if (!typeGroups[r.type]) typeGroups[r.type] = [];
-    typeGroups[r.type].push(r);
-  }
-
   const train: RawPropertyRecord[] = [];
   const val: RawPropertyRecord[] = [];
   const test: RawPropertyRecord[] = [];
+  const seenCities = new Set<string>();
+  const seenTypes = new Set<string>();
+  const remaining: RawPropertyRecord[] = [];
 
-  // Guaranteed category coverage:
-  // For each type group, reserve representation in train before allocating to val/test
-  for (const [type, items] of Object.entries(typeGroups)) {
-    if (type === "HOUSE" || type === "APARTMENT" || type === "COMMERCIAL") {
-      // 4 items: 2 to train, 1 to val, 1 to test
-      train.push(items[0], items[1]);
-      val.push(items[2]);
-      test.push(items[3]);
-    } else if (type === "LAND") {
-      // 4 items: 3 to train, 0 to val, 1 to test
-      train.push(items[0], items[1], items[2]);
-      test.push(items[3]);
-    } else if (type === "OFFICE" || type === "VILLA") {
-      // 3 items: 2 to train, 0 to val, 1 to test
-      train.push(items[0], items[1]);
-      test.push(items[2]);
+  // Pass 1: Ensure complete coverage for every city and property type in train
+  for (const r of sorted) {
+    const c = r.city.toLowerCase();
+    const t = r.type;
+    if (!seenCities.has(c) || !seenTypes.has(t)) {
+      train.push(r);
+      seenCities.add(c);
+      seenTypes.add(t);
     } else {
-      // TOWNHOUSE, STUDIO: 3 items: all 3 to train
-      train.push(items[0], items[1], items[2]);
+      remaining.push(r);
     }
   }
 
-  // Adjust for arbitrary sizes if dataset size deviates from standard N=28
-  while (test.length < testCount && train.length > 8) {
-    test.push(train.pop()!);
-  }
-  while (val.length < valCount && train.length > 8) {
-    val.push(train.pop()!);
+  // Pass 2: Distribute remaining items to test and val to meet requested ratios
+  for (const r of remaining) {
+    if (test.length < testCount) {
+      test.push(r);
+    } else if (val.length < valCount) {
+      val.push(r);
+    } else {
+      train.push(r);
+    }
   }
 
   // DATA LEAKAGE ASSERTION:

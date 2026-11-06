@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState , memo } from "react";
 import {
   BarChart3,
   TrendingUp,
@@ -71,7 +71,7 @@ const TYPES = [
   "STUDIO",
 ];
 
-export default function DashboardPricePrediction({
+function DashboardPricePrediction({
   initialPredictions = [],
 }: {
   initialPredictions?: PastPrediction[];
@@ -401,7 +401,7 @@ export default function DashboardPricePrediction({
                       </div>
                     </td>
                     <td className="py-3 px-3 text-[#475569]">
-                      {p.bedrooms} Beds · {p.bathrooms} Baths · {p.area} m²
+                      {p.propertyType === "LAND" || p.bedrooms === 0 ? `Land Plot · ${p.area} m²` : `${p.bedrooms} Beds · ${p.bathrooms} Baths · ${p.area} m²`}
                     </td>
                     <td className="py-3 px-3 font-bold text-[#07111F]">
                       {formatPrice(p.predictedPrice)}
@@ -424,3 +424,5 @@ export default function DashboardPricePrediction({
     </div>
   );
 }
+
+export default memo(DashboardPricePrediction);

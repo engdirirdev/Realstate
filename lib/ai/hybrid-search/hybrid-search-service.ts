@@ -13,6 +13,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { Role } from "@prisma/client";
+import { getCityDbVariants, getDistrictAliases } from "../nlu/location-resolver";
 import { parseNaturalLanguageQuery } from "../nlu";
 import { NormalizedQueryUnderstanding, HardConstraints } from "../nlu/constraint-classifier";
 import { QueryIntent } from "../nlu/intent-classifier";
@@ -151,14 +152,24 @@ export async function executeHybridSearch(
   const structuredWhere: any = { ...baseWhere };
   const h = understanding.hardConstraints;
 
-  if (h.city) structuredWhere.city = { contains: h.city };
+  if (h.city) {
+    const cityVariants = getCityDbVariants(h.city);
+    if (cityVariants.length > 1) {
+      structuredWhere.city = { in: cityVariants };
+    } else if (cityVariants.length === 1) {
+      structuredWhere.city = cityVariants[0];
+    } else {
+      structuredWhere.city = { contains: h.city };
+    }
+  }
   if (h.district) {
-    structuredWhere.OR = [
-      { location: { contains: h.district } },
-      { address: { contains: h.district } },
-      { title: { contains: h.district } },
-      { description: { contains: h.district } },
-    ];
+    const districtTerms = getDistrictAliases(h.district);
+    structuredWhere.OR = districtTerms.flatMap((term) => [
+      { location: { contains: term } },
+      { address: { contains: term } },
+      { title: { contains: term } },
+      { description: { contains: term } },
+    ]);
   }
   if (h.propertyType) {
     if (h.propertyType === "HOUSE") {

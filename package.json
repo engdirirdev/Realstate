@@ -22,7 +22,14 @@
     "test:conversational-quality": "npx tsx tests/conversational-ai-quality-correction.mjs",
     "test:somali-nlu": "npx tsx tests/somali-nlu-location.mjs",
     "test:master-conversational": "npx tsx tests/master-conversational-ai.mjs",
-    "test": "node tests/phase1-verification.mjs && node tests/phase2a-semantic-search.mjs && node tests/phase2b-hybrid-search.mjs && npx tsx tests/phase2c-personalized-recommendations.mjs && npx tsx tests/phase3-valuation-ml.mjs && npx tsx tests/conversational-ai-memory.mjs && npx tsx tests/conversational-ai-quality-correction.mjs && npx tsx tests/somali-nlu-location.mjs && npx tsx tests/master-conversational-ai.mjs"
+    "test:caching": "npx tsx tests/caching-verification.mjs",
+    "test:error-handling": "npx tsx tests/error-handling-verification.mjs",
+    "test:production": "npx tsx tests/production-readiness-verification.mjs",
+    "test:seo": "npx tsx tests/seo-verification.mjs",
+    "test:scalability": "npx tsx tests/scalability-verification.mjs",
+    "test:ux": "npx tsx tests/ux-review-verification.mjs",
+    "test": "node tests/phase1-verification.mjs && node tests/phase2a-semantic-search.mjs && node tests/phase2b-hybrid-search.mjs && npx tsx tests/phase2c-personalized-recommendations.mjs && npx tsx tests/phase3-valuation-ml.mjs && npx tsx tests/conversational-ai-memory.mjs && npx tsx tests/conversational-ai-quality-correction.mjs && npx tsx tests/somali-nlu-location.mjs && npx tsx tests/master-conversational-ai.mjs && npx tsx tests/caching-verification.mjs && npx tsx tests/error-handling-verification.mjs && npx tsx tests/production-readiness-verification.mjs && npx tsx tests/seo-verification.mjs && npx tsx tests/scalability-verification.mjs && npx tsx tests/ux-review-verification.mjs",
+    "postinstall": "node scripts/patch-next-overlay.js"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.2",

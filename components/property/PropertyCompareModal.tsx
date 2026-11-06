@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback , memo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -50,7 +50,7 @@ function getAmenitiesList(p: ComparableItem): string[] {
   }
 }
 
-export default function PropertyCompareModal({
+function PropertyCompareModal({
   currentProperty,
   availableComps = [],
 }: PropertyCompareModalProps) {
@@ -99,7 +99,7 @@ export default function PropertyCompareModal({
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-5xl bg-[#FCFBF7] rounded-3xl p-6 sm:p-8 border border-[#E8E1D4] shadow-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl bg-[#FCFBF7] rounded-3xl p-6 sm:p-8 border border-[#E8E1D4] shadow-2xl max-h-[90vh] overflow-y-auto momentum-scroll">
           <DialogHeader className="border-b border-[#E8E1D4] pb-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
@@ -149,7 +149,7 @@ export default function PropertyCompareModal({
           )}
 
           {/* Comparison Table */}
-          <div className="mt-4 overflow-x-auto rounded-2xl border border-[#E8E1D4] bg-white shadow-xs">
+          <div className="mt-4 overflow-x-auto momentum-scroll rounded-2xl border border-[#E8E1D4] bg-white shadow-xs">
             <table className="w-full text-xs">
               <thead className="bg-[#07111F] text-white">
                 <tr>
@@ -216,7 +216,7 @@ export default function PropertyCompareModal({
                   </td>
                   {comparedProperties.map((p) => (
                     <td key={p.id} className="p-3 font-semibold">
-                      {p.bedrooms} Beds
+                      {p.type === "LAND" || p.bedrooms === 0 ? "N/A (Land Plot)" : `${p.bedrooms} Beds`}
                     </td>
                   ))}
                 </tr>
@@ -228,7 +228,7 @@ export default function PropertyCompareModal({
                   </td>
                   {comparedProperties.map((p) => (
                     <td key={p.id} className="p-3 font-semibold">
-                      {p.bathrooms} Baths
+                      {p.type === "LAND" ? "N/A (Land)" : p.bathrooms > 0 ? `${p.bathrooms} Baths` : "0 Baths"}
                     </td>
                   ))}
                 </tr>
@@ -315,3 +315,5 @@ export default function PropertyCompareModal({
     </>
   );
 }
+
+export default memo(PropertyCompareModal);

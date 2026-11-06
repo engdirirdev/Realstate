@@ -24,6 +24,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Compare Properties – Customer Portal | Kiro-Maal Real Estate",
+  robots: { index: false, follow: false },
 };
 
 export default async function CustomerComparePage({
@@ -174,7 +175,7 @@ export default async function CustomerComparePage({
                   </td>
                   {properties.map((p) => (
                     <td key={p.id} className="p-4 font-semibold text-[#07111F]">
-                      {p.bedrooms || 1} Beds · {p.bathrooms || 1} Baths
+                      {p.type === "LAND" || p.bedrooms === 0 ? "N/A (Land Plot)" : `${p.bedrooms || 1} Beds · ${p.bathrooms || 1} Baths`}
                     </td>
                   ))}
                 </tr>

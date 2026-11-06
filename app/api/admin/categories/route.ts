@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { invalidateCategoryCache } from "@/lib/cache";
 
 export async function GET() {
   try {
     const categories = await prisma.category.findMany({ orderBy: { name: "asc" } });
     return NextResponse.json({ success: true, categories });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to fetch categories" }, { status: 500 });
+    console.error("[GET /api/admin/categories]", error);
+    return NextResponse.json({ success: false, error: "Failed to fetch categories" }, { status: 500 });
   }
 }
 
@@ -15,11 +17,13 @@ export async function POST(request: NextRequest) {
   try {
     const session = await auth();
     if (!session || (session.user as any)?.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
     const { name, description } = await request.json();
-    if (!name) return NextResponse.json({ error: "Category name required" }, { status: 400 });
+    if (!name?.trim()) {
+      return NextResponse.json({ success: false, error: "Category name required" }, { status: 400 });
+    }
 
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "");
 
@@ -27,9 +31,12 @@ export async function POST(request: NextRequest) {
       data: { name: String(name).trim(), slug, description: description ? String(description).trim() : null },
     });
 
+    await invalidateCategoryCache();
+
     return NextResponse.json({ success: true, category });
   } catch (error) {
-    return NextResponse.json({ error: "Category already exists or invalid" }, { status: 400 });
+    console.error("[POST /api/admin/categories]", error);
+    return NextResponse.json({ success: false, error: "Category already exists or invalid" }, { status: 400 });
   }
 }
 
@@ -37,12 +44,12 @@ export async function PATCH(request: NextRequest) {
   try {
     const session = await auth();
     if (!session || (session.user as any)?.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
     const { id, name, description } = await request.json();
-    if (!id || !name) {
-      return NextResponse.json({ error: "Category ID and name are required" }, { status: 400 });
+    if (!id || !name?.trim()) {
+      return NextResponse.json({ success: false, error: "Category ID and name are required" }, { status: 400 });
     }
 
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "");
@@ -56,9 +63,12 @@ export async function PATCH(request: NextRequest) {
       },
     });
 
+    await invalidateCategoryCache();
+
     return NextResponse.json({ success: true, category });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to update category" }, { status: 500 });
+    console.error("[PATCH /api/admin/categories]", error);
+    return NextResponse.json({ success: false, error: "Failed to update category" }, { status: 500 });
   }
 }
 
@@ -66,17 +76,20 @@ export async function DELETE(request: NextRequest) {
   try {
     const session = await auth();
     if (!session || (session.user as any)?.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
-    if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
+    if (!id) return NextResponse.json({ success: false, error: "ID required" }, { status: 400 });
 
     await prisma.category.delete({ where: { id } });
+
+    await invalidateCategoryCache();
+
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to delete category" }, { status: 500 });
+    console.error("[DELETE /api/admin/categories]", error);
+    return NextResponse.json({ success: false, error: "Failed to delete category" }, { status: 500 });
   }
 }
-

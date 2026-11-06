@@ -194,6 +194,7 @@ export default function AIChatbot() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [conversationState, setConversationState] = useState<any>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Listen for global open event
@@ -272,7 +273,7 @@ export default function AIChatbot() {
       const res = await fetch("/api/ai-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: query, sessionId, history: chatHistory }),
+        body: JSON.stringify({ message: query, sessionId, history: chatHistory, conversationState }),
       });
 
       const data = await res.json();
@@ -286,6 +287,9 @@ export default function AIChatbot() {
 
       if (data.sessionId && !sessionId) {
         setSessionId(data.sessionId);
+      }
+      if (data.conversationState) {
+        setConversationState(data.conversationState);
       }
 
       const botMsg: Message = {

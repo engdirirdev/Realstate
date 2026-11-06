@@ -1571,12 +1571,24 @@ export function evaluateSearchReadiness(
     };
   }
 
+  // 5e. Coverage / Company Informational Questions (e.g. "which locations do you have to work in", "list your locations", "where do you operate", "meelahee ka shaqeysaan")
+  if (
+    lower.match(/\b(which locations|list (your|you) locations|what locations|where do you (work|operate|cover)|locations do you|meelahee ka shaqeysaan|magaalooyinkee ka shaqeysaan|goobaha aad ka shaqeysaan|cities do you cover|where are your offices|what services)\b/i)
+  ) {
+    return {
+      isReady: false,
+      responseType: "GENERAL_CONVERSATION",
+      reason: "User asking about platform location coverage or informational questions",
+    };
+  }
+
   // 6. Property Search Readiness Check
   const slots = state.slots;
 
   // Check whether the user is explicitly executing an active search query
   const hasExplicitSearchCommand =
-    /\b(find|search|show me|list|give me|browse|raadi|i tus|ii raadi|keen|wax walba|wax walba ii raadi|dhammaan|all|doonayaa|أبحث|ابحث|أريد أن أرى|اعرض|ugu fiican|kan ugu fiican|midka ugu fiican)\b/i.test(lower) ||
+    /\b(find|search|show me|browse|raadi|i tus|ii raadi|keen|wax walba|wax walba ii raadi|dhammaan|all|doonayaa|أبحث|ابحث|أريد أن أرى|اعرض|ugu fiican|kan ugu fiican|midka ugu fiican)\b/i.test(lower) ||
+    (/\blist\b/i.test(lower) && !lower.match(/\b(list (your|you) locations|list cities|list areas)\b/i)) ||
     lower.includes("ku yaal") ||
     (Boolean(slots.city) && Boolean(slots.district) && Boolean(slots.propertyType) && typeof slots.bedrooms === "number" && typeof slots.maxPrice === "number" && !lower.includes("khasab") && !lower.includes("haddii") && !lower.includes("ma rabo"));
 

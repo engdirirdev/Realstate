@@ -116,6 +116,28 @@ export function restoreConversationState(
         }
         fallbackState.turnCount += 1;
         fallbackState.lastUserRequest = msg.content;
+
+        // Carry over extracted location and entities from prior user turns
+        const loc = resolveLocation(msg.content);
+        if (loc?.canonicalCity) {
+          fallbackState.slots.city = loc.canonicalCity;
+          if (loc.district) fallbackState.slots.district = loc.district;
+        }
+        const entities = extractEntities(msg.content);
+        if (entities.purpose && !fallbackState.slots.purpose) fallbackState.slots.purpose = entities.purpose;
+        if (entities.propertyType && !fallbackState.slots.propertyType) fallbackState.slots.propertyType = entities.propertyType;
+        if (typeof entities.bedrooms === "number") fallbackState.slots.bedrooms = entities.bedrooms;
+        if (entities.price) {
+          if (typeof entities.price === "number") fallbackState.slots.maxPrice = entities.price;
+          else if (typeof (entities.price as any).maxPrice === "number") fallbackState.slots.maxPrice = (entities.price as any).maxPrice;
+        }
+      } else if (msg.role === "assistant" && msg.content) {
+        // Also carry over confirmed city mentions from previous assistant replies (e.g. "Waayahay, Mogadishu")
+        const asstLoc = resolveLocation(msg.content);
+        if (asstLoc?.canonicalCity && !fallbackState.slots.city) {
+          fallbackState.slots.city = asstLoc.canonicalCity;
+          if (asstLoc.district) fallbackState.slots.district = asstLoc.district;
+        }
       }
     }
   }
@@ -708,7 +730,8 @@ export async function processConversationalTurn(
     const readiness = evaluateSearchReadiness(state, message, extractEntities(message), activeLanguage);
     if (readiness && readiness.responseType && readiness.responseType !== "PROPERTY_RESULTS") {
       responseType = readiness.responseType;
-      if (readiness.clarificationQuestion) {
+      // Preserve Gemini's direct, intelligent answer if provided; only fall back to clarification question if empty
+      if (!reply && readiness.clarificationQuestion) {
         reply = readiness.clarificationQuestion;
       }
     } else if (conversationalDecision.contextUpdates?.responseType) {

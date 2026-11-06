@@ -94,6 +94,7 @@ export async function POST(request: NextRequest) {
       message,
       history = [],
       sessionId: requestedSessionId,
+      conversationState,
     } = body || {};
 
     if (!message || typeof message !== "string" || message.trim().length === 0) {
@@ -205,6 +206,7 @@ export async function POST(request: NextRequest) {
       userName,
       userRole,
       userId,
+      initialState: conversationState || undefined,
     });
 
     const finalReply = turnResult.reply;

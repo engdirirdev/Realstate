@@ -249,6 +249,26 @@ async function executePropertySearchTool(
     searchFilter.price = { ...(searchFilter.price || {}), gte: minBudget };
   }
 
+  // Keyword / Title Matching support (e.g. "Contemporary Luxury Villa")
+  const rawQ = (toolArgs as any).query || (toolArgs as any).title;
+  if (rawQ && typeof rawQ === "string" && rawQ.trim().length > 0) {
+    const cleanQ = rawQ.replace(/\b(hargiesa|hargeisa|muqdisho|mogadishu|villa|house|apartment|guri|dabaq|do you have|any)\b/gi, "").trim();
+    const words = cleanQ.split(/\s+/).filter((w: string) => w.length > 2);
+    if (words.length > 0) {
+      const qClause = {
+        OR: words.flatMap((w: string) => [
+          { title: { contains: w } },
+          { description: { contains: w } },
+        ]),
+      };
+      if (searchFilter.AND) {
+        (searchFilter.AND as any[]).push(qClause);
+      } else {
+        searchFilter.AND = [qClause];
+      }
+    }
+  }
+
   // Execute database search with hard constraint filters
   let matchedProps: any[] = [];
   try {
@@ -612,6 +632,30 @@ export async function processConversationalTurn(
     }
   }
 
+  // 4b. Automatic Search Upgrade for Property Inquiries:
+  // If the user asked whether a property or type of property exists ("do you have...", "is there...", "ma haysaan...")
+  // and the AI returned text rather than a tool call, ensure search_properties is executed!
+  const isAvailabilityInquiry =
+    /\b(do you have|is there|are there|any|ma haysaan|ma jiraa|ma leedihiin|haysaa|ma heshaa)\b/i.test(message) ||
+    Boolean((state.slots.city || conversationalDecision.contextUpdates?.city) && (state.slots.propertyType || conversationalDecision.contextUpdates?.propertyType) && !message.match(/\b(locations|cities|where do you work|offices)\b/i));
+
+  if (
+    conversationalDecision.type !== "TOOL_CALL" &&
+    isAvailabilityInquiry &&
+    (conversationalDecision.contextUpdates?.propertyType || conversationalDecision.contextUpdates?.city || state.slots.city || state.slots.propertyType)
+  ) {
+    conversationalDecision.type = "TOOL_CALL";
+    conversationalDecision.toolCall = {
+      name: "search_properties",
+      args: {
+        city: conversationalDecision.contextUpdates?.city || state.slots.city,
+        district: conversationalDecision.contextUpdates?.district || state.slots.district,
+        propertyType: (conversationalDecision.contextUpdates?.propertyType || state.slots.propertyType) as any,
+        query: message,
+      },
+    };
+  }
+
   // 5. Handle AI Decision: Tool Call vs. Text Response
   if (conversationalDecision.type === "TOOL_CALL" && conversationalDecision.toolCall && conversationalDecision.toolCall.name === "search_properties") {
     // -------------------------------------------------------------------------
@@ -640,10 +684,16 @@ export async function processConversationalTurn(
       state.slots.proximity = toolArgs.proximity;
     }
 
-    // 5a. Search Readiness Guard: Ensure interview criteria are complete before running database retrieval
+    // 5a. Search Readiness Guard: Only clarify if the user's inquiry is totally generic (e.g. no city, type, or title)
     const extracted = extractEntities(message);
     const readiness = evaluateSearchReadiness(state, message, extracted, activeLanguage);
-    if (!readiness.isReady && readiness.clarificationQuestion) {
+    const hasSpecificInquiry = Boolean(
+      (toolArgs as any).query ||
+      toolArgs.city ||
+      toolArgs.propertyType ||
+      message.match(/\b(contemporary|luxury|villa|apartment|townhouse|penthouse|compound|hargeisa|hargiesa|mogadishu|muqdisho|do you have|ma haysaan)\b/i)
+    );
+    if (!readiness.isReady && readiness.clarificationQuestion && !hasSpecificInquiry) {
       return {
         reply: readiness.clarificationQuestion,
         properties: [],

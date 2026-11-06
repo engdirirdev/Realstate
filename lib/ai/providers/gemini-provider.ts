@@ -41,6 +41,10 @@ export const PROPERTY_SEARCH_FUNCTION_DECLARATION: FunctionDeclaration = {
   parameters: {
     type: SchemaType.OBJECT,
     properties: {
+      query: {
+        type: SchemaType.STRING,
+        description: "Keywords, listing title, or specific property name (e.g. 'Contemporary Luxury Villa', 'Diplomatic Compound', 'Penthouse').",
+      },
       city: {
         type: SchemaType.STRING,
         description: "City to search in, e.g. Mogadishu, Hargeisa, Kismayo.",
@@ -96,6 +100,7 @@ export const GEMINI_PROPERTY_SEARCH_TOOL: Tool = {
 };
 
 export interface GeminiPropertySearchArgs {
+  query?: string;
   city?: string;
   district?: string;
   purpose?: "RENT" | "SALE";
@@ -512,10 +517,11 @@ CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
    - Workplace proximity: "KM4 ayaan ka shaqeeyaa" is proximity context.
    - Short answers: "$400", "5000", "3 qol", "Hodan", "xamar".
    - Questions about previously returned properties (e.g. "Kan labaad ma furnished baa?", "Parking ma leeyahay?").
-6. TOOLS & SEARCH INQUIRIES:
+6. TOOLS & PROPERTY INQUIRIES:
    - You have the tool: 'search_properties'.
-   - CALL 'search_properties' when the user wants to search, browse, find, or check availability of properties (e.g. "find properties in Mogadishu", "ii raadi guri", "Do you have any 3-bedroom houses for rent in Mogadishu?", "Ma haysaan guri...").
-   - DO NOT call any tool for greetings, general inquiries, questions about company locations or services, advice questions, expressing preferences, budget statements, or questions about already displayed properties. Answer those directly with clear, natural conversational text!
+   - CALL 'search_properties' WHENEVER the user asks if a property, home, villa, apartment, or listing exists, or asks about a specific property title/name (e.g. "do you have Contemporary Luxury Villa hargiesa", "do you have any 3-bedroom houses", "are there villas in Hargeisa", "find me...", "Ma haysaan guri..."). Pass all available parameters including query (the title/keywords like "Contemporary Luxury Villa"), city (e.g. "Hargeisa"), and propertyType (e.g. "VILLA")!
+   - NEVER respond with generic acknowledgments like "Waa hagaag, shuruudahaaga waan diiwaangeliyay" or "I recorded your requirements" when the user is asking whether a property exists. You MUST call 'search_properties' to check the database inventory!
+   - DO NOT call any tool for greetings, company location or service questions, advice questions, or payment questions. Answer those directly with clear, natural conversational text in the user's language!
 7. When responding with text, if the user mentioned new criteria, preferences, or constraints during this turn, or if answering an inquiry about a property, append a JSON block at the very end:
 \`\`\`context
 {"city":"...","district":"...","maxPrice":...,"minPrice":...,"bedrooms":...,"propertyType":"...","purpose":"...","excludedLocations":[...],"softPreferences":[...],"responseType":"GREETING|ADVICE|CLARIFICATION|PROPERTY_DETAIL|GENERAL_CONVERSATION"}

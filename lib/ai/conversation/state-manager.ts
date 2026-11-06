@@ -1587,7 +1587,7 @@ export function evaluateSearchReadiness(
 
   // Check whether the user is explicitly executing an active search query
   const hasExplicitSearchCommand =
-    /\b(find|search|show me|browse|raadi|i tus|ii raadi|keen|wax walba|wax walba ii raadi|dhammaan|all|doonayaa|أبحث|ابحث|أريد أن أرى|اعرض|ugu fiican|kan ugu fiican|midka ugu fiican)\b/i.test(lower) ||
+    /\b(find|search|show me|browse|raadi|i tus|ii raadi|keen|wax walba|wax walba ii raadi|dhammaan|all|doonayaa|أبحث|ابحث|أريد أن أرى|اعرض|ugu fiican|kan ugu fiican|midka ugu fiican|do you have|is there|are there|any|ma haysaan|ma jiraa|ma leedihiin|haysaa)\b/i.test(lower) ||
     (/\blist\b/i.test(lower) && !lower.match(/\b(list (your|you) locations|list cities|list areas)\b/i)) ||
     lower.includes("ku yaal") ||
     (Boolean(slots.city) && Boolean(slots.district) && Boolean(slots.propertyType) && typeof slots.bedrooms === "number" && typeof slots.maxPrice === "number" && !lower.includes("khasab") && !lower.includes("haddii") && !lower.includes("ma rabo"));
@@ -1662,7 +1662,7 @@ export function evaluateSearchReadiness(
   // C. City is known: Check whether enough parameters exist or if an interview step is needed.
   const hasDetailedSearchCommand =
     hasExplicitSearchCommand ||
-    /\b(find|search|show me|list|give me|browse|raadi|i tus|ii raadi|keen|wax walba|wax walba ii raadi|dhammaan|all|doonayaa|أبحث|ابحث|أريد أن أرى|اعرض)\b/i.test(lower) ||
+    /\b(find|search|show me|list|give me|browse|raadi|i tus|ii raadi|keen|wax walba|wax walba ii raadi|dhammaan|all|doonayaa|أبحث|ابحث|أريد أن أرى|اعرض|do you have|is there|are there|any|ma haysaan|ma jiraa|ma leedihiin|haysaa)\b/i.test(lower) ||
     lower.includes("under") || lower.includes("budget") || lower.includes("below") || lower.includes("ka yar") || lower.includes("miisaaniyad") || lower.includes("ii raadi") || lower.includes("ugu fiican");
 
   const hasSpecificType = slots.propertyType && slots.propertyType !== "HOUSE"; // Villa, Apartment, Office, etc.

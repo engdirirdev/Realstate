@@ -39,7 +39,7 @@ export const SOMALI_CITY_DIRECTORY: CityDefinition[] = [
     dbCityName: "Hargeisa",
     hasApprovedInventory: true,
     aliases: [
-      "hargeisa", "hargeysa", "hargaysa", "magaalada hargeysa", "magaalada hargeisa",
+      "hargeisa", "hargeysa", "hargaysa", "hargiesa", "hargesa", "hargisa", "magaalada hargeysa", "magaalada hargeisa",
       "hergeisa", "hargeisa city", "hargeysa city", "هرجيسا", "مدينة هرجيسا"
     ],
   },
@@ -494,6 +494,7 @@ export function getCityDbVariants(cityInput: string): string[] {
     xamar: ["Mogadishu", "Muqdisho", "Xamar", "Banaadir"],
     hargeisa: ["Hargeisa", "Hargeysa", "Hargaysa"],
     hargeysa: ["Hargeisa", "Hargeysa", "Hargaysa"],
+    hargiesa: ["Hargeisa", "Hargeysa", "Hargaysa"],
     bosaso: ["Bosaso", "Boosaaso", "Bosaaso"],
     boosaaso: ["Bosaso", "Boosaaso", "Bosaaso"],
     kismayo: ["Kismayo", "Kismaayo"],

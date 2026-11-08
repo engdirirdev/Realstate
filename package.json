@@ -3,9 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/prepare-dev.js && next dev --turbopack",
+    "dev:webpack": "node scripts/prepare-dev.js && next dev",
     "build": "next build",
     "start": "next start",
+    "prod": "next build && next start",
     "lint": "next lint",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",

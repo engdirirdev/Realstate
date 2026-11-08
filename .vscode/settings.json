@@ -1,0 +1,21 @@
+{
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/**": true,
+    "**/.next/**": true,
+    "**/out/**": true,
+    "**/dist/**": true,
+    "**/thesis/**": true,
+    "**/public/uploads/**": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.next": true,
+    "**/out": true,
+    "**/dist": true,
+    "**/thesis": true,
+    "**/*.tsbuildinfo": true
+  },
+  "typescript.tsserver.maxTsServerMemory": 4096
+}

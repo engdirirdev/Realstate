@@ -13,8 +13,8 @@ const nextConfig = {
   output: process.env.STANDALONE === "true" ? "standalone" : undefined,
 
   onDemandEntries: {
-    maxInactiveAge: 15 * 60 * 1000,
-    pagesBufferLength: 10,
+    maxInactiveAge: 60 * 60 * 1000,
+    pagesBufferLength: 100,
   },
 
   images: {
@@ -70,10 +70,15 @@ const nextConfig = {
       "recharts",
       "@radix-ui/react-dialog",
       "@radix-ui/react-dropdown-menu",
+      "@radix-ui/react-label",
       "@radix-ui/react-select",
+      "@radix-ui/react-slot",
       "@radix-ui/react-switch",
       "@radix-ui/react-tabs",
       "@radix-ui/react-toast",
+      "clsx",
+      "tailwind-merge",
+      "class-variance-authority",
     ],
   },
 

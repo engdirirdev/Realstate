@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Building2,
@@ -77,6 +78,29 @@ const navGroups: NavGroup[] = [
 
 export default function AdminSidebarNav() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [optimisticPath, setOptimisticPath] = useState<string | null>(null);
+
+  useEffect(() => {
+    setOptimisticPath(null);
+  }, [pathname]);
+
+  // Staggered background prefetching so routes compile one-by-one without a 14-request startup storm
+  useEffect(() => {
+    const allHrefs = navGroups.flatMap((g) => g.items.map((i) => i.href));
+    const timers: NodeJS.Timeout[] = [];
+    allHrefs.forEach((href, idx) => {
+      if (href !== pathname) {
+        const t = setTimeout(() => {
+          router.prefetch(href);
+        }, 800 + idx * 220);
+        timers.push(t);
+      }
+    });
+    return () => timers.forEach(clearTimeout);
+  }, [router, pathname]);
+
+  const currentPath = optimisticPath || pathname;
 
   return (
     <nav suppressHydrationWarning className="flex-1 px-3.5 py-2 space-y-4 overflow-y-auto scrollbar-hide">
@@ -89,18 +113,21 @@ export default function AdminSidebarNav() {
           )}
           {group.items.map(({ href, label, icon: Icon }) => {
             const isActive =
-              pathname === href ||
-              (label === "Dashboard" && pathname === "/admin") ||
-              (href === "/admin/sales" && (pathname === "/admin/sales" || pathname === "/admin/requests")) ||
-              (href === "/admin/transactions" && (pathname === "/admin/transactions" || pathname === "/admin/payments")) ||
-              (href === "/admin/bookings" && (pathname === "/admin/bookings" || pathname === "/admin/rentals"));
+              currentPath === href ||
+              (label === "Dashboard" && currentPath === "/admin") ||
+              (href === "/admin/sales" && (currentPath === "/admin/sales" || currentPath === "/admin/requests")) ||
+              (href === "/admin/transactions" && (currentPath === "/admin/transactions" || currentPath === "/admin/payments")) ||
+              (href === "/admin/bookings" && (currentPath === "/admin/bookings" || currentPath === "/admin/rentals"));
             return (
               <Link
                 key={href + label}
                 href={href}
-                prefetch={true}
+                prefetch={false}
+                onMouseEnter={() => router.prefetch(href)}
+                onFocus={() => router.prefetch(href)}
+                onClick={() => setOptimisticPath(href)}
                 className={cn(
-                  "group flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200",
+                  "group flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150",
                   isActive
                     ? "bg-gradient-to-r from-[#D9A336] via-[#E8B849] to-[#C99126] text-[#0B1523] font-bold shadow-md shadow-[#C99126]/20"
                     : "text-slate-300 hover:text-white hover:bg-white/5 active:bg-white/10"

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import NextAuth, { CredentialsSignin } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
@@ -27,7 +28,7 @@ const DUMMY_BCRYPT_HASH = "$2a$10$abcdefghijklmnopqrstuvwxyz1234567890abcdefghij
 const sessionValidationCache = new Map<string, { role: string; isActive: boolean; validatedAt: number }>();
 const VALIDATION_CACHE_TTL = 60 * 1000;
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+const { handlers, auth: baseAuth, signIn, signOut } = NextAuth({
   ...authConfig,
   trustHost: true,
   providers: [
@@ -179,3 +180,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
 });
+
+const cachedAuth = typeof cache === "function" ? cache(() => baseAuth()) : () => baseAuth();
+
+export const auth: typeof baseAuth = ((...args: any[]) => {
+  if (args.length === 0) {
+    return cachedAuth();
+  }
+  return (baseAuth as any)(...args);
+}) as any;
+
+export { handlers, signIn, signOut };

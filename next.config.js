@@ -65,6 +65,10 @@ const nextConfig = {
   serverExternalPackages: ["@prisma/client", "prisma", "bcryptjs", "sharp"],
 
   experimental: {
+    staleTimes: {
+      dynamic: 60,
+      static: 300,
+    },
     optimizePackageImports: [
       "lucide-react",
       "recharts",

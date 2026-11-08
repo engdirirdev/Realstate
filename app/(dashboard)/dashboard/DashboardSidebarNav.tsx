@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Building2,
@@ -75,6 +76,28 @@ const managerNavGroups: NavGroup[] = [
 
 export default function DashboardSidebarNav() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [optimisticPath, setOptimisticPath] = useState<string | null>(null);
+
+  useEffect(() => {
+    setOptimisticPath(null);
+  }, [pathname]);
+
+  useEffect(() => {
+    const allHrefs = managerNavGroups.flatMap((g) => g.items.map((i) => i.href));
+    const timers: NodeJS.Timeout[] = [];
+    allHrefs.forEach((href, idx) => {
+      if (href !== pathname) {
+        const t = setTimeout(() => {
+          router.prefetch(href);
+        }, 800 + idx * 220);
+        timers.push(t);
+      }
+    });
+    return () => timers.forEach(clearTimeout);
+  }, [router, pathname]);
+
+  const currentPath = optimisticPath || pathname;
 
   return (
     <nav className="flex-1 px-3 py-2 space-y-4 overflow-y-auto scrollbar-hide">
@@ -87,18 +110,21 @@ export default function DashboardSidebarNav() {
           )}
           {group.items.map(({ href, label, icon: Icon }) => {
             const isActive =
-              pathname === href ||
-              (label === "Dashboard" && pathname === "/dashboard") ||
-              (href === "/dashboard/customers" && pathname?.startsWith("/dashboard/customers")) ||
-              (href === "/dashboard/bookings" && (pathname === "/dashboard/bookings" || pathname === "/dashboard/rentals")) ||
-              (href === "/dashboard/transactions" && (pathname === "/dashboard/transactions" || pathname === "/dashboard/payments"));
+              currentPath === href ||
+              (label === "Dashboard" && currentPath === "/dashboard") ||
+              (href === "/dashboard/customers" && currentPath?.startsWith("/dashboard/customers")) ||
+              (href === "/dashboard/bookings" && (currentPath === "/dashboard/bookings" || currentPath === "/dashboard/rentals")) ||
+              (href === "/dashboard/transactions" && (currentPath === "/dashboard/transactions" || currentPath === "/dashboard/payments"));
             return (
               <Link
                 key={label + href}
                 href={href}
-                prefetch={true}
+                prefetch={false}
+                onMouseEnter={() => router.prefetch(href)}
+                onFocus={() => router.prefetch(href)}
+                onClick={() => setOptimisticPath(href)}
                 className={cn(
-                  "group flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200",
+                  "group flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150",
                   isActive
                     ? "bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] font-extrabold shadow-lg shadow-[#C89B3C]/25"
                     : "text-white/80 hover:text-white hover:bg-white/5 active:bg-white/10"

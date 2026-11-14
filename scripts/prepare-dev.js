@@ -34,3 +34,4 @@ if (fs.existsSync(nextDir)) {
     safeRemove(nextDir);
   }
 }
+

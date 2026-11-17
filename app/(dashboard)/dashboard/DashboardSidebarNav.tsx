@@ -119,7 +119,7 @@ export default function DashboardSidebarNav() {
               <Link
                 key={label + href}
                 href={href}
-                prefetch={false}
+                prefetch={true}
                 onMouseEnter={() => router.prefetch(href)}
                 onFocus={() => router.prefetch(href)}
                 onClick={() => setOptimisticPath(href)}

@@ -225,14 +225,22 @@ function UsersDirectoryContent({ initialUsers = [] }: { initialUsers?: UserItem[
   }, [searchQuery, activeTab, statusFilter]);
 
   useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      if (initialUsers && initialUsers.length > 0 && !searchQuery && activeTab === "ALL" && statusFilter === "ALL") {
-        return;
-      }
+    if (initialUsers && initialUsers.length > 0 && !searchQuery.trim()) {
+      const filtered = initialUsers.filter((u) => {
+        if (activeTab === "CUSTOMER" && u.role !== "CUSTOMER") return false;
+        if (activeTab === "USER" && u.role !== "USER") return false;
+        if (activeTab === "ADMIN" && u.role !== "ADMIN") return false;
+        if (activeTab === "ALL" && u.role === "CUSTOMER") return false;
+        if (statusFilter === "ACTIVE" && !u.isActive) return false;
+        if (statusFilter === "INACTIVE" && u.isActive) return false;
+        return true;
+      });
+      setUsers(filtered);
+      setLoading(false);
+      return;
     }
     const controller = new AbortController();
-    const timer = setTimeout(() => fetchUsers(controller.signal), 250);
+    const timer = setTimeout(() => fetchUsers(controller.signal), 200);
     return () => {
       clearTimeout(timer);
       controller.abort();

@@ -169,27 +169,27 @@ function CentralTransactionsView({
     }
   }, [ledgerType, ledgerStatus, ledgerPage, debouncedLedgerQ]);
 
-  const isInitialPaymentsMount = useRef(true);
-  const isInitialLedgerMount = useRef(true);
+  const lastPaymentsKey = useRef("ALL|");
+  const lastLedgerKey = useRef(`${isAdmin ? "ALL" : "RENTAL"}|ALL|1|`);
 
   useEffect(() => {
-    if (isInitialPaymentsMount.current) {
-      isInitialPaymentsMount.current = false;
-      if (initialPaymentsData) return;
+    const currentKey = `${paymentsStatus}|${debouncedPaymentsQ.trim()}`;
+    if (initialPaymentsData && currentKey === lastPaymentsKey.current) {
+      return;
     }
-    const t = setTimeout(loadPayments, paymentsQ ? 300 : 0);
-    return () => clearTimeout(t);
-  }, [loadPayments, paymentsQ, initialPaymentsData]);
+    lastPaymentsKey.current = currentKey;
+    loadPayments();
+  }, [loadPayments, paymentsStatus, debouncedPaymentsQ, initialPaymentsData]);
 
   useEffect(() => {
     if (!isAdmin) return;
-    if (isInitialLedgerMount.current) {
-      isInitialLedgerMount.current = false;
-      if (initialLedgerData) return;
+    const currentKey = `${ledgerType}|${ledgerStatus}|${ledgerPage}|${debouncedLedgerQ.trim()}`;
+    if (initialLedgerData && currentKey === lastLedgerKey.current) {
+      return;
     }
-    const t = setTimeout(loadLedger, ledgerQ ? 300 : 0);
-    return () => clearTimeout(t);
-  }, [loadLedger, ledgerQ, isAdmin, initialLedgerData]);
+    lastLedgerKey.current = currentKey;
+    loadLedger();
+  }, [loadLedger, ledgerType, ledgerStatus, ledgerPage, debouncedLedgerQ, isAdmin, initialLedgerData]);
 
   // Unified metrics (Memoized)
   const totalSettlement = useMemo(() => paymentsData.totalRevenue || ledgerData.revenue || 0, [paymentsData.totalRevenue, ledgerData.revenue]);

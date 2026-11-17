@@ -122,7 +122,7 @@ export default function AdminSidebarNav() {
               <Link
                 key={href + label}
                 href={href}
-                prefetch={false}
+                prefetch={true}
                 onMouseEnter={() => router.prefetch(href)}
                 onFocus={() => router.prefetch(href)}
                 onClick={() => setOptimisticPath(href)}

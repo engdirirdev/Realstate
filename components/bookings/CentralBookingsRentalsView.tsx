@@ -214,8 +214,8 @@ function CentralBookingsRentalsView({
     }
   }, [rentalPage, rentalStatusFilter, debouncedRentalSearch]);
 
-  const isInitialBookingsMount = useRef(true);
-  const isInitialRentalsMount = useRef(true);
+  const lastBookingsKey = useRef("1|ALL|");
+  const lastRentalsKey = useRef("1|ALL|");
 
   useEffect(() => {
     if (!initialMetrics) {
@@ -225,19 +225,21 @@ function CentralBookingsRentalsView({
 
   useEffect(() => {
     if (activeTab === "bookings") {
-      if (isInitialBookingsMount.current) {
-        isInitialBookingsMount.current = false;
-        if (initialBookings) return;
+      const currentKey = `${bookingPage}|${bookingStatusFilter}|${debouncedBookingSearch.trim()}`;
+      if (initialBookings && currentKey === lastBookingsKey.current) {
+        return;
       }
+      lastBookingsKey.current = currentKey;
       fetchBookings();
     } else {
-      if (isInitialRentalsMount.current) {
-        isInitialRentalsMount.current = false;
-        if (initialRentals) return;
+      const currentKey = `${rentalPage}|${rentalStatusFilter}|${debouncedRentalSearch.trim()}`;
+      if (initialRentals && currentKey === lastRentalsKey.current) {
+        return;
       }
+      lastRentalsKey.current = currentKey;
       fetchRentals();
     }
-  }, [activeTab, fetchBookings, fetchRentals, initialBookings, initialRentals]);
+  }, [activeTab, bookingPage, bookingStatusFilter, debouncedBookingSearch, rentalPage, rentalStatusFilter, debouncedRentalSearch, fetchBookings, fetchRentals, initialBookings, initialRentals]);
 
   // ─── Manager Booking Approval Action (Section 13) ───
   const handleApproveBooking = useCallback(async (bookingId: string) => {

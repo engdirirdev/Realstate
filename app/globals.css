@@ -223,10 +223,9 @@
     transform: translateZ(0);
   }
 
-  /* GPU Compositing for Smooth Modal & Table Scrolling */
+  /* GPU Compositing for Smooth Modal & Table Scrolling (without overriding CSS transform) */
   .gpu-accelerated {
     backface-visibility: hidden;
-    transform: translateZ(0);
   }
 
   /* Performance: Skip layout & paint for off-screen elements until scrolled near */

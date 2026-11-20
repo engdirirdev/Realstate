@@ -329,8 +329,10 @@ export default async function PropertiesPage({
 
             <SaveSearchButton
               filters={{
+                q: keywordQuery || undefined,
                 location: searchLocation ? String(searchLocation) : undefined,
                 type: type ? String(type) : undefined,
+                listingType: listingType ? String(listingType) : undefined,
                 minPrice: minPrice ? Number(minPrice) : undefined,
                 maxPrice: maxPrice ? Number(maxPrice) : undefined,
                 bedrooms: bedrooms ? Number(bedrooms) : undefined,

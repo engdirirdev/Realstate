@@ -31,8 +31,8 @@ const WRITE_ACTIONS = new Set([
   "deleteMany",
 ]);
 
-// Models that must never be cached (e.g. real-time chat sessions/messages)
-const UNCACHEABLE_MODELS = new Set(["ChatMessage", "ChatSession"]);
+// Models that must never be cached (e.g. real-time chat sessions/messages, inquiries, saved searches)
+const UNCACHEABLE_MODELS = new Set(["ChatMessage", "ChatSession", "Inquiry", "SearchHistory"]);
 
 const queryCache = new Map<string, { data: any; expiresAt: number }>();
 const QUERY_CACHE_TTL_MS = 15 * 1000; // 15-second ultra-fast in-memory read cache

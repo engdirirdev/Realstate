@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useTransition, useEffect , memo } from "react";
+import { useState, useTransition, useEffect, memo } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Filter, RotateCcw, Loader2 } from "lucide-react";
+import { Filter, RotateCcw, Loader2, Bookmark, Check } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 interface CityOption {
   city: string;
@@ -39,6 +40,8 @@ function CustomerPropertiesFilterForm({
   const [type, setType] = useState(initialFilters.type || "");
   const [listingType, setListingType] = useState(initialFilters.listingType || "");
   const [sort, setSort] = useState(initialFilters.sort || "latest");
+  const [savingSearch, setSavingSearch] = useState(false);
+  const [searchSaved, setSearchSaved] = useState(false);
 
   useEffect(() => {
     setQ(initialFilters.q || "");
@@ -47,6 +50,10 @@ function CustomerPropertiesFilterForm({
     setListingType(initialFilters.listingType || "");
     setSort(initialFilters.sort || "latest");
   }, [initialFilters.q, initialFilters.city, initialFilters.type, initialFilters.listingType, initialFilters.sort]);
+
+  useEffect(() => {
+    setSearchSaved(false);
+  }, [q, city, type, listingType]);
 
   const executeSearch = (overrides: Record<string, string> = {}) => {
     const qVal = "q" in overrides ? overrides.q : q;
@@ -84,6 +91,44 @@ function CustomerPropertiesFilterForm({
     startTransition(() => {
       router.push("/customer/properties", { scroll: false });
     });
+  };
+
+  const handleSaveCurrentSearch = async () => {
+    setSavingSearch(true);
+    try {
+      const nameParts = [
+        city || "All Cities",
+        type || "All Types",
+        listingType === "FOR_RENT" ? "For Rent" : listingType === "FOR_SALE" ? "For Sale" : "",
+        q.trim() ? `"${q.trim()}"` : "",
+      ].filter(Boolean);
+
+      const res = await fetch("/api/user/saved-searches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: `Search: ${nameParts.join(" • ")}`,
+          query: q.trim() || null,
+          location: city || null,
+          propertyType: type || null,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSearchSaved(true);
+        toast({
+          title: "Search Saved! 🔔",
+          description: "Your current search criteria has been saved to Saved Searches.",
+        });
+        router.refresh();
+      } else {
+        toast({ title: "Notice", description: data.error || "Failed to save search", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Failed to save search.", variant: "destructive" });
+    } finally {
+      setSavingSearch(false);
+    }
   };
 
   const hasActiveFilters = Boolean(
@@ -199,35 +244,49 @@ function CustomerPropertiesFilterForm({
         </select>
       </div>
 
-      {/* Submit & Reset Actions */}
-      <div className="flex items-end gap-2">
+      {/* Submit, Save & Reset Actions */}
+      <div className="flex items-end gap-1.5">
         <button
           type="submit"
           disabled={isPending}
-          className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] text-xs font-bold hover:brightness-105 transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-75 h-9 border-0"
+          className="flex-1 py-2 px-2.5 rounded-xl bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] text-xs font-bold hover:brightness-105 transition-all shadow-xs flex items-center justify-center gap-1 cursor-pointer disabled:opacity-75 h-9 border-0"
         >
           {isPending ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
           ) : (
             <Filter className="w-3.5 h-3.5" />
           )}
-          <span>{isPending ? "Filtering..." : "Filter"}</span>
+          <span>{isPending ? "..." : "Filter"}</span>
+        </button>
+        <button
+          type="button"
+          onClick={handleSaveCurrentSearch}
+          disabled={savingSearch || searchSaved}
+          className="py-2 px-2.5 rounded-xl border border-[#C89B3C]/40 bg-[#07111F] text-[#D9B45B] hover:bg-[#0B1728] text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer h-9 disabled:opacity-75"
+          title="Save this search"
+        >
+          {savingSearch ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : searchSaved ? (
+            <Check className="w-3.5 h-3.5 text-emerald-400" />
+          ) : (
+            <Bookmark className="w-3.5 h-3.5 text-[#D9B45B]" />
+          )}
+          <span>{searchSaved ? "Saved" : "Save"}</span>
         </button>
         {hasActiveFilters && (
           <button
             type="button"
             onClick={handleReset}
-            className="py-2 px-3 rounded-xl border border-[#E8E1D4] bg-[#F7F3EA] text-[#6B7280] hover:text-[#07111F] hover:bg-[#E8E1D4] text-xs font-medium transition-all flex items-center justify-center gap-1 cursor-pointer h-9"
+            className="py-2 px-2 rounded-xl border border-[#E8E1D4] bg-[#F7F3EA] text-[#6B7280] hover:text-[#07111F] hover:bg-[#E8E1D4] text-xs font-medium transition-all flex items-center justify-center cursor-pointer h-9"
             title="Reset Filters"
           >
-            <RotateCcw className="w-3 h-3 text-[#A97918]" />
-            <span className="hidden sm:inline">Reset</span>
+            <RotateCcw className="w-3.5 h-3.5 text-[#A97918]" />
           </button>
         )}
       </div>
     </form>
   );
 }
-
 
 export default memo(CustomerPropertiesFilterForm);

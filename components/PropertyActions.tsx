@@ -269,10 +269,11 @@ export default function PropertyActions({
       });
       const data = await res.json();
       if (data.success) {
-        toast({ title: "Inquiry Sent! 📩", description: "The property manager has received your inquiry." });
+        toast({ title: "Message Sent! 📩", description: "The property manager has received your message." });
         setInquiryModalOpen(false);
         setInquiryMsg("");
-        router.push("/customer/inquiries");
+        router.push("/customer/messages");
+        router.refresh();
       } else {
         toast({ title: "Error", description: data.error, variant: "destructive" });
       }

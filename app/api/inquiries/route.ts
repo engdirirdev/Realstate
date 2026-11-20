@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, forbiddenResponse } from "@/lib/auth-guards";
+import { dbCache } from "@/lib/cache";
 
 // GET: Fetch inquiries for Customer, Manager, or Admin
 export async function GET(request: NextRequest) {
@@ -11,9 +12,15 @@ export async function GET(request: NextRequest) {
     }
     const { user } = authResult;
 
-    const where =
+    const where: any =
       user.role === "USER"
-        ? { managerId: user.id }
+        ? {
+            OR: [
+              { managerId: user.id },
+              { property: { managerId: user.id } },
+              { managerId: null },
+            ],
+          }
         : user.role === "ADMIN"
         ? {}
         : { customerId: user.id };
@@ -22,7 +29,7 @@ export async function GET(request: NextRequest) {
     const pageParam = searchParams.get("page");
     const pageSizeParam = searchParams.get("pageSize");
     const page = Math.max(1, parseInt(pageParam || "1", 10));
-    const pageSize = pageSizeParam ? Math.min(100, Math.max(1, parseInt(pageSizeParam, 10))) : 25;
+    const pageSize = pageSizeParam ? Math.min(100, Math.max(1, parseInt(pageSizeParam, 10))) : 50;
     const skip = (page - 1) * pageSize;
 
     const [inquiries, total] = await Promise.all([
@@ -36,13 +43,14 @@ export async function GET(request: NextRequest) {
               city: true,
               price: true,
               type: true,
+              listingType: true,
               images: { take: 1, orderBy: { order: "asc" } },
             },
           },
           customer: { select: { id: true, name: true, email: true, phone: true } },
-          manager: { select: { id: true, name: true, email: true } },
+          manager: { select: { id: true, name: true, email: true, phone: true } },
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: { updatedAt: "desc" },
         take: pageSize,
         skip,
       }),
@@ -66,7 +74,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST: Customer sends inquiry on a property
+// POST: Customer sends message / inquiry to a Property Manager
 export async function POST(request: NextRequest) {
   try {
     const authResult = await requireAuth();
@@ -76,18 +84,38 @@ export async function POST(request: NextRequest) {
     const { user } = authResult;
 
     const body = await request.json();
-    const { propertyId, message } = body;
+    const { propertyId, managerId: requestedManagerId, subject, message } = body;
 
-    if (!propertyId || !message) {
+    if (!message || !String(message).trim()) {
       return NextResponse.json(
-        { success: false, error: "Property ID and message are required." },
+        { success: false, error: "Message content is required." },
         { status: 400 }
       );
     }
 
-    const property = await prisma.property.findUnique({
-      where: { id: propertyId },
-    });
+    let property = null;
+    if (propertyId) {
+      property = await prisma.property.findUnique({
+        where: { id: propertyId },
+      });
+    } else if (requestedManagerId) {
+      // If customer selected a manager directly without specifying a property, attach their latest managed property or any active property
+      property =
+        (await prisma.property.findFirst({
+          where: { managerId: requestedManagerId, isActive: true },
+          orderBy: { createdAt: "desc" },
+        })) ||
+        (await prisma.property.findFirst({
+          where: { isActive: true },
+          orderBy: { createdAt: "desc" },
+        }));
+    } else {
+      property = await prisma.property.findFirst({
+        where: { isActive: true },
+        orderBy: { createdAt: "desc" },
+      });
+    }
+
     if (!property) {
       return NextResponse.json(
         { success: false, error: "Property not found." },
@@ -95,40 +123,73 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    let targetManagerId = requestedManagerId || property.managerId || null;
+    if (!targetManagerId) {
+      // Assign to an active Property Manager (role = USER) so a manager always receives the message
+      const activeManager = await prisma.user.findFirst({
+        where: { role: "USER", isActive: true },
+        orderBy: { createdAt: "asc" },
+        select: { id: true },
+      });
+      targetManagerId = activeManager?.id || null;
+    }
+
     const inquiry = await prisma.inquiry.create({
       data: {
-        propertyId,
+        propertyId: property.id,
         customerId: user.id,
-        managerId: property.managerId,
-        message: message.trim(),
+        managerId: targetManagerId,
+        subject:
+          subject && String(subject).trim()
+            ? String(subject).trim()
+            : `Inquiry about ${property.title}`,
+        message: String(message).trim(),
         status: "NEW",
+      },
+      include: {
+        property: {
+          select: {
+            id: true,
+            title: true,
+            city: true,
+            price: true,
+            listingType: true,
+            images: { take: 1, orderBy: { order: "asc" } },
+          },
+        },
+        customer: { select: { id: true, name: true, email: true, phone: true } },
+        manager: { select: { id: true, name: true, email: true, phone: true } },
       },
     });
 
-    // Notify Manager
-    if (property.managerId) {
-      await prisma.notification.create({
-        data: {
-          userId: property.managerId,
-          type: "INQUIRY",
-          title: "New Property Inquiry 💬",
-          message: `${user.name || "A customer"} inquired about "${property.title}".`,
-          linkUrl: `/dashboard/inquiries`,
-        },
-      }).catch(() => {});
+    dbCache.invalidateTags(["inquiries", "notifications"]);
+
+    // Notify Assigned Manager
+    if (targetManagerId) {
+      await prisma.notification
+        .create({
+          data: {
+            userId: targetManagerId,
+            type: "INQUIRY",
+            title: "New Customer Message 💬",
+            message: `${user.name || "A customer"} sent you a message about "${property.title}".`,
+            linkUrl: `/dashboard/inquiries`,
+          },
+        })
+        .catch(() => {});
     }
 
     return NextResponse.json({ success: true, inquiry });
   } catch (error) {
     console.error("[POST /api/inquiries]", error);
     return NextResponse.json(
-      { success: false, error: "Failed to send inquiry." },
+      { success: false, error: "Failed to send message." },
       { status: 500 }
     );
   }
 }
 
-// PATCH: Manager or Admin responds to inquiry (Guarded against IDOR)
+// PATCH: Manager replies to inquiry OR Customer sends a follow-up reply in the thread
 export async function PATCH(request: NextRequest) {
   try {
     const authResult = await requireAuth();
@@ -138,7 +199,7 @@ export async function PATCH(request: NextRequest) {
     const { user } = authResult;
 
     const body = await request.json();
-    const { inquiryId, response, status } = body;
+    const { inquiryId, response, customerReply, status } = body;
 
     if (!inquiryId) {
       return NextResponse.json(
@@ -150,6 +211,9 @@ export async function PATCH(request: NextRequest) {
     // 1. Verify existence
     const existing = await prisma.inquiry.findUnique({
       where: { id: inquiryId },
+      include: {
+        property: { select: { id: true, title: true, managerId: true } },
+      },
     });
 
     if (!existing) {
@@ -159,35 +223,113 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // 2. IDOR Prevention: Only assigned manager or super admin may respond
-    const isAssignedManager = existing.managerId === user.id;
+    // Case A: Customer is sending a follow-up reply in their own thread
+    if (customerReply && String(customerReply).trim()) {
+      if (existing.customerId !== user.id && user.role !== "ADMIN") {
+        return forbiddenResponse("You can only reply to your own message threads.");
+      }
+
+      const timestamp = new Date().toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      const updatedMessage = `${existing.message}\n\n[${user.name || "Customer"} • ${timestamp}]:\n${String(customerReply).trim()}`;
+
+      const updated = await prisma.inquiry.update({
+        where: { id: inquiryId },
+        data: {
+          message: updatedMessage,
+          status: "NEW",
+        },
+        include: {
+          property: {
+            select: {
+              id: true,
+              title: true,
+              city: true,
+              price: true,
+              listingType: true,
+              images: { take: 1, orderBy: { order: "asc" } },
+            },
+          },
+          customer: { select: { id: true, name: true, email: true, phone: true } },
+          manager: { select: { id: true, name: true, email: true, phone: true } },
+        },
+      });
+
+      dbCache.invalidateTags(["inquiries", "notifications"]);
+
+      const notifyManagerId = updated.managerId || existing.property?.managerId;
+      if (notifyManagerId) {
+        await prisma.notification
+          .create({
+            data: {
+              userId: notifyManagerId,
+              type: "INQUIRY",
+              title: "Customer Replied to Inquiry 💬",
+              message: `${user.name || "Customer"} sent a follow-up reply on "${existing.property.title}".`,
+              linkUrl: `/dashboard/inquiries`,
+            },
+          })
+          .catch(() => {});
+      }
+
+      return NextResponse.json({ success: true, inquiry: updated });
+    }
+
+    // Case B: Manager or Admin is responding to the Customer
+    const isAssignedManager =
+      existing.managerId === user.id ||
+      existing.property?.managerId === user.id ||
+      (user.role === "USER" && !existing.managerId);
     const isAdmin = user.role === "ADMIN";
+
     if (!isAdmin && !isAssignedManager) {
       return forbiddenResponse(
-        "Forbidden. Only the assigned manager or an administrator can respond to this inquiry."
+        "Forbidden. Only the assigned property manager or an administrator can respond to this inquiry."
       );
     }
 
     const updated = await prisma.inquiry.update({
       where: { id: inquiryId },
       data: {
-        ...(response && { response: response.trim() }),
-        ...(status && { status }),
+        ...(response !== undefined && { response: String(response).trim() }),
+        status: status || "RESPONDED",
+        ...(!existing.managerId && user.role === "USER" ? { managerId: user.id } : {}),
       },
-      include: { property: { select: { title: true } } },
+      include: {
+        property: {
+          select: {
+            id: true,
+            title: true,
+            city: true,
+            price: true,
+            listingType: true,
+            images: { take: 1, orderBy: { order: "asc" } },
+          },
+        },
+        customer: { select: { id: true, name: true, email: true, phone: true } },
+        manager: { select: { id: true, name: true, email: true, phone: true } },
+      },
     });
 
-    // Send notification to customer if manager responded
+    dbCache.invalidateTags(["inquiries", "notifications"]);
+
+    // Send notification to customer when manager responds
     if (response && updated.customerId) {
-      await prisma.notification.create({
-        data: {
-          userId: updated.customerId,
-          type: "INQUIRY",
-          title: "Property Manager Replied 💬",
-          message: `The manager replied to your inquiry for "${updated.property.title}".`,
-          linkUrl: `/customer/inquiries`,
-        },
-      }).catch(() => {});
+      await prisma.notification
+        .create({
+          data: {
+            userId: updated.customerId,
+            type: "INQUIRY",
+            title: "Property Manager Replied 💬",
+            message: `${user.name || "The property manager"} replied to your message for "${updated.property.title}".`,
+            linkUrl: `/customer/messages`,
+          },
+        })
+        .catch(() => {});
     }
 
     return NextResponse.json({ success: true, inquiry: updated });

@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export const revalidate = 30;
+export const revalidate = 0;
 
 export default async function CustomerSavedSearchesPage() {
   const session = await auth();
@@ -23,6 +23,7 @@ export default async function CustomerSavedSearchesPage() {
   const searches: SavedSearchItem[] = rawSearches.map((s) => ({
     id: s.id,
     name: s.name,
+    query: s.query,
     location: s.location,
     propertyType: s.propertyType,
     minPrice: s.minPrice,

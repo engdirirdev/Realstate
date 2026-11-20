@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export const revalidate = 30;
+export const revalidate = 0;
 
 export default async function ManagerInquiriesPage() {
   const session = await auth();

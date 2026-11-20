@@ -290,10 +290,16 @@ export async function getCustomersDashboardData() {
 // ─── 4. MANAGER INQUIRIES DASHBOARD DATA ───────────────────────────
 export async function getInquiriesDashboardData(userId?: string, role?: string) {
   const cacheKey = `dashboard:inquiries:${role || "ALL"}:${userId || "ALL"}`;
-  return dbCache.getOrSet(cacheKey, 15, async () => {
+  return dbCache.getOrSet(cacheKey, 5, async () => {
     const where: any =
       role === "USER" && userId
-        ? { managerId: userId }
+        ? {
+            OR: [
+              { managerId: userId },
+              { property: { managerId: userId } },
+              { managerId: null },
+            ],
+          }
         : {};
 
     const rawInquiries = await prisma.inquiry.findMany({
@@ -316,13 +322,21 @@ export async function getInquiriesDashboardData(userId?: string, role?: string) 
             phone: true,
           },
         },
+        manager: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: { updatedAt: "desc" },
       take: 50,
     });
 
     return rawInquiries.map((inq) => ({
       id: inq.id,
+      subject: inq.subject || `Inquiry about ${inq.property?.title || "Property"}`,
       name: inq.customer?.name || "Anonymous Client",
       email: inq.customer?.email || "",
       phone: inq.customer?.phone || null,
@@ -330,8 +344,10 @@ export async function getInquiriesDashboardData(userId?: string, role?: string) 
       status: inq.status,
       response: inq.response,
       createdAt: inq.createdAt.toISOString(),
+      updatedAt: inq.updatedAt.toISOString(),
       property: inq.property,
       customer: inq.customer,
+      manager: inq.manager,
     }));
   }, ["inquiries"]);
 }

@@ -3,7 +3,7 @@ export const revalidate = 30;
 // PAGE NAME  : Customer Portal — Browse Properties
 // ROUTE      : /customer/properties
 // DESCRIPTION: In-portal property browsing with smart filters,
-//              saved favorites, and detailed cards
+//              saved searches, saved favorites, and detailed cards
 //              Kiro-Maal Real Estate Master Design System
 // ROLE       : CUSTOMER
 // ================================================================
@@ -11,8 +11,9 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { Building2, Filter, Sparkles } from "lucide-react";
+import { Building2, Sparkles } from "lucide-react";
 import PropertyCard from "@/components/PropertyCard";
+import SaveSearchButton from "@/components/SaveSearchButton";
 import CustomerPropertiesFilterForm from "@/components/customer/CustomerPropertiesFilterForm";
 import type { Metadata } from "next";
 
@@ -20,8 +21,6 @@ export const metadata: Metadata = {
   title: "Browse Properties – Customer Portal | Kiro-Maal Real Estate",
   robots: { index: false, follow: false },
 };
-
-
 
 const TYPES = [
   { value: "", label: "All Types" },
@@ -45,12 +44,27 @@ export default async function CustomerPropertiesPage({
 
   const params = await searchParams;
   const q = typeof params.q === "string" ? params.q.trim() : "";
-  const city = typeof params.city === "string" ? params.city : "";
+  const city =
+    typeof params.city === "string" && params.city
+      ? params.city
+      : typeof params.location === "string"
+      ? params.location
+      : "";
   const type = typeof params.type === "string" ? params.type : "";
   const listingType = typeof params.listingType === "string" ? params.listingType : "";
   const sort = typeof params.sort === "string" ? params.sort : "latest";
-  const maxPrice = typeof params.maxPrice === "string" && !isNaN(Number(params.maxPrice)) ? Number(params.maxPrice) : null;
-  const minPrice = typeof params.minPrice === "string" && !isNaN(Number(params.minPrice)) ? Number(params.minPrice) : null;
+  const maxPrice =
+    typeof params.maxPrice === "string" && params.maxPrice !== "" && !isNaN(Number(params.maxPrice))
+      ? Number(params.maxPrice)
+      : null;
+  const minPrice =
+    typeof params.minPrice === "string" && params.minPrice !== "" && !isNaN(Number(params.minPrice))
+      ? Number(params.minPrice)
+      : null;
+  const bedrooms =
+    typeof params.bedrooms === "string" && params.bedrooms !== "" && !isNaN(Number(params.bedrooms))
+      ? Number(params.bedrooms)
+      : null;
 
   const where: any = {
     status: { in: ["APPROVED", "PUBLISHED"] },
@@ -61,6 +75,9 @@ export default async function CustomerPropertiesPage({
   if (type) where.type = type;
   if (listingType && ["FOR_RENT", "FOR_SALE"].includes(listingType)) {
     where.listingType = listingType;
+  }
+  if (bedrooms !== null && bedrooms > 0) {
+    where.bedrooms = { gte: bedrooms };
   }
   if (q) {
     where.OR = [
@@ -142,10 +159,25 @@ export default async function CustomerPropertiesPage({
             </p>
           </div>
 
+          <SaveSearchButton
+            filters={{
+              q: q || undefined,
+              city: city || undefined,
+              type: type || undefined,
+              listingType: listingType || undefined,
+              minPrice: minPrice ?? undefined,
+              maxPrice: maxPrice ?? undefined,
+              bedrooms: bedrooms ?? undefined,
+            }}
+          />
         </div>
 
         {/* Filter Toolbar */}
-        <CustomerPropertiesFilterForm availableCities={availableCities} types={TYPES} initialFilters={{ q, city, type, listingType, sort }} />
+        <CustomerPropertiesFilterForm
+          availableCities={availableCities}
+          types={TYPES}
+          initialFilters={{ q, city, type, listingType, sort }}
+        />
       </div>
 
       {/* ─── Listings Grid ─── */}
@@ -153,6 +185,12 @@ export default async function CustomerPropertiesPage({
         <p className="text-xs font-bold text-[#07111F]">
           Showing <span className="text-[#C89B3C]">{properties.length}</span> Verified Properties
         </p>
+        <Link
+          href="/customer/saved-searches"
+          className="text-xs font-bold text-[#A97918] hover:text-[#07111F] underline underline-offset-4"
+        >
+          View Saved Searches →
+        </Link>
       </div>
 
       {properties.length === 0 ? (

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, forbiddenResponse } from "@/lib/auth-guards";
 import { dbCache } from "@/lib/cache";
+import { parseInquiryThread, serializeInquiryThread } from "@/lib/inquiry-thread";
 
 // GET: Fetch inquiries for Customer, Manager, or Admin
 export async function GET(request: NextRequest) {
@@ -99,7 +100,6 @@ export async function POST(request: NextRequest) {
         where: { id: propertyId },
       });
     } else if (requestedManagerId) {
-      // If customer selected a manager directly without specifying a property, attach their latest managed property or any active property
       property =
         (await prisma.property.findFirst({
           where: { managerId: requestedManagerId, isActive: true },
@@ -125,7 +125,6 @@ export async function POST(request: NextRequest) {
 
     let targetManagerId = requestedManagerId || property.managerId || null;
     if (!targetManagerId) {
-      // Assign to an active Property Manager (role = USER) so a manager always receives the message
       const activeManager = await prisma.user.findFirst({
         where: { role: "USER", isActive: true },
         orderBy: { createdAt: "asc" },
@@ -133,6 +132,23 @@ export async function POST(request: NextRequest) {
       });
       targetManagerId = activeManager?.id || null;
     }
+
+    const timestamp = new Date().toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    const initialTurns = [
+      {
+        id: `turn-${Date.now()}`,
+        sender: "CUSTOMER" as const,
+        senderName: user.name || "Customer",
+        text: String(message).trim(),
+        timestamp,
+      },
+    ];
 
     const inquiry = await prisma.inquiry.create({
       data: {
@@ -144,6 +160,7 @@ export async function POST(request: NextRequest) {
             ? String(subject).trim()
             : `Inquiry about ${property.title}`,
         message: String(message).trim(),
+        response: serializeInquiryThread(initialTurns),
         status: "NEW",
       },
       include: {
@@ -164,7 +181,6 @@ export async function POST(request: NextRequest) {
 
     dbCache.invalidateTags(["inquiries", "notifications"]);
 
-    // Notify Assigned Manager
     if (targetManagerId) {
       await prisma.notification
         .create({
@@ -189,7 +205,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PATCH: Manager replies to inquiry OR Customer sends a follow-up reply in the thread
+// PATCH: Manager replies to inquiry OR Customer sends a follow-up reply in the chronological thread
 export async function PATCH(request: NextRequest) {
   try {
     const authResult = await requireAuth();
@@ -208,11 +224,12 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // 1. Verify existence
     const existing = await prisma.inquiry.findUnique({
       where: { id: inquiryId },
       include: {
         property: { select: { id: true, title: true, managerId: true } },
+        customer: { select: { id: true, name: true } },
+        manager: { select: { id: true, name: true } },
       },
     });
 
@@ -223,24 +240,36 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Case A: Customer is sending a follow-up reply in their own thread
+    const timestamp = new Date().toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    const currentTurns = parseInquiryThread(existing);
+
+    // Case A: Customer is sending the next reply in the thread
     if (customerReply && String(customerReply).trim()) {
       if (existing.customerId !== user.id && user.role !== "ADMIN") {
         return forbiddenResponse("You can only reply to your own message threads.");
       }
 
-      const timestamp = new Date().toLocaleString("en-US", {
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      const updatedMessage = `${existing.message}\n\n[${user.name || "Customer"} • ${timestamp}]:\n${String(customerReply).trim()}`;
+      const nextTurns = [
+        ...currentTurns,
+        {
+          id: `turn-${Date.now()}-c`,
+          sender: "CUSTOMER" as const,
+          senderName: user.name || existing.customer?.name || "Customer",
+          text: String(customerReply).trim(),
+          timestamp,
+        },
+      ];
 
       const updated = await prisma.inquiry.update({
         where: { id: inquiryId },
         data: {
-          message: updatedMessage,
+          response: serializeInquiryThread(nextTurns),
           status: "NEW",
         },
         include: {
@@ -268,8 +297,8 @@ export async function PATCH(request: NextRequest) {
             data: {
               userId: notifyManagerId,
               type: "INQUIRY",
-              title: "Customer Replied to Inquiry 💬",
-              message: `${user.name || "Customer"} sent a follow-up reply on "${existing.property.title}".`,
+              title: "Customer Replied 💬",
+              message: `${user.name || "Customer"} replied on "${existing.property.title}".`,
               linkUrl: `/dashboard/inquiries`,
             },
           })
@@ -279,7 +308,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ success: true, inquiry: updated });
     }
 
-    // Case B: Manager or Admin is responding to the Customer
+    // Case B: Manager or Admin is sending the next reply in the thread
     const isAssignedManager =
       existing.managerId === user.id ||
       existing.property?.managerId === user.id ||
@@ -292,10 +321,21 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    let nextTurns = [...currentTurns];
+    if (response && String(response).trim()) {
+      nextTurns.push({
+        id: `turn-${Date.now()}-m`,
+        sender: "MANAGER" as const,
+        senderName: user.name || existing.manager?.name || "Property Manager",
+        text: String(response).trim(),
+        timestamp,
+      });
+    }
+
     const updated = await prisma.inquiry.update({
       where: { id: inquiryId },
       data: {
-        ...(response !== undefined && { response: String(response).trim() }),
+        response: serializeInquiryThread(nextTurns),
         status: status || "RESPONDED",
         ...(!existing.managerId && user.role === "USER" ? { managerId: user.id } : {}),
       },
@@ -317,7 +357,6 @@ export async function PATCH(request: NextRequest) {
 
     dbCache.invalidateTags(["inquiries", "notifications"]);
 
-    // Send notification to customer when manager responds
     if (response && updated.customerId) {
       await prisma.notification
         .create({

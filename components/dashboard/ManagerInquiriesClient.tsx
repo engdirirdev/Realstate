@@ -1,6 +1,6 @@
 // ================================================================
 // COMPONENT  : ManagerInquiriesClient
-// DESCRIPTION: Manager inbox for customer property inquiries & messages
+// DESCRIPTION: Manager smart conversation inbox for customer messages
 // ================================================================
 "use client";
 
@@ -16,19 +16,16 @@ import {
   MapPin,
   RefreshCw,
   Clock,
+  User,
+  ShieldCheck,
+  Phone,
+  Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { formatPrice } from "@/lib/utils";
+import { parseInquiryThread } from "@/lib/inquiry-thread";
 
 interface ManagerInquiriesClientProps {
   initialInquiries?: any[];
@@ -37,10 +34,10 @@ interface ManagerInquiriesClientProps {
 function ManagerInquiriesClient({ initialInquiries = [] }: ManagerInquiriesClientProps) {
   const [inquiries, setInquiries] = useState<any[]>(initialInquiries);
   const [loading, setLoading] = useState(false);
-  const [replyModalOpen, setReplyModalOpen] = useState(false);
-  const [selectedInquiry, setSelectedInquiry] = useState<any>(null);
-  const [replyText, setReplyText] = useState("");
-  const [submittingReply, setSubmittingReply] = useState(false);
+
+  // Per-card inline reply draft
+  const [inlineDrafts, setInlineDrafts] = useState<Record<string, string>>({});
+  const [sendingId, setSendingId] = useState<string | null>(null);
 
   const fetchInquiries = useCallback(async () => {
     setLoading(true);
@@ -57,51 +54,46 @@ function ManagerInquiriesClient({ initialInquiries = [] }: ManagerInquiriesClien
     }
   }, []);
 
-  const handleOpenReply = useCallback((inq: any) => {
-    setSelectedInquiry(inq);
-    setReplyText(inq.response || "");
-    setReplyModalOpen(true);
-  }, []);
+  const handleSendReply = useCallback(
+    async (inquiryId: string) => {
+      const text = (inlineDrafts[inquiryId] || "").trim();
+      if (!text) return;
 
-  const handleSendReply = useCallback(async () => {
-    if (!selectedInquiry || !replyText.trim()) return;
-    setSubmittingReply(true);
-    try {
-      const res = await fetch("/api/inquiries", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          inquiryId: selectedInquiry.id,
-          response: replyText.trim(),
-          status: "RESPONDED",
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast({
-          title: "Reply Sent! 📩",
-          description: "The customer has received your reply in their Messages inbox.",
+      setSendingId(inquiryId);
+      try {
+        const res = await fetch("/api/inquiries", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            inquiryId,
+            response: text,
+            status: "RESPONDED",
+          }),
         });
-        setReplyModalOpen(false);
-        setInquiries((prev) =>
-          prev.map((item) =>
-            item.id === selectedInquiry.id
-              ? { ...item, status: "RESPONDED", response: replyText.trim() }
-              : item
-          )
-        );
-      } else {
-        toast({ title: "Error", description: data.error, variant: "destructive" });
+        const data = await res.json();
+        if (data.success && data.inquiry) {
+          setInquiries((prev) =>
+            prev.map((item) => (item.id === inquiryId ? data.inquiry : item))
+          );
+          setInlineDrafts((prev) => ({ ...prev, [inquiryId]: "" }));
+          toast({
+            title: "Reply Sent! 📩",
+            description: "Your reply has been added to the conversation thread.",
+          });
+        } else {
+          toast({ title: "Error", description: data.error, variant: "destructive" });
+        }
+      } catch {
+        toast({ title: "Error", description: "Failed to send reply.", variant: "destructive" });
+      } finally {
+        setSendingId(null);
       }
-    } catch {
-      toast({ title: "Error", description: "Failed to send reply.", variant: "destructive" });
-    } finally {
-      setSubmittingReply(false);
-    }
-  }, [selectedInquiry, replyText]);
+    },
+    [inlineDrafts]
+  );
 
   return (
-    <div className="space-y-6 bg-[#F7F3EA] min-h-screen p-6 sm:p-8">
+    <div className="space-y-6 max-w-5xl mx-auto bg-[#F7F3EA] min-h-screen p-5 sm:p-7">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FCFBF7] border border-[#C89B3C]/30 text-[#A97918] text-xs font-semibold uppercase tracking-wider mb-2 shadow-xs">
@@ -111,7 +103,7 @@ function ManagerInquiriesClient({ initialInquiries = [] }: ManagerInquiriesClien
             <MessageSquare className="h-7 w-7 text-[#C89B3C]" /> Customer Messages &amp; Inquiries
           </h1>
           <p className="text-[#6B7280] text-sm mt-1">
-            Receive and reply to messages, property questions, and consultations from customers.
+            Live two-way conversations with customers regarding your property listings.
           </p>
         </div>
 
@@ -130,7 +122,9 @@ function ManagerInquiriesClient({ initialInquiries = [] }: ManagerInquiriesClien
       {loading ? (
         <div className="p-16 bg-[#FCFBF7] rounded-2xl border border-[#E8E1D4] text-center flex flex-col items-center justify-center gap-3 max-w-lg mx-auto shadow-sm">
           <Loader2 className="h-8 w-8 animate-spin text-[#C89B3C]" />
-          <p className="font-serif font-bold text-[#07111F] text-base">Loading Customer Messages...</p>
+          <p className="font-serif font-bold text-[#07111F] text-base">
+            Loading Customer Conversations...
+          </p>
         </div>
       ) : inquiries.length === 0 ? (
         <div className="bg-[#FCFBF7] rounded-2xl shadow-sm border border-[#E8E1D4] p-12 text-center max-w-lg mx-auto">
@@ -143,158 +137,196 @@ function ManagerInquiriesClient({ initialInquiries = [] }: ManagerInquiriesClien
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {inquiries.map((inq) => (
-            <div
-              key={inq.id}
-              className="bg-[#FCFBF7] rounded-2xl p-6 shadow-sm border border-[#E8E1D4] space-y-4 hover:border-[#C89B3C]/50 transition-all"
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E8E1D4] pb-4">
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-serif font-bold text-[#07111F] text-base">
-                      {inq.subject || `Inquiry about ${inq.property?.title || "Property"}`}
-                    </h3>
-                    {inq.property && (
-                      <Link
-                        href={`/properties/${inq.property.id}`}
-                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#F7F3EA] border border-[#E8E1D4] text-[11px] font-bold text-[#A97918] hover:text-[#07111F]"
-                      >
-                        <Building2 className="h-3 w-3 text-[#C89B3C]" />
-                        {inq.property.title} ({inq.property.city} • {formatPrice(inq.property.price)})
-                      </Link>
-                    )}
+        <div className="space-y-6">
+          {inquiries.map((inq) => {
+            const thread = parseInquiryThread(inq);
+            const lastTurn = thread[thread.length - 1];
+            const needsReply = lastTurn?.sender === "CUSTOMER";
+            const customerName = inq.customer?.name || inq.name || "Customer";
+            const customerEmail = inq.customer?.email || inq.email || "";
+            const customerPhone = inq.customer?.phone || inq.phone || "";
+
+            return (
+              <div
+                key={inq.id}
+                className="bg-[#FCFBF7] rounded-2xl shadow-sm border border-[#E8E1D4] overflow-hidden hover:border-[#C89B3C]/50 transition-all"
+              >
+                {/* ─── Smart Card Top Header ─── */}
+                <div className="bg-gradient-to-r from-[#07111F] via-[#0B1728] to-[#07111F] px-5 py-4 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#C89B3C]/30">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-13 h-13 rounded-xl bg-[#0B1728] overflow-hidden flex-shrink-0 border border-[#C89B3C]/40 shadow-inner">
+                      {inq.property?.images?.[0]?.url ? (
+                        <img
+                          src={inq.property.images[0].url}
+                          alt={inq.property.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[#D9B45B]">
+                          <Building2 className="h-6 w-6" />
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md bg-[#C89B3C]/20 text-[#D9B45B] border border-[#C89B3C]/30">
+                          {inq.subject || "Property Inquiry"}
+                        </span>
+                        {inq.property && (
+                          <Link
+                            href={`/properties/${inq.property.id}`}
+                            className="inline-flex items-center gap-1 text-xs font-serif font-bold text-white hover:text-[#D9B45B] transition-colors"
+                          >
+                            <MapPin className="h-3.5 w-3.5 text-[#D9B45B]" />
+                            {inq.property.title} ({inq.property.city} •{" "}
+                            <span className="text-[#D9B45B]">{formatPrice(inq.property.price)}</span>)
+                          </Link>
+                        )}
+                      </div>
+
+                      <div className="text-xs text-slate-300 flex flex-wrap items-center gap-3 mt-1">
+                        <span className="inline-flex items-center gap-1 font-semibold text-white">
+                          <User className="h-3.5 w-3.5 text-[#D9B45B]" /> {customerName}
+                        </span>
+                        {customerEmail && (
+                          <span className="inline-flex items-center gap-1 text-slate-300">
+                            <Mail className="h-3 w-3 text-[#D9B45B]" /> {customerEmail}
+                          </span>
+                        )}
+                        {customerPhone && (
+                          <span className="inline-flex items-center gap-1 text-slate-300">
+                            <Phone className="h-3 w-3 text-[#D9B45B]" /> {customerPhone}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-xs text-[#6B7280] flex flex-wrap items-center gap-2">
-                    <span>
-                      Customer:{" "}
-                      <strong className="text-[#07111F]">
-                        {inq.customer?.name || inq.name || "Customer"}
-                      </strong>{" "}
-                      ({inq.customer?.email || inq.email})
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1.5 ${
+                        needsReply
+                          ? "bg-amber-400/20 text-amber-300 border border-amber-400/40"
+                          : "bg-emerald-500/20 text-emerald-300 border border-emerald-400/40"
+                      }`}
+                    >
+                      {needsReply ? (
+                        <>
+                          <Clock className="h-3.5 w-3.5" /> Needs Reply
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="h-3.5 w-3.5" /> Replied
+                        </>
+                      )}
                     </span>
-                    {(inq.customer?.phone || inq.phone) && (
-                      <span>• Tel: {inq.customer?.phone || inq.phone}</span>
-                    )}
-                    {inq.createdAt && (
-                      <span className="inline-flex items-center gap-1 text-[#A97918]">
-                        • <Clock className="h-3 w-3" />{" "}
-                        {new Date(inq.createdAt).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </span>
-                    )}
-                  </p>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-bold ${
-                      inq.status === "RESPONDED"
-                        ? "bg-[#07111F] text-[#D9B45B] border border-[#C89B3C]/40"
-                        : "bg-amber-50 text-amber-800 border border-amber-200"
-                    }`}
-                  >
-                    {inq.status === "RESPONDED" ? "Replied" : "Needs Reply"}
-                  </span>
+                {/* ─── Chronological Two-Sided Chat Thread ─── */}
+                <div className="p-5 sm:p-6 bg-[#FAF7F2] space-y-4 max-h-[460px] overflow-y-auto">
+                  {thread.map((msg, idx) => {
+                    const isCustomer = msg.sender === "CUSTOMER";
+                    return (
+                      <div
+                        key={msg.id || idx}
+                        className={`flex items-start gap-3 ${
+                          isCustomer ? "justify-start" : "justify-end"
+                        }`}
+                      >
+                        {/* Left Avatar for Customer */}
+                        {isCustomer && (
+                          <div className="w-8 h-8 rounded-full bg-[#C89B3C]/20 border border-[#C89B3C]/40 text-[#07111F] flex items-center justify-center font-bold text-xs shrink-0 mt-1">
+                            <User className="h-4 w-4 text-[#A97918]" />
+                          </div>
+                        )}
+
+                        {/* Message Bubble */}
+                        <div
+                          className={`max-w-[82%] sm:max-w-[70%] rounded-2xl px-4 py-3 shadow-xs ${
+                            isCustomer
+                              ? "bg-white border border-[#E8E1D4] text-[#07111F] rounded-tl-xs"
+                              : "bg-[#07111F] border border-[#C89B3C]/40 text-white rounded-tr-xs"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-4 mb-1">
+                            <span
+                              className={`text-[11px] font-bold uppercase tracking-wider flex items-center gap-1 ${
+                                isCustomer ? "text-[#A97918]" : "text-[#D9B45B]"
+                              }`}
+                            >
+                              {isCustomer ? (
+                                <>{customerName} • Customer</>
+                              ) : (
+                                <>
+                                  <ShieldCheck className="h-3.5 w-3.5 text-[#D9B45B]" /> You (
+                                  {msg.senderName}) • Manager
+                                </>
+                              )}
+                            </span>
+                            <span
+                              className={`text-[10px] font-mono ${
+                                isCustomer ? "text-[#6B7280]" : "text-slate-400"
+                              }`}
+                            >
+                              {msg.timestamp}
+                            </span>
+                          </div>
+                          <p
+                            className={`text-xs sm:text-sm leading-relaxed whitespace-pre-line ${
+                              isCustomer ? "text-[#07111F]" : "text-[#F7F3EA]"
+                            }`}
+                          >
+                            {msg.text}
+                          </p>
+                        </div>
+
+                        {/* Right Avatar for Manager */}
+                        {!isCustomer && (
+                          <div className="w-8 h-8 rounded-full bg-[#07111F] border border-[#C89B3C] text-[#D9B45B] flex items-center justify-center font-bold text-xs shrink-0 mt-1 shadow-xs">
+                            <ShieldCheck className="h-4 w-4" />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* ─── Smart Card Bottom Inline Reply Composer ─── */}
+                <div className="p-3.5 sm:p-4 bg-[#FCFBF7] border-t border-[#E8E1D4] flex items-center gap-2.5">
+                  <Input
+                    value={inlineDrafts[inq.id] || ""}
+                    onChange={(e) =>
+                      setInlineDrafts((prev) => ({ ...prev, [inq.id]: e.target.value }))
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendReply(inq.id);
+                      }
+                    }}
+                    placeholder={`Write a reply to ${customerName}...`}
+                    className="flex-1 h-10 rounded-xl border-[#E8E1D4] bg-white text-xs sm:text-sm text-[#07111F] focus:border-[#C89B3C]"
+                  />
                   <Button
-                    onClick={() => handleOpenReply(inq)}
-                    size="sm"
-                    className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] hover:brightness-105 rounded-xl text-xs gap-1.5 font-bold shadow-xs border-0 cursor-pointer"
+                    type="button"
+                    onClick={() => handleSendReply(inq.id)}
+                    disabled={sendingId === inq.id || !(inlineDrafts[inq.id] || "").trim()}
+                    className="h-10 px-4 bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] hover:brightness-105 rounded-xl text-xs font-bold gap-1.5 border-0 shadow-xs cursor-pointer shrink-0"
                   >
-                    <Send className="h-3.5 w-3.5" />
-                    {inq.response ? "Update Reply" : "Reply to Customer"}
+                    {sendingId === inq.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Send className="h-3.5 w-3.5" />
+                    )}
+                    Send Reply
                   </Button>
                 </div>
               </div>
-
-              {/* Customer Message & Manager Reply Thread */}
-              <div className="space-y-3">
-                <div className="bg-[#F7F3EA] p-4 rounded-xl border border-[#E8E1D4]">
-                  <p className="text-xs font-bold uppercase tracking-wider text-[#6B7280] mb-1">
-                    Customer Message:
-                  </p>
-                  <p className="text-sm text-[#07111F] leading-relaxed whitespace-pre-line">
-                    {inq.message}
-                  </p>
-                </div>
-
-                {inq.response && (
-                  <div className="bg-[#07111F] p-4 rounded-xl border border-[#C89B3C]/30 text-white">
-                    <p className="text-xs font-bold text-[#D9B45B] mb-1 flex items-center gap-1.5 uppercase tracking-wider">
-                      <CheckCircle2 className="h-4 w-4 text-[#D9B45B]" /> Your Reply to Customer:
-                    </p>
-                    <p className="text-sm text-[#E8E1D4] leading-relaxed whitespace-pre-line">
-                      {inq.response}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
-
-      {/* Reply Modal */}
-      <Dialog open={replyModalOpen} onOpenChange={setReplyModalOpen}>
-        <DialogContent className="max-w-md bg-[#FCFBF7] rounded-2xl p-6 shadow-xl border border-[#E8E1D4]">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-serif font-bold text-[#07111F] flex items-center gap-2">
-              <Send className="h-5 w-5 text-[#C89B3C]" /> Reply to Customer
-            </DialogTitle>
-            <DialogDescription className="text-xs text-[#6B7280]">
-              Send a direct reply to{" "}
-              {selectedInquiry?.customer?.name || selectedInquiry?.name || "Customer"} regarding{" "}
-              &ldquo;{selectedInquiry?.property?.title || "their inquiry"}&rdquo;.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 my-2">
-            <div className="bg-[#F7F3EA] p-3.5 rounded-xl border border-[#E8E1D4] text-xs space-y-1">
-              <p className="font-bold text-[#07111F]">Customer Message:</p>
-              <p className="text-[#4B5563] whitespace-pre-line max-h-32 overflow-y-auto">
-                {selectedInquiry?.message}
-              </p>
-            </div>
-
-            <div className="space-y-1.5">
-              <p className="text-xs font-bold uppercase tracking-wider text-[#07111F]">
-                Your Reply
-              </p>
-              <Textarea
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                placeholder="Type your response to the customer here..."
-                className="min-h-[120px] border-[#E8E1D4] bg-white rounded-xl text-sm focus:border-[#C89B3C] focus:ring-1 focus:ring-[#C89B3C]"
-              />
-            </div>
-          </div>
-
-          <DialogFooter className="pt-2 gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setReplyModalOpen(false)}
-              className="rounded-xl border-[#E8E1D4] text-[#07111F] hover:bg-[#F7F3EA]"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSendReply}
-              disabled={submittingReply || !replyText.trim()}
-              className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] hover:brightness-105 rounded-xl gap-2 font-bold border-0 shadow-sm cursor-pointer"
-            >
-              {submittingReply ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-              Send Reply
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -273,19 +273,6 @@ export default function CustomerMessagesClient({
                 {/* ─── Smart Card Top Header ─── */}
                 <div className="bg-gradient-to-r from-[#07111F] via-[#0B1728] to-[#07111F] px-5 py-4 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#C89B3C]/30">
                   <div className="flex items-center gap-3.5">
-                    <div className="w-13 h-13 rounded-xl bg-[#0B1728] overflow-hidden flex-shrink-0 border border-[#C89B3C]/40 shadow-inner">
-                      {inq.property?.images?.[0]?.url ? (
-                        <img
-                          src={inq.property.images[0].url}
-                          alt={inq.property.title}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[#D9B45B]">
-                          <Building2 className="h-6 w-6" />
-                        </div>
-                      )}
-                    </div>
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md bg-[#C89B3C]/20 text-[#D9B45B] border border-[#C89B3C]/30">

@@ -244,44 +244,29 @@ function CustomerPropertiesFilterForm({
         </select>
       </div>
 
-      {/* Submit, Save & Reset Actions */}
-      <div className="flex items-end gap-1.5">
+      {/* Submit & Reset Actions */}
+      <div className="flex items-end gap-2">
         <button
           type="submit"
           disabled={isPending}
-          className="flex-1 py-2 px-2.5 rounded-xl bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] text-xs font-bold hover:brightness-105 transition-all shadow-xs flex items-center justify-center gap-1 cursor-pointer disabled:opacity-75 h-9 border-0"
+          className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] text-xs font-bold hover:brightness-105 transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-75 h-9 border-0"
         >
           {isPending ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
           ) : (
             <Filter className="w-3.5 h-3.5" />
           )}
-          <span>{isPending ? "..." : "Filter"}</span>
-        </button>
-        <button
-          type="button"
-          onClick={handleSaveCurrentSearch}
-          disabled={savingSearch || searchSaved}
-          className="py-2 px-2.5 rounded-xl border border-[#C89B3C]/40 bg-[#07111F] text-[#D9B45B] hover:bg-[#0B1728] text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer h-9 disabled:opacity-75"
-          title="Save this search"
-        >
-          {savingSearch ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : searchSaved ? (
-            <Check className="w-3.5 h-3.5 text-emerald-400" />
-          ) : (
-            <Bookmark className="w-3.5 h-3.5 text-[#D9B45B]" />
-          )}
-          <span>{searchSaved ? "Saved" : "Save"}</span>
+          <span>{isPending ? "Filtering..." : "Filter"}</span>
         </button>
         {hasActiveFilters && (
           <button
             type="button"
             onClick={handleReset}
-            className="py-2 px-2 rounded-xl border border-[#E8E1D4] bg-[#F7F3EA] text-[#6B7280] hover:text-[#07111F] hover:bg-[#E8E1D4] text-xs font-medium transition-all flex items-center justify-center cursor-pointer h-9"
+            className="py-2 px-3 rounded-xl border border-[#E8E1D4] bg-[#F7F3EA] text-[#6B7280] hover:text-[#07111F] hover:bg-[#E8E1D4] text-xs font-medium transition-all flex items-center justify-center gap-1 cursor-pointer h-9"
             title="Reset Filters"
           >
             <RotateCcw className="w-3.5 h-3.5 text-[#A97918]" />
+            <span className="hidden sm:inline">Reset</span>
           </button>
         )}
       </div>

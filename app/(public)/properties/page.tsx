@@ -326,19 +326,6 @@ export default async function PropertiesPage({
                 Explore verified listings with AI valuations, price intelligence, and verified regional registry
               </p>
             </div>
-
-            <SaveSearchButton
-              filters={{
-                q: keywordQuery || undefined,
-                location: searchLocation ? String(searchLocation) : undefined,
-                type: type ? String(type) : undefined,
-                listingType: listingType ? String(listingType) : undefined,
-                minPrice: minPrice ? Number(minPrice) : undefined,
-                maxPrice: maxPrice ? Number(maxPrice) : undefined,
-                bedrooms: bedrooms ? Number(bedrooms) : undefined,
-                bathrooms: bathrooms ? Number(bathrooms) : undefined,
-              }}
-            />
           </div>
 
           {/* ================================================================ */}

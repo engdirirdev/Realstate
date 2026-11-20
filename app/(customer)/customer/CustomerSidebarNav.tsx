@@ -44,7 +44,6 @@ const customerNavGroups: NavGroup[] = [
     items: [
       { href: "/customer/properties", label: "Browse Properties", icon: Building2 },
       { href: "/customer/favorites", label: "Favorites", icon: Heart },
-      { href: "/customer/saved-searches", label: "Saved Searches", icon: Search },
     ],
   },
   {

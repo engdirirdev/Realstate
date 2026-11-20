@@ -13,7 +13,6 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Building2, Sparkles } from "lucide-react";
 import PropertyCard from "@/components/PropertyCard";
-import SaveSearchButton from "@/components/SaveSearchButton";
 import CustomerPropertiesFilterForm from "@/components/customer/CustomerPropertiesFilterForm";
 import type { Metadata } from "next";
 
@@ -158,18 +157,6 @@ export default async function CustomerPropertiesPage({
               Explore luxury villas, modern apartments, and prime commercial plots across Somalia
             </p>
           </div>
-
-          <SaveSearchButton
-            filters={{
-              q: q || undefined,
-              city: city || undefined,
-              type: type || undefined,
-              listingType: listingType || undefined,
-              minPrice: minPrice ?? undefined,
-              maxPrice: maxPrice ?? undefined,
-              bedrooms: bedrooms ?? undefined,
-            }}
-          />
         </div>
 
         {/* Filter Toolbar */}
@@ -185,12 +172,6 @@ export default async function CustomerPropertiesPage({
         <p className="text-xs font-bold text-[#07111F]">
           Showing <span className="text-[#C89B3C]">{properties.length}</span> Verified Properties
         </p>
-        <Link
-          href="/customer/saved-searches"
-          className="text-xs font-bold text-[#A97918] hover:text-[#07111F] underline underline-offset-4"
-        >
-          View Saved Searches →
-        </Link>
       </div>
 
       {properties.length === 0 ? (

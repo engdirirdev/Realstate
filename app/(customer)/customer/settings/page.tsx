@@ -98,13 +98,7 @@ export default function CustomerSettingsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <button
             type="button"
-            onClick={() => {
-              setLang("en");
-              toast({
-                title: "Language switched to English 🇬🇧",
-                description: "The portal is now displayed in English.",
-              });
-            }}
+            onClick={() => setLang("en")}
             className={`p-5 rounded-2xl border text-left transition-all flex items-center justify-between cursor-pointer ${
               lang === "en"
                 ? "bg-[#07111F] text-white border-[#C89B3C] shadow-md ring-2 ring-[#C89B3C]/30"
@@ -125,13 +119,7 @@ export default function CustomerSettingsPage() {
 
           <button
             type="button"
-            onClick={() => {
-              setLang("so");
-              toast({
-                title: "Luuqadda waa Af-Soomaali 🇸🇴",
-                description: "Nidaamka waxaa lagu soo bandhigay Af-Soomaali.",
-              });
-            }}
+            onClick={() => setLang("so")}
             className={`p-5 rounded-2xl border text-left transition-all flex items-center justify-between cursor-pointer ${
               lang === "so"
                 ? "bg-[#07111F] text-white border-[#C89B3C] shadow-md ring-2 ring-[#C89B3C]/30"
@@ -175,15 +163,7 @@ export default function CustomerSettingsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <button
             type="button"
-            onClick={() => {
-              setTheme("day");
-              toast({
-                title: isSo ? "Muuqaalka Maalinta (Day Mode) ☀️" : "Day Mode Activated ☀️",
-                description: isSo
-                  ? "Nidaamka waxaa loo beddelay iftiinka maalinta."
-                  : "Switched to warm luxury daylight appearance.",
-              });
-            }}
+            onClick={() => setTheme("day")}
             className={`p-5 rounded-2xl border text-left transition-all flex items-center justify-between cursor-pointer ${
               theme === "day"
                 ? "bg-[#07111F] text-white border-[#C89B3C] shadow-md ring-2 ring-[#C89B3C]/30"
@@ -218,15 +198,7 @@ export default function CustomerSettingsPage() {
 
           <button
             type="button"
-            onClick={() => {
-              setTheme("night");
-              toast({
-                title: isSo ? "Muuqaalka Habeenka (Night Mode) 🌙" : "Night Mode Activated 🌙",
-                description: isSo
-                  ? "Nidaamka waxaa loo beddelay muuqaalka habeenka."
-                  : "Switched to deep navy dark appearance.",
-              });
-            }}
+            onClick={() => setTheme("night")}
             className={`p-5 rounded-2xl border text-left transition-all flex items-center justify-between cursor-pointer ${
               theme === "night"
                 ? "bg-[#07111F] text-white border-[#C89B3C] shadow-md ring-2 ring-[#C89B3C]/30"

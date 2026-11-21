@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { formatPrice } from "@/lib/utils";
+import PurchasePaymentModal, { PurchasePayTarget } from "@/components/transactions/PurchasePaymentModal";
 
 type RequestType = "ALL" | "RENTAL" | "PURCHASE";
 
@@ -49,7 +50,7 @@ export default function CustomerRequestsView({
   const [rentalRequests, setRentalRequests] = useState<any[]>(initialRentalRequests || []);
   const [purchaseRequests, setPurchaseRequests] = useState<any[]>(initialPurchaseRequests || []);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [payTarget, setPayTarget] = useState<any | null>(null);
+  const [payTarget, setPayTarget] = useState<PurchasePayTarget | null>(null);
   const [viewBookingTarget, setViewBookingTarget] = useState<any | null>(null);
 
   const isInitialMount = useRef(true);
@@ -108,14 +109,14 @@ export default function CustomerRequestsView({
     }
   };
 
-  const handlePay = async () => {
+  const handlePay = async (paymentMethod: string, transactionRef: string) => {
     if (!payTarget) return;
-    setBusyId(payTarget.id);
+    setBusyId(payTarget.transactionId);
     try {
-      const res = await fetch(`/api/transactions/${payTarget.id}/pay`, {
+      const res = await fetch(`/api/transactions/${payTarget.transactionId}/pay`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentMethod: "SANDBOX" }),
+        body: JSON.stringify({ paymentMethod, transactionRef }),
       });
       const json = await res.json();
       if (json.success) {
@@ -512,7 +513,16 @@ export default function CustomerRequestsView({
                   {item.status === "PAYMENT_PENDING" && !isPaidPayment && item.transaction && (
                     <Button
                       size="sm"
-                      onClick={() => setPayTarget(item.transaction)}
+                      onClick={() =>
+                        setPayTarget({
+                          transactionId: item.transaction.id,
+                          txnNo: item.transaction.txnNo,
+                          requestNo: item.requestNo,
+                          propertyTitle: item.property?.title,
+                          customerName: item.customer?.name || item.customer?.email,
+                          amount: item.transaction.amount ?? amount,
+                        })
+                      }
                       className="rounded-xl text-xs bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] font-bold gap-1.5 border-0 shadow-xs cursor-pointer"
                     >
                       <CreditCard className="h-3.5 w-3.5" /> Pay Now
@@ -734,53 +744,13 @@ export default function CustomerRequestsView({
         </DialogContent>
       </Dialog>
 
-      {/* Sandbox Payment Confirmation Modal */}
-      <Dialog open={!!payTarget} onOpenChange={(o) => !o && setPayTarget(null)}>
-        <DialogContent className="max-w-md bg-[#FCFBF7] rounded-2xl border border-[#E8E1D4]">
-          <DialogHeader>
-            <DialogTitle className="font-serif text-[#07111F] flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-[#C89B3C]" /> Pay for Request
-            </DialogTitle>
-            <DialogDescription className="text-xs text-[#6B7280]">
-              Transaction Reference #{payTarget?.txnNo}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="bg-[#07111F] border border-[#C89B3C]/30 p-4 rounded-xl space-y-2 text-white">
-            <div className="flex items-center gap-2 text-xs font-bold text-[#D9B45B]">
-              <span>Official Sandbox Payment Gateway</span>
-            </div>
-            <p className="text-xs text-[#94A3B8]">
-              Instantly activates your agreement and automatically issues an official receipt.
-            </p>
-            <div className="pt-2 border-t border-[#C89B3C]/20 flex justify-between text-xs font-bold">
-              <span>Total Amount Due</span>
-              <span className="text-sm font-serif text-[#D9B45B]">
-                {payTarget ? formatPrice(payTarget.amount) : ""}
-              </span>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setPayTarget(null)}
-              className="rounded-xl border-[#E8E1D4]"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handlePay}
-              disabled={busyId === payTarget?.id}
-              className="rounded-xl bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] font-bold border-0"
-            >
-              {busyId === payTarget?.id ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                "Confirm & Pay"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Dedicated Purchase Payment Modal (Matching Booking Payment Card) */}
+      <PurchasePaymentModal
+        target={payTarget}
+        onClose={() => setPayTarget(null)}
+        onConfirmPay={handlePay}
+        submitting={!!payTarget && busyId === payTarget.transactionId}
+      />
     </div>
   );
 }

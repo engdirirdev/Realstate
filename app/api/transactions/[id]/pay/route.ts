@@ -16,9 +16,14 @@ export async function POST(request: NextRequest, { params }: Props) {
 
     const { id } = await params;
     const body = await request.json().catch(() => ({}));
-    const method = METHODS.includes(body?.paymentMethod) ? body.paymentMethod : "SANDBOX";
+    const rawMethod = typeof body?.paymentMethod === "string" ? body.paymentMethod.trim() : "";
+    const method = rawMethod ? rawMethod.slice(0, 60) : "EVC Plus";
+    const transactionRef =
+      typeof body?.transactionRef === "string" && body.transactionRef.trim()
+        ? body.transactionRef.trim().slice(0, 80)
+        : undefined;
 
-    const result = await payTransaction(id, user.id, method);
+    const result = await payTransaction(id, user.id, method, transactionRef);
     return NextResponse.json({
       success: true,
       payment: { id: result.payment.id, reference: result.payment.transactionRef, amount: result.payment.amount },

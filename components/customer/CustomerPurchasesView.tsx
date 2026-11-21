@@ -19,6 +19,7 @@ import { toast } from "@/hooks/use-toast";
 import { formatPrice } from "@/lib/utils";
 import StatusBadge from "@/components/transactions/StatusBadge";
 import { PROPERTY_CARD_BLUR_DATA_URL } from "@/lib/image-utils";
+import PurchasePaymentModal, { PurchasePayTarget } from "@/components/transactions/PurchasePaymentModal";
 
 type PurchaseTab = "ALL" | "APPROVED" | "PENDING" | "COMPLETED" | "CANCELLED";
 
@@ -30,7 +31,7 @@ export default function CustomerPurchasesView({ initialPurchases }: CustomerPurc
   const [tab, setTab] = useState<PurchaseTab>("ALL");
   const [loading, setLoading] = useState(initialPurchases ? false : true);
   const [purchases, setPurchases] = useState<any[]>(initialPurchases || []);
-  const [payTarget, setPayTarget] = useState<any | null>(null);
+  const [payTarget, setPayTarget] = useState<PurchasePayTarget | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const isInitialMount = useRef(true);
 
@@ -59,14 +60,14 @@ export default function CustomerPurchasesView({ initialPurchases }: CustomerPurc
     loadPurchases();
   }, [loadPurchases, initialPurchases]);
 
-  const handlePay = async () => {
+  const handlePay = async (paymentMethod: string, transactionRef: string) => {
     if (!payTarget) return;
-    setBusyId(payTarget.id);
+    setBusyId(payTarget.transactionId);
     try {
-      const res = await fetch(`/api/transactions/${payTarget.id}/pay`, {
+      const res = await fetch(`/api/transactions/${payTarget.transactionId}/pay`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentMethod: "SANDBOX" }),
+        body: JSON.stringify({ paymentMethod, transactionRef }),
       });
       const json = await res.json();
       if (json.success) {
@@ -331,7 +332,16 @@ export default function CustomerPurchasesView({ initialPurchases }: CustomerPurc
                   {(purchase.status === "PAYMENT_PENDING" || (purchase.status === "APPROVED" && purchase.transaction)) && !isPaid && (
                     <Button
                       size="sm"
-                      onClick={() => setPayTarget(purchase.transaction)}
+                      onClick={() =>
+                        setPayTarget({
+                          transactionId: purchase.transaction.id,
+                          txnNo: purchase.transaction.txnNo,
+                          requestNo: purchase.requestNo,
+                          propertyTitle: purchase.property?.title,
+                          customerName: purchase.customer?.name || purchase.customer?.email,
+                          amount: purchase.transaction.amount ?? purchase.salePrice,
+                        })
+                      }
                       className="flex-1 rounded-xl text-xs bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] font-bold gap-1 border-0 shadow-xs"
                     >
                       <CreditCard className="h-3.5 w-3.5" /> Pay Now
@@ -359,50 +369,13 @@ export default function CustomerPurchasesView({ initialPurchases }: CustomerPurc
         </div>
       )}
 
-      {/* Payment Confirmation Modal */}
-      <Dialog open={!!payTarget} onOpenChange={(o) => !o && setPayTarget(null)}>
-        <DialogContent className="max-w-md bg-[#FCFBF7] rounded-2xl border border-[#E8E1D4]">
-          <DialogHeader>
-            <DialogTitle className="font-serif text-[#07111F] flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-[#C89B3C]" /> Complete Property Purchase
-            </DialogTitle>
-            <DialogDescription className="text-xs text-[#6B7280]">
-              Transaction Reference #{payTarget?.txnNo}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="bg-[#07111F] border border-[#C89B3C]/30 p-4 rounded-xl space-y-2 text-white">
-            <div className="flex items-center gap-2 text-xs font-bold text-[#D9B45B]">
-              <ShieldCheck className="h-4 w-4 text-[#C89B3C]" />
-              <span>Official Escrow / Acquisition Gateway</span>
-            </div>
-            <p className="text-xs text-[#94A3B8]">
-              Executing payment will close this transaction, mark the property SOLD, and issue the official ownership transfer receipt.
-            </p>
-            <div className="pt-2 border-t border-[#C89B3C]/20 flex justify-between text-xs font-bold">
-              <span>Total Purchase Consideration</span>
-              <span className="text-sm font-serif text-[#D9B45B]">
-                {payTarget ? formatPrice(payTarget.amount) : ""}
-              </span>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setPayTarget(null)}
-              className="rounded-xl border-[#E8E1D4]"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handlePay}
-              disabled={busyId === payTarget?.id}
-              className="rounded-xl bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] font-bold border-0"
-            >
-              {busyId === payTarget?.id ? <Loader2 className="h-4 w-4 animate-spin" /> : "Authorize Payment"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Dedicated Purchase Payment Modal (Matching Booking Payment Card) */}
+      <PurchasePaymentModal
+        target={payTarget}
+        onClose={() => setPayTarget(null)}
+        onConfirmPay={handlePay}
+        submitting={!!payTarget && busyId === payTarget.transactionId}
+      />
     </div>
   );
 }

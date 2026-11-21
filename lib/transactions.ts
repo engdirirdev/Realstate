@@ -811,7 +811,12 @@ export async function reviewRequest(
 // PAYMENT  (sandbox gateway – no real card is charged)
 // ----------------------------------------------------------------
 
-export async function payTransaction(transactionId: string, customerId: string, paymentMethod?: string) {
+export async function payTransaction(
+  transactionId: string,
+  customerId: string,
+  paymentMethod?: string,
+  customTransactionRef?: string
+) {
   return prisma.$transaction(async (tx) => {
     const preview = await tx.transaction.findUnique({ where: { id: transactionId }, select: { propertyId: true } });
     if (!preview) throw new TxnError("Transaction not found.", 404);
@@ -863,9 +868,9 @@ export async function payTransaction(transactionId: string, customerId: string, 
         managerId: txn.managerId,
         amount: txn.amount, // always the server-side amount
         currency: txn.currency,
-        paymentMethod: paymentMethod || "SANDBOX",
+        paymentMethod: paymentMethod || "EVC Plus",
         status: "PAID",
-        transactionRef: genNo("PAY"),
+        transactionRef: customTransactionRef?.trim() || genNo("PAY"),
         paidAt: now,
       },
     });

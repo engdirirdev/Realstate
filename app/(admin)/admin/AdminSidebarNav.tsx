@@ -20,12 +20,15 @@ import {
   FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePortalLanguage } from "@/lib/customer-i18n";
 
 interface NavGroup {
   title?: string;
+  titleSo?: string;
   items: {
     href: string;
     label: string;
+    labelSo: string;
     icon: any;
   }[];
 }
@@ -33,45 +36,50 @@ interface NavGroup {
 const navGroups: NavGroup[] = [
   {
     items: [
-      { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/admin", label: "Dashboard", labelSo: "Xarunta Guud", icon: LayoutDashboard },
     ],
   },
   {
     title: "PROPERTY MANAGEMENT",
+    titleSo: "MAAMULKA GURYAHA",
     items: [
-      { href: "/admin/properties", label: "All Properties", icon: Building2 },
-      { href: "/admin/properties/add", label: "Add Property", icon: Plus },
-      { href: "/admin/categories", label: "Categories", icon: FolderTree },
-      { href: "/admin/locations", label: "Locations", icon: MapPin },
+      { href: "/admin/properties", label: "All Properties", labelSo: "Dhammaan Guryaha", icon: Building2 },
+      { href: "/admin/properties/add", label: "Add Property", labelSo: "Ku Dar Guri", icon: Plus },
+      { href: "/admin/categories", label: "Categories", labelSo: "Qaybaha", icon: FolderTree },
+      { href: "/admin/locations", label: "Locations", labelSo: "Goobaha", icon: MapPin },
     ],
   },
   {
     title: "TRANSACTIONS & SETTLEMENTS",
+    titleSo: "HESHIISYADA & LACAGTA",
     items: [
-      { href: "/admin/sales", label: "Purchase Requests & Sales", icon: BadgeDollarSign },
-      { href: "/admin/bookings", label: "Bookings & Rents", icon: FileText },
-      { href: "/admin/transactions", label: "Payments & Transactions", icon: CreditCard },
+      { href: "/admin/sales", label: "Purchase Requests & Sales", labelSo: "Codsiyada Iibka", icon: BadgeDollarSign },
+      { href: "/admin/bookings", label: "Bookings & Rents", labelSo: "Ballamaha & Kirada", icon: FileText },
+      { href: "/admin/transactions", label: "Payments & Transactions", labelSo: "Lacag-Bixinta", icon: CreditCard },
     ],
   },
   {
     title: "CLIENT ENGAGEMENT",
+    titleSo: "XIRIIRKA MACAAMIISHA",
     items: [
-      { href: "/admin/messages", label: "Contact Inquiries", icon: MessageSquare },
+      { href: "/admin/messages", label: "Contact Inquiries", labelSo: "Farriimaha", icon: MessageSquare },
     ],
   },
   {
     title: "USERS & CLIENTS",
+    titleSo: "ISTICMAALAYAASHA",
     items: [
-      { href: "/admin/users?role=CUSTOMER", label: "Customers", icon: Users },
-      { href: "/admin/users?role=USER", label: "Managers", icon: UserCheck },
+      { href: "/admin/users?role=CUSTOMER", label: "Customers", labelSo: "Macaamiisha", icon: Users },
+      { href: "/admin/users?role=USER", label: "Managers", labelSo: "Maamulayaasha", icon: UserCheck },
     ],
   },
   {
     title: "SYSTEM & INTELLIGENCE",
+    titleSo: "NIDAAMKA & CAQLIGA",
     items: [
-      { href: "/admin/analytics", label: "Platform Analytics", icon: BarChart3 },
-      { href: "/admin/audit-logs", label: "Audit Logs", icon: ScrollText },
-      { href: "/admin/settings", label: "Settings", icon: Settings },
+      { href: "/admin/analytics", label: "Platform Analytics", labelSo: "Falanqaynta", icon: BarChart3 },
+      { href: "/admin/audit-logs", label: "Audit Logs", labelSo: "Diiwaanka Amniga", icon: ScrollText },
+      { href: "/admin/settings", label: "Settings", labelSo: "Dejinta", icon: Settings },
     ],
   },
 ];
@@ -80,12 +88,12 @@ export default function AdminSidebarNav() {
   const pathname = usePathname();
   const router = useRouter();
   const [optimisticPath, setOptimisticPath] = useState<string | null>(null);
+  const [lang] = usePortalLanguage();
 
   useEffect(() => {
     setOptimisticPath(null);
   }, [pathname]);
 
-  // Staggered background prefetching so routes compile one-by-one without a 14-request startup storm
   useEffect(() => {
     const allHrefs = navGroups.flatMap((g) => g.items.map((i) => i.href));
     const timers: NodeJS.Timeout[] = [];
@@ -101,6 +109,7 @@ export default function AdminSidebarNav() {
   }, [router, pathname]);
 
   const currentPath = optimisticPath || pathname;
+  const isSo = lang === "so";
 
   return (
     <nav suppressHydrationWarning className="flex-1 px-3.5 py-2 space-y-4 overflow-y-auto scrollbar-hide">
@@ -108,10 +117,10 @@ export default function AdminSidebarNav() {
         <div key={groupIdx} className="space-y-1">
           {group.title && (
             <p className="px-3 text-[10px] font-bold text-[#C49E58] uppercase tracking-[0.12em] mb-2 font-mono">
-              {group.title}
+              {isSo ? group.titleSo || group.title : group.title}
             </p>
           )}
-          {group.items.map(({ href, label, icon: Icon }) => {
+          {group.items.map(({ href, label, labelSo, icon: Icon }) => {
             const isActive =
               currentPath === href ||
               (label === "Dashboard" && currentPath === "/admin") ||
@@ -141,7 +150,7 @@ export default function AdminSidebarNav() {
                       : "text-[#D9A336] group-hover:text-[#E8B849] group-hover:scale-110"
                   )}
                 />
-                <span className="truncate">{label}</span>
+                <span className="truncate">{isSo ? labelSo : label}</span>
               </Link>
             );
           })}

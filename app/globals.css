@@ -276,6 +276,7 @@ html[data-portal-theme="night"] {
 
 html[data-portal-theme="night"] body,
 html[data-portal-theme="night"] .bg-\[\#F7F3EA\],
+html[data-portal-theme="night"] .bg-\[\#F5EFEB\],
 html[data-portal-theme="night"] .bg-\[\#FAF7F2\] {
   background-color: #07111F !important;
   color: #F7F3EA !important;

@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import AdminSidebarNav from "@/app/(admin)/admin/AdminSidebarNav";
 import BrandLogo from "@/components/layout/BrandLogo";
+import { usePortalLanguage, usePortalTheme } from "@/lib/customer-i18n";
 
 interface AdminHeaderProps {
   userName?: string | null;
@@ -42,6 +43,8 @@ export default function AdminHeader({
 }: AdminHeaderProps) {
   const [searchValue, setSearchValue] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  usePortalLanguage();
+  usePortalTheme();
 
   const initial = userName?.charAt(0).toUpperCase() || "A";
 

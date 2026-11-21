@@ -16,15 +16,18 @@ import {
   CreditCard,
   FileText,
   Users,
-  Heart,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePortalLanguage } from "@/lib/customer-i18n";
 
 interface NavGroup {
   title?: string;
+  titleSo?: string;
   items: {
     href: string;
     label: string;
+    labelSo: string;
     icon: any;
   }[];
 }
@@ -32,43 +35,49 @@ interface NavGroup {
 const managerNavGroups: NavGroup[] = [
   {
     items: [
-      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/dashboard", label: "Dashboard", labelSo: "Xarunta Guud", icon: LayoutDashboard },
     ],
   },
   {
     title: "PROPERTIES",
+    titleSo: "GURYAHA",
     items: [
-      { href: "/dashboard/properties", label: "All Properties", icon: Building2 },
-      { href: "/dashboard/properties/add", label: "Add Property", icon: PlusCircle },
+      { href: "/dashboard/properties", label: "All Properties", labelSo: "Dhammaan Guryaha", icon: Building2 },
+      { href: "/dashboard/properties/add", label: "Add Property", labelSo: "Ku Dar Guri", icon: PlusCircle },
     ],
   },
   {
     title: "CLIENTS & LEADS",
+    titleSo: "MACAAMIISHA",
     items: [
-      { href: "/dashboard/customers", label: "Customers", icon: Users },
-      { href: "/dashboard/inquiries", label: "Inquiries & Leads", icon: MessageSquare },
-      { href: "/dashboard/notifications", label: "Alerts & Notifications", icon: Bell },
+      { href: "/dashboard/customers", label: "Customers", labelSo: "Macaamiisha", icon: Users },
+      { href: "/dashboard/inquiries", label: "Inquiries & Leads", labelSo: "Farriimaha", icon: MessageSquare },
+      { href: "/dashboard/notifications", label: "Alerts & Notifications", labelSo: "Ogeysiisyada", icon: Bell },
     ],
   },
   {
     title: "TRANSACTIONS",
+    titleSo: "HESHIISYADA",
     items: [
-      { href: "/dashboard/bookings", label: "Bookings & Rents", icon: FileText },
-      { href: "/dashboard/transactions", label: "Payments", icon: CreditCard },
+      { href: "/dashboard/bookings", label: "Bookings & Rents", labelSo: "Ballamaha & Kirada", icon: FileText },
+      { href: "/dashboard/transactions", label: "Payments", labelSo: "Lacag-Bixinta", icon: CreditCard },
     ],
   },
   {
     title: "AI & ANALYTICS",
+    titleSo: "CAQLIGA AI",
     items: [
-      { href: "/dashboard/predictions", label: "Price Prediction", icon: TrendingUp },
-      { href: "/dashboard/recommendations", label: "Recommendations", icon: Sparkles },
-      { href: "/dashboard/analytics", label: "Portfolio Analytics", icon: BarChart3 },
+      { href: "/dashboard/predictions", label: "Price Prediction", labelSo: "Qiimeynta AI", icon: TrendingUp },
+      { href: "/dashboard/recommendations", label: "Recommendations", labelSo: "Talooyinka AI", icon: Sparkles },
+      { href: "/dashboard/analytics", label: "Portfolio Analytics", labelSo: "Falanqaynta", icon: BarChart3 },
     ],
   },
   {
-    title: "SYSTEM",
+    title: "ACCOUNT",
+    titleSo: "AKOONKA",
     items: [
-      { href: "/dashboard/profile", label: "Profile & Settings", icon: Settings },
+      { href: "/dashboard/profile", label: "Profile", labelSo: "Xogta Shaqsiga", icon: User },
+      { href: "/dashboard/settings", label: "Settings", labelSo: "Dejinta", icon: Settings },
     ],
   },
 ];
@@ -77,6 +86,7 @@ export default function DashboardSidebarNav() {
   const pathname = usePathname();
   const router = useRouter();
   const [optimisticPath, setOptimisticPath] = useState<string | null>(null);
+  const [lang] = usePortalLanguage();
 
   useEffect(() => {
     setOptimisticPath(null);
@@ -97,6 +107,7 @@ export default function DashboardSidebarNav() {
   }, [router, pathname]);
 
   const currentPath = optimisticPath || pathname;
+  const isSo = lang === "so";
 
   return (
     <nav className="flex-1 px-3 py-2 space-y-4 overflow-y-auto scrollbar-hide">
@@ -104,10 +115,10 @@ export default function DashboardSidebarNav() {
         <div key={groupIdx} className="space-y-1">
           {group.title && (
             <p className="px-3 text-[10px] font-extrabold text-[#C89B3C]/80 uppercase tracking-widest mb-2 font-serif">
-              {group.title}
+              {isSo ? group.titleSo || group.title : group.title}
             </p>
           )}
-          {group.items.map(({ href, label, icon: Icon }) => {
+          {group.items.map(({ href, label, labelSo, icon: Icon }) => {
             const isActive =
               currentPath === href ||
               (label === "Dashboard" && currentPath === "/dashboard") ||
@@ -137,7 +148,7 @@ export default function DashboardSidebarNav() {
                       : "text-[#D9B45B] group-hover:text-[#F3D78A] group-hover:scale-110"
                   )}
                 />
-                <span className="truncate">{label}</span>
+                <span className="truncate">{isSo ? labelSo : label}</span>
               </Link>
             );
           })}

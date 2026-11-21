@@ -15,6 +15,7 @@ import {
   Settings,
   LogOut,
   Users,
+  User,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -26,6 +27,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import DashboardSidebarNav from "@/app/(dashboard)/dashboard/DashboardSidebarNav";
 import BrandLogo from "@/components/layout/BrandLogo";
+import { usePortalLanguage, usePortalTheme } from "@/lib/customer-i18n";
 
 interface ManagerHeaderProps {
   userName?: string | null;
@@ -42,6 +44,8 @@ export default function ManagerHeader({
 }: ManagerHeaderProps) {
   const [searchValue, setSearchValue] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [lang] = usePortalLanguage();
+  usePortalTheme();
 
   const initial = userName?.charAt(0).toUpperCase() || "M";
 
@@ -113,7 +117,7 @@ export default function ManagerHeader({
                   className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#C89B3C] to-[#D9B45B] flex items-center justify-center text-[#07111F] font-bold text-sm shadow-xs overflow-hidden shrink-0 ring-2 ring-[#C89B3C]/30 group-hover:ring-[#C89B3C] transition-all"
                 >
                   {userImage ? (
-                    <Image src={userImage} alt={userName || "Manager"} width={36} height={36} className="w-full h-full object-cover" />
+                    <img src={userImage} alt={userName || "Manager"} className="w-full h-full object-cover" />
                   ) : (
                     <span suppressHydrationWarning>{initial}</span>
                   )}
@@ -171,8 +175,19 @@ export default function ManagerHeader({
                   prefetch={true}
                   className="flex items-center gap-2.5 text-xs font-semibold text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl px-2.5 py-2 cursor-pointer transition-colors"
                 >
+                  <User className="h-4 w-4 text-[#C89B3C]" />
+                  {lang === "so" ? "Xogta Shaqsiga" : "Profile Details"}
+                </Link>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/dashboard/settings"
+                  prefetch={true}
+                  className="flex items-center gap-2.5 text-xs font-semibold text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl px-2.5 py-2 cursor-pointer transition-colors"
+                >
                   <Settings className="h-4 w-4 text-[#C89B3C]" />
-                  Profile & Settings
+                  {lang === "so" ? "Dejinta" : "Account Settings"}
                 </Link>
               </DropdownMenuItem>
 

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { signOut } from "next-auth/react";
 import {
   Search,
@@ -11,10 +10,8 @@ import {
   X,
   ExternalLink,
   ChevronDown,
-  Building2,
   Settings,
   LogOut,
-  Users,
   User,
 } from "lucide-react";
 import {
@@ -149,34 +146,12 @@ export default function ManagerHeader({
 
               <DropdownMenuItem asChild>
                 <Link
-                  href="/dashboard/properties"
-                  prefetch={true}
-                  className="flex items-center gap-2.5 text-xs font-semibold text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl px-2.5 py-2 cursor-pointer transition-colors"
-                >
-                  <Building2 className="h-4 w-4 text-[#C89B3C]" />
-                  My Properties
-                </Link>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem asChild>
-                <Link
-                  href="/dashboard/customers"
-                  prefetch={true}
-                  className="flex items-center gap-2.5 text-xs font-semibold text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl px-2.5 py-2 cursor-pointer transition-colors"
-                >
-                  <Users className="h-4 w-4 text-[#C89B3C]" />
-                  Clients & Leads
-                </Link>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem asChild>
-                <Link
                   href="/dashboard/profile"
                   prefetch={true}
                   className="flex items-center gap-2.5 text-xs font-semibold text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl px-2.5 py-2 cursor-pointer transition-colors"
                 >
                   <User className="h-4 w-4 text-[#C89B3C]" />
-                  {lang === "so" ? "Xogta Shaqsiga" : "Profile Details"}
+                  {lang === "so" ? "Xogta Shaqsiga" : "Profile"}
                 </Link>
               </DropdownMenuItem>
 
@@ -187,7 +162,7 @@ export default function ManagerHeader({
                   className="flex items-center gap-2.5 text-xs font-semibold text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl px-2.5 py-2 cursor-pointer transition-colors"
                 >
                   <Settings className="h-4 w-4 text-[#C89B3C]" />
-                  {lang === "so" ? "Dejinta" : "Account Settings"}
+                  {lang === "so" ? "Dejinta" : "Settings"}
                 </Link>
               </DropdownMenuItem>
 

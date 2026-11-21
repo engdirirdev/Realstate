@@ -14,19 +14,34 @@ export default async function CustomerLayout({ children }: { children: React.Rea
 
   const userId = session.user?.id;
 
-  // Real unread notifications count cached with 30s TTL to prevent DB hammering on every click
-  const unreadCount = userId
-    ? await dbCache.getOrSet(
-        `customer:unread_notifications:${userId}`,
-        30,
-        async () => {
-          return prisma.notification.count({
-            where: { userId, isRead: false },
-          }).catch(() => 0);
-        },
-        ["notifications", userId]
-      )
-    : 0;
+  const [dbUser, unreadCount] = await Promise.all([
+    userId
+      ? prisma.user
+          .findUnique({
+            where: { id: userId },
+            select: { name: true, email: true, image: true },
+          })
+          .catch(() => null)
+      : Promise.resolve(null),
+    userId
+      ? dbCache.getOrSet(
+          `customer:unread_notifications:${userId}`,
+          30,
+          async () => {
+            return prisma.notification
+              .count({
+                where: { userId, isRead: false },
+              })
+              .catch(() => 0);
+          },
+          ["notifications", userId]
+        )
+      : Promise.resolve(0),
+  ]);
+
+  const activeName = dbUser?.name || session.user?.name || "Customer";
+  const activeEmail = dbUser?.email || session.user?.email || "customer@realestate.so";
+  const activeImage = dbUser?.image || session.user?.image || null;
 
   return (
     <div suppressHydrationWarning className="min-h-screen bg-[#F7F3EA] flex">
@@ -45,15 +60,19 @@ export default async function CustomerLayout({ children }: { children: React.Rea
         {/* Bottom User & Sign Out */}
         <div suppressHydrationWarning className="p-4 border-t border-[#C89B3C]/20 space-y-2 bg-[#050C16] shrink-0">
           <div suppressHydrationWarning className="flex items-center gap-3 px-2 py-1">
-            <div suppressHydrationWarning className="w-8 h-8 rounded-xl bg-[#C89B3C]/15 border border-[#C89B3C]/30 flex items-center justify-center flex-shrink-0">
-              <User className="h-4 w-4 text-[#D9B45B]" />
+            <div suppressHydrationWarning className="w-8 h-8 rounded-xl bg-[#C89B3C]/15 border border-[#C89B3C]/30 flex items-center justify-center flex-shrink-0 overflow-hidden">
+              {activeImage ? (
+                <img src={activeImage} alt={activeName} className="w-full h-full object-cover" />
+              ) : (
+                <User className="h-4 w-4 text-[#D9B45B]" />
+              )}
             </div>
             <div suppressHydrationWarning className="min-w-0 flex-1">
               <p suppressHydrationWarning className="font-bold text-[#FCFBF7] text-xs truncate">
-                {session.user?.name || "Customer"}
+                {activeName}
               </p>
               <p suppressHydrationWarning className="text-[10px] text-[#D9B45B] font-semibold truncate">
-                {session.user?.email || "customer@realestate.so"}
+                {activeEmail}
               </p>
             </div>
           </div>
@@ -65,9 +84,9 @@ export default async function CustomerLayout({ children }: { children: React.Rea
       {/* ─── Main Content Area ─── */}
       <div suppressHydrationWarning className="lg:ml-64 flex-1 flex flex-col min-h-screen bg-[#F7F3EA] min-w-0">
         <CustomerHeader
-          userName={session.user?.name}
-          userEmail={session.user?.email}
-          userImage={session.user?.image}
+          userName={activeName}
+          userEmail={activeEmail}
+          userImage={activeImage}
           unreadCount={unreadCount}
         />
 

@@ -19,15 +19,17 @@ import {
   Settings,
   Calendar,
   Star,
-  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePortalLanguage } from "@/lib/customer-i18n";
 
 interface NavGroup {
   title?: string;
+  titleSo?: string;
   items: {
     href: string;
     label: string;
+    labelSo: string;
     icon: any;
   }[];
 }
@@ -35,52 +37,59 @@ interface NavGroup {
 const customerNavGroups: NavGroup[] = [
   {
     title: "MAIN",
+    titleSo: "QAYBTA GUUD",
     items: [
-      { href: "/customer", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/customer", label: "Dashboard", labelSo: "Xarunta Guud", icon: LayoutDashboard },
     ],
   },
   {
     title: "PROPERTIES",
+    titleSo: "GURYAHA",
     items: [
-      { href: "/customer/properties", label: "Browse Properties", icon: Building2 },
-      { href: "/customer/favorites", label: "Favorites", icon: Heart },
+      { href: "/customer/properties", label: "Browse Properties", labelSo: "Raadi Guryaha", icon: Building2 },
+      { href: "/customer/favorites", label: "Favorites", labelSo: "Kuwa La Jecelyahay", icon: Heart },
     ],
   },
   {
     title: "TRANSACTIONS",
+    titleSo: "HESHIISYADA",
     items: [
-      { href: "/customer/bookings", label: "My Bookings", icon: Calendar },
-      { href: "/customer/requests", label: "My Requests", icon: FileText },
-      { href: "/customer/rentals", label: "My Rentals", icon: Key },
-      { href: "/customer/purchases", label: "My Purchases", icon: ShoppingBag },
+      { href: "/customer/bookings", label: "My Bookings", labelSo: "Ballamaha", icon: Calendar },
+      { href: "/customer/requests", label: "My Requests", labelSo: "Codsiyadayda", icon: FileText },
+      { href: "/customer/rentals", label: "My Rentals", labelSo: "Kiradayda", icon: Key },
+      { href: "/customer/purchases", label: "My Purchases", labelSo: "Iibsashadayda", icon: ShoppingBag },
     ],
   },
   {
     title: "FINANCE",
+    titleSo: "MAALIYADDA",
     items: [
-      { href: "/customer/payments", label: "Payments", icon: CreditCard },
+      { href: "/customer/payments", label: "Payments", labelSo: "Lacag-Bixinta", icon: CreditCard },
     ],
   },
   {
     title: "AI",
+    titleSo: "CAQLIGA AI",
     items: [
-      { href: "/customer/recommendations", label: "AI Recommendations", icon: Sparkles },
-      { href: "/customer/predictions", label: "Price Prediction", icon: TrendingUp },
+      { href: "/customer/recommendations", label: "AI Recommendations", labelSo: "Talooyinka AI", icon: Sparkles },
+      { href: "/customer/predictions", label: "Price Prediction", labelSo: "Qiimeynta AI", icon: TrendingUp },
     ],
   },
   {
     title: "COMMUNICATION",
+    titleSo: "XIRIIRKA",
     items: [
-      { href: "/customer/messages", label: "Messages", icon: MessageSquare },
-      { href: "/customer/notifications", label: "Notifications", icon: Bell },
+      { href: "/customer/messages", label: "Messages", labelSo: "Farriimaha", icon: MessageSquare },
+      { href: "/customer/notifications", label: "Notifications", labelSo: "Ogeysiisyada", icon: Bell },
     ],
   },
   {
     title: "ACCOUNT",
+    titleSo: "AKOONKA",
     items: [
-      { href: "/customer/profile", label: "Profile", icon: User },
-      { href: "/customer/reviews", label: "My Reviews", icon: Star },
-      { href: "/customer/settings", label: "Settings", icon: Settings },
+      { href: "/customer/profile", label: "Profile", labelSo: "Xogta Shaqsiga", icon: User },
+      { href: "/customer/reviews", label: "My Reviews", labelSo: "Qiimeyntayda", icon: Star },
+      { href: "/customer/settings", label: "Settings", labelSo: "Dejinta", icon: Settings },
     ],
   },
 ];
@@ -89,6 +98,7 @@ export default function CustomerSidebarNav() {
   const pathname = usePathname();
   const router = useRouter();
   const [optimisticPath, setOptimisticPath] = useState<string | null>(null);
+  const [lang] = usePortalLanguage();
 
   useEffect(() => {
     setOptimisticPath(null);
@@ -109,12 +119,13 @@ export default function CustomerSidebarNav() {
   }, [router, pathname]);
 
   const currentPath = optimisticPath || pathname;
+  const isSo = lang === "so";
 
   return (
     <nav className="flex-1 px-3 py-2 space-y-4 overflow-y-auto scrollbar-hide">
       <div className="px-3 pb-2 border-b border-[#C89B3C]/15 mb-2">
         <p className="text-[11px] font-black text-[#D9B45B] tracking-wider uppercase font-serif">
-          Customer Portal
+          {isSo ? "Barta Macaamiisha" : "Customer Portal"}
         </p>
       </div>
 
@@ -122,10 +133,10 @@ export default function CustomerSidebarNav() {
         <div key={groupIdx} className="space-y-1">
           {group.title && (
             <p className="px-3 text-[10px] font-extrabold text-[#C89B3C]/80 uppercase tracking-widest mb-1.5 font-serif">
-              {group.title}
+              {isSo ? group.titleSo || group.title : group.title}
             </p>
           )}
-          {group.items.map(({ href, label, icon: Icon }) => {
+          {group.items.map(({ href, label, labelSo, icon: Icon }) => {
             const isActive =
               currentPath === href || (href === "/customer" && currentPath === "/customer");
 
@@ -152,7 +163,7 @@ export default function CustomerSidebarNav() {
                       : "text-[#D9B45B] group-hover:text-[#F3D78A] group-hover:scale-110"
                   )}
                 />
-                <span className="truncate">{label}</span>
+                <span className="truncate">{isSo ? labelSo : label}</span>
               </Link>
             );
           })}

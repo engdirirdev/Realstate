@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import CustomerSidebarNav from "@/app/(customer)/customer/CustomerSidebarNav";
 import BrandLogo from "@/components/layout/BrandLogo";
+import { usePortalLanguage } from "@/lib/customer-i18n";
 
 interface CustomerHeaderProps {
   userName?: string | null;
@@ -42,6 +43,7 @@ export default function CustomerHeader({
 }: CustomerHeaderProps) {
   const [searchValue, setSearchValue] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [lang, setLang] = usePortalLanguage();
 
   const initial = userName?.charAt(0).toUpperCase() || "C";
 
@@ -75,15 +77,43 @@ export default function CustomerHeader({
           </div>
         </div>
 
-        {/* Right: Public Site Link, Notifications & Customer Profile */}
-        <div className="flex items-center gap-3 sm:gap-4">
+        {/* Right: Language Switcher, Public Site Link, Notifications & Customer Profile */}
+        <div className="flex items-center gap-2.5 sm:gap-3.5">
+          {/* Quick Language Toggle (EN / SO) */}
+          <div className="inline-flex items-center bg-[#F7F3EA] p-0.5 rounded-xl border border-[#E8E1D4]">
+            <button
+              type="button"
+              onClick={() => setLang("en")}
+              className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                lang === "en"
+                  ? "bg-[#07111F] text-[#D9B45B] shadow-2xs"
+                  : "text-[#6B7280] hover:text-[#07111F]"
+              }`}
+              title="Switch to English"
+            >
+              EN
+            </button>
+            <button
+              type="button"
+              onClick={() => setLang("so")}
+              className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                lang === "so"
+                  ? "bg-[#07111F] text-[#D9B45B] shadow-2xs"
+                  : "text-[#6B7280] hover:text-[#07111F]"
+              }`}
+              title="U beddel Af-Soomaali"
+            >
+              SO
+            </button>
+          </div>
+
           <Link
             href="/"
             prefetch={true}
             className="hidden md:inline-flex items-center gap-1.5 text-xs font-semibold text-[#07111F] hover:text-[#C89B3C] bg-[#FCFBF7] hover:bg-[#F7F3EA] border border-[#E8E1D4] px-3 py-1.5 rounded-xl transition-colors focus-visible:ring-2 focus-visible:ring-[#C89B3C]"
           >
             <ExternalLink className="h-3.5 w-3.5 text-[#C89B3C]" />
-            <span>Public Site</span>
+            <span>{lang === "so" ? "Bogga Guud" : "Public Site"}</span>
           </Link>
 
           {/* Notifications */}
@@ -113,7 +143,7 @@ export default function CustomerHeader({
                   className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#C89B3C] to-[#D9B45B] flex items-center justify-center text-[#07111F] font-bold text-sm shadow-xs overflow-hidden shrink-0 ring-2 ring-[#C89B3C]/30 group-hover:ring-[#C89B3C] transition-all"
                 >
                   {userImage ? (
-                    <Image src={userImage} alt={userName || "Customer"} width={36} height={36} className="w-full h-full object-cover" />
+                    <img src={userImage} alt={userName || "Customer"} className="w-full h-full object-cover" />
                   ) : (
                     <span suppressHydrationWarning>{initial}</span>
                   )}

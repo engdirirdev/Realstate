@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await requireRole(["ADMIN", "USER"]);
+    const authResult = await requireRole(["ADMIN", "USER", "CUSTOMER"]);
     if (authResult.response) {
       return authResult.response;
     }

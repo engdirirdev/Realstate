@@ -1,10 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import Link from "next/link";
-import { Settings } from "lucide-react";
 import AdminSidebarNav from "./AdminSidebarNav";
 import AdminHeader from "@/components/admin/AdminHeader";
-import SidebarSignOutButton from "@/components/layout/SidebarSignOutButton";
 import BrandLogo from "@/components/layout/BrandLogo";
 import { prisma } from "@/lib/prisma";
 import { dbCache } from "@/lib/cache";
@@ -44,37 +41,6 @@ export default async function AdminLayout({
         {/* Navigation Items (Scrollable if screen is scaled or low height) */}
         <div suppressHydrationWarning className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-[#1B2738] hover:scrollbar-thumb-[#C89B3C]/50 py-3">
           <AdminSidebarNav />
-        </div>
-
-        {/* Bottom User & Sign Out (Matching Screenshot) */}
-        <div suppressHydrationWarning className="p-4 border-t border-[#1B2738] space-y-2 bg-[#09111D] shrink-0">
-          <div suppressHydrationWarning className="flex items-center justify-between gap-3 px-1 py-1">
-            <div suppressHydrationWarning className="flex items-center gap-2.5 min-w-0">
-              <div suppressHydrationWarning className="w-9 h-9 rounded-full bg-[#C99126] text-white flex items-center justify-center font-black text-sm shrink-0 shadow-sm">
-                <span suppressHydrationWarning>{session.user?.name?.charAt(0).toUpperCase() || "C"}</span>
-              </div>
-              <div suppressHydrationWarning className="min-w-0">
-                <p suppressHydrationWarning className="font-bold text-white text-xs truncate">
-                  {session.user?.name || "Cabdullahi Axmed"}
-                </p>
-                <p suppressHydrationWarning className="text-[10px] text-slate-400 font-medium truncate">
-                  {session.user?.email || "admin@realestate.so"}
-                </p>
-              </div>
-            </div>
-
-            <Link
-              suppressHydrationWarning
-              href="/admin/settings"
-              prefetch={true}
-              className="text-[#D9A336] hover:text-white p-1 transition-colors shrink-0"
-              title="Settings"
-            >
-              <Settings className="w-4 h-4" />
-            </Link>
-          </div>
-
-          <SidebarSignOutButton />
         </div>
       </aside>
 

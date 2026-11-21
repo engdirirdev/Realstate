@@ -136,6 +136,15 @@ export async function createPurchaseRequest(customerId: string, propertyId: stri
     if (open) throw new TxnError("You already have an open purchase request for this property.", 409);
 
     let assignedManagerId = property.managerId;
+    if (assignedManagerId) {
+      const currentAssignee = await tx.user.findUnique({
+        where: { id: assignedManagerId },
+        select: { role: true, isActive: true },
+      });
+      if (!currentAssignee || currentAssignee.role !== "USER" || !currentAssignee.isActive) {
+        assignedManagerId = null;
+      }
+    }
     if (!assignedManagerId) {
       const activeManager = await tx.user.findFirst({ where: { role: "USER", isActive: true } });
       if (activeManager) assignedManagerId = activeManager.id;
@@ -163,7 +172,7 @@ export async function createPurchaseRequest(customerId: string, propertyId: stri
       },
     });
 
-    if (!property.managerId && assignedManagerId) {
+    if (assignedManagerId && property.managerId !== assignedManagerId) {
       await tx.property.update({
         where: { id: property.id },
         data: { managerId: assignedManagerId },
@@ -267,6 +276,15 @@ export async function createRentalRequest(
     );
 
     let assignedManagerId = property.managerId;
+    if (assignedManagerId) {
+      const currentAssignee = await tx.user.findUnique({
+        where: { id: assignedManagerId },
+        select: { role: true, isActive: true },
+      });
+      if (!currentAssignee || currentAssignee.role !== "USER" || !currentAssignee.isActive) {
+        assignedManagerId = null;
+      }
+    }
     if (!assignedManagerId) {
       const activeManager = await tx.user.findFirst({ where: { role: "USER", isActive: true } });
       if (activeManager) assignedManagerId = activeManager.id;
@@ -294,7 +312,7 @@ export async function createRentalRequest(
       },
     });
 
-    if (!property.managerId && assignedManagerId) {
+    if (assignedManagerId && property.managerId !== assignedManagerId) {
       await tx.property.update({
         where: { id: property.id },
         data: { managerId: assignedManagerId },
@@ -441,9 +459,6 @@ export async function reviewRequest(
         }
         if (actor.role !== "USER") {
           throw new TxnError("Only property managers can review rental bookings.", 403);
-        }
-        if (req.property.managerId && req.property.managerId !== actor.id && req.managerId !== actor.id) {
-          throw new TxnError("Only the assigned property manager can review this rental booking.", 403);
         }
       }
     }

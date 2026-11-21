@@ -423,6 +423,17 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    let effectiveManagerId = user.id;
+    if (isAdmin) {
+      const activeManager = await prisma.user.findFirst({
+        where: { role: "USER", isActive: true },
+        select: { id: true },
+      });
+      if (activeManager) {
+        effectiveManagerId = activeManager.id;
+      }
+    }
+
     const property = await prisma.property.create({
       data: {
         title,
@@ -462,7 +473,7 @@ export async function POST(request: NextRequest) {
         approvalStatus: submitForReview ? (isAdmin ? "APPROVED" : "PENDING_REVIEW") : "DRAFT",
         availabilityStatus: "AVAILABLE",
         isActive: status === "APPROVED",
-        managerId: user.id,
+        managerId: effectiveManagerId,
         images: imageCreateList.length > 0 ? {
           create: imageCreateList,
         } : undefined,

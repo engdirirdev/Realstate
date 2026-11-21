@@ -26,12 +26,15 @@ export async function GET(request: NextRequest) {
     if (user.role === "ADMIN") {
       // Admin has full global oversight
     } else if (user.role === "USER") {
-      // Property Manager: sees requests directly assigned to them, requests for properties they manage, or unassigned requests
+      // Property Manager: sees requests directly assigned to them, requests for properties they manage, or requests created under an admin/unassigned listing
       andClauses.push({
         OR: [
           { managerId: user.id },
           { property: { managerId: user.id } },
-          { AND: [{ managerId: null }, { property: { managerId: null } }] },
+          { manager: { role: "ADMIN" } },
+          { property: { manager: { role: "ADMIN" } } },
+          { managerId: null },
+          { property: { managerId: null } },
         ],
       });
     } else if (user.role === "CUSTOMER") {

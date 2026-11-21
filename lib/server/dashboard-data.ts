@@ -14,7 +14,10 @@ export async function getRentalDashboardData(userId: string, role: string) {
         OR: [
           { managerId: userId },
           { property: { managerId: userId } },
-          { AND: [{ managerId: null }, { property: { managerId: null } }] },
+          { manager: { role: "ADMIN" } },
+          { property: { manager: { role: "ADMIN" } } },
+          { managerId: null },
+          { property: { managerId: null } },
         ],
       });
     } else {

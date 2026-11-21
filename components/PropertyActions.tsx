@@ -116,10 +116,24 @@ export default function PropertyActions({
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  // Payment method selection & transaction reference
+  // Payment method selection & automatic transaction reference
+  const generateAutoTransactionRef = (methodId: string = "evc_plus"): string => {
+    const prefixMap: Record<string, string> = {
+      evc_plus: "EVC",
+      zaad: "ZAAD",
+      sahal: "SAHAL",
+      bank_transfer: "BANK",
+    };
+    const tag = prefixMap[methodId] || "PAY";
+    const rand = Math.floor(100000 + Math.random() * 900000);
+    return `TXN-${tag}-${rand}`;
+  };
+
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodConfig[]>([]);
   const [selectedMethodId, setSelectedMethodId] = useState<string>("evc_plus");
-  const [transactionRef, setTransactionRef] = useState("");
+  const [transactionRef, setTransactionRef] = useState<string>(() =>
+    generateAutoTransactionRef("evc_plus")
+  );
   const [loadingMethods, setLoadingMethods] = useState(false);
 
   const today = new Date().toISOString().slice(0, 10);
@@ -127,6 +141,9 @@ export default function PropertyActions({
 
   // Load centralized payment methods when opening the rental flow
   useEffect(() => {
+    if (rentOpen) {
+      setTransactionRef((prev) => prev || generateAutoTransactionRef(selectedMethodId));
+    }
     if (rentOpen && paymentMethods.length === 0) {
       setLoadingMethods(true);
       fetch("/api/payment-methods")
@@ -134,13 +151,15 @@ export default function PropertyActions({
         .then((data) => {
           if (data.success && Array.isArray(data.methods) && data.methods.length > 0) {
             setPaymentMethods(data.methods);
-            setSelectedMethodId(data.methods[0].id);
+            const firstId = data.methods[0].id;
+            setSelectedMethodId(firstId);
+            setTransactionRef(generateAutoTransactionRef(firstId));
           }
         })
         .catch(() => {})
         .finally(() => setLoadingMethods(false));
     }
-  }, [rentOpen, paymentMethods.length]);
+  }, [rentOpen, paymentMethods.length, selectedMethodId]);
 
   const rentalPreview = useMemo(() => {
     if (!startDate || !endDate) return null;
@@ -214,10 +233,8 @@ export default function PropertyActions({
       toast({ title: "Invalid dates", description: "Please enter valid check-in and check-out dates.", variant: "destructive" });
       return;
     }
-    if (!transactionRef.trim()) {
-      toast({ title: "Transaction Reference Required", description: "Please enter your payment transaction reference / receipt code.", variant: "destructive" });
-      return;
-    }
+    const finalTransactionRef =
+      transactionRef.trim() || generateAutoTransactionRef(selectedMethodId);
 
     setSubmitting(true);
     try {
@@ -230,7 +247,7 @@ export default function PropertyActions({
           endDate,
           notes,
           paymentMethod: selectedPaymentMethod?.name || "EVC Plus",
-          transactionRef: transactionRef.trim(),
+          transactionRef: finalTransactionRef,
         }),
       });
       const data = await res.json();
@@ -241,7 +258,7 @@ export default function PropertyActions({
         });
         setRentOpen(false);
         setRentalStep(1);
-        setTransactionRef("");
+        setTransactionRef(generateAutoTransactionRef(selectedMethodId));
         router.push("/customer/requests");
       } else {
         toast({ title: "Booking failed", description: data.error, variant: "destructive" });
@@ -758,7 +775,10 @@ export default function PropertyActions({
                         <button
                           key={m.id}
                           type="button"
-                          onClick={() => setSelectedMethodId(m.id)}
+                          onClick={() => {
+                            setSelectedMethodId(m.id);
+                            setTransactionRef(generateAutoTransactionRef(m.id));
+                          }}
                           className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                             isSelected
                               ? "bg-[#FAF6EC] border-[#C89B3C] ring-2 ring-[#C89B3C]/30 shadow-xs"
@@ -817,15 +837,18 @@ export default function PropertyActions({
                   </p>
 
                   <div className="space-y-1 pt-1 border-t border-[#E8DEC8]">
-                    <Label className="text-xs font-bold text-[#07111F]">
-                      Transaction Reference / SMS Confirmation Code *
-                    </Label>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-bold text-[#07111F]">
+                        Transaction Reference (Auto-Generated)
+                      </Label>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300">
+                        Auto-Generated
+                      </span>
+                    </div>
                     <Input
                       value={transactionRef}
-                      onChange={(e) => setTransactionRef(e.target.value)}
-                      placeholder="e.g. TXN-819203 or mobile money SMS confirmation ID"
-                      className="h-10 bg-white border-[#C89B3C]/50 rounded-xl font-mono text-xs focus:ring-2 focus:ring-[#C89B3C]"
-                      required
+                      readOnly
+                      className="h-10 bg-white border-[#C89B3C]/50 rounded-xl font-mono font-bold text-xs text-[#07111F] focus:ring-2 focus:ring-[#C89B3C]"
                     />
                     <p className="text-[10px] text-[#6B7280]">
                       Your payment will be registered as <span className="font-bold text-[#8C6D23]">PENDING VERIFICATION</span> until Manager reviews.
@@ -846,7 +869,7 @@ export default function PropertyActions({
                 <Button
                   type="button"
                   onClick={submitRentalBooking}
-                  disabled={submitting || !transactionRef.trim()}
+                  disabled={submitting}
                   className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] rounded-xl gap-2 font-bold border-0 hover:opacity-95 cursor-pointer shadow-md"
                 >
                   {submitting ? (

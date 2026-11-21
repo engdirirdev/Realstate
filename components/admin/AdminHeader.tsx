@@ -11,10 +11,8 @@ import {
   X,
   ExternalLink,
   ChevronDown,
-  Settings,
-  Shield,
   LogOut,
-  Building2,
+  User,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -43,7 +41,7 @@ export default function AdminHeader({
 }: AdminHeaderProps) {
   const [searchValue, setSearchValue] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  usePortalLanguage();
+  const [lang] = usePortalLanguage();
   usePortalTheme();
 
   const initial = userName?.charAt(0).toUpperCase() || "A";
@@ -123,7 +121,7 @@ export default function AdminHeader({
                   className="w-9 h-9 rounded-full ring-2 ring-[#C89B3C]/30 group-hover:ring-[#C89B3C] transition-all overflow-hidden flex items-center justify-center text-xs bg-gradient-to-tr from-[#C99126] to-[#E8B849] text-white font-extrabold shadow-inner shrink-0"
                 >
                   {userImage ? (
-                    <Image src={userImage} alt={userName || "Admin"} width={36} height={36} className="w-full h-full object-cover" />
+                    <img src={userImage} alt={userName || "Admin"} className="w-full h-full object-cover" />
                   ) : (
                     <span suppressHydrationWarning>{initial}</span>
                   )}
@@ -166,46 +164,12 @@ export default function AdminHeader({
 
               <DropdownMenuItem asChild>
                 <Link
-                  href="/admin/properties"
+                  href="/admin/profile"
                   prefetch={true}
                   className="flex items-center gap-2.5 text-xs font-semibold text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl px-2.5 py-2 cursor-pointer transition-colors"
                 >
-                  <Building2 className="h-4 w-4 text-[#C89B3C]" />
-                  Manage Properties
-                </Link>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem asChild>
-                <Link
-                  href="/admin/settings"
-                  prefetch={true}
-                  className="flex items-center gap-2.5 text-xs font-semibold text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl px-2.5 py-2 cursor-pointer transition-colors"
-                >
-                  <Settings className="h-4 w-4 text-[#C89B3C]" />
-                  System Settings
-                </Link>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem asChild>
-                <Link
-                  href="/admin/audit-logs"
-                  prefetch={true}
-                  className="flex items-center gap-2.5 text-xs font-semibold text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl px-2.5 py-2 cursor-pointer transition-colors"
-                >
-                  <Shield className="h-4 w-4 text-[#C89B3C]" />
-                  Security & Audit Logs
-                </Link>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem asChild>
-                <Link
-                  href="/"
-                  prefetch={true}
-                  
-                  className="flex items-center gap-2.5 text-xs font-semibold text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl px-2.5 py-2 cursor-pointer transition-colors"
-                >
-                  <ExternalLink className="h-4 w-4 text-[#6B7280]" />
-                  View Public Website
+                  <User className="h-4 w-4 text-[#C89B3C]" />
+                  {lang === "so" ? "Xogta Shaqsiga (Profile)" : "Profile"}
                 </Link>
               </DropdownMenuItem>
 

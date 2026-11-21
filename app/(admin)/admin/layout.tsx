@@ -15,19 +15,35 @@ export default async function AdminLayout({
   if (!session) redirect("/login");
   if ((session.user as any)?.role !== "ADMIN") redirect("/dashboard");
 
-  // Real unread inquiries count for bell notification cached with 30s TTL to prevent DB hammering on every click
-  const unreadCount = await dbCache.getOrSet(
-    "admin:unread_messages_count",
-    30,
-    async () => {
-      return prisma.contactMessage
-        .count({
-          where: { isRead: false },
-        })
-        .catch(() => 0);
-    },
-    ["admin", "messages"]
-  );
+  const userId = session.user?.id;
+
+  // Fetch fresh admin profile and unread inquiries count in parallel
+  const [dbUser, unreadCount] = await Promise.all([
+    userId
+      ? prisma.user
+          .findUnique({
+            where: { id: userId },
+            select: { name: true, email: true, image: true },
+          })
+          .catch(() => null)
+      : Promise.resolve(null),
+    dbCache.getOrSet(
+      "admin:unread_messages_count",
+      30,
+      async () => {
+        return prisma.contactMessage
+          .count({
+            where: { isRead: false },
+          })
+          .catch(() => 0);
+      },
+      ["admin", "messages"]
+    ),
+  ]);
+
+  const activeName = dbUser?.name || session.user?.name || "Cabdullahi Axmed";
+  const activeEmail = dbUser?.email || session.user?.email || "admin@realestate.so";
+  const activeImage = dbUser?.image || session.user?.image || null;
 
   return (
     <div suppressHydrationWarning className="min-h-screen bg-[#F5EFEB] flex font-sans">
@@ -47,9 +63,9 @@ export default async function AdminLayout({
       {/* ─── Main Content Area (Warm Cream #F5EFEB) ─── */}
       <div suppressHydrationWarning className="lg:ml-64 flex-1 flex flex-col min-h-screen min-w-0 bg-[#F5EFEB]">
         <AdminHeader
-          userName={session.user?.name}
-          userEmail={session.user?.email}
-          userImage={session.user?.image}
+          userName={activeName}
+          userEmail={activeEmail}
+          userImage={activeImage}
           unreadCount={unreadCount || 5}
         />
 

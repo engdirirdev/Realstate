@@ -18,6 +18,7 @@ import {
   Settings,
   BadgeDollarSign,
   FileText,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePortalLanguage } from "@/lib/customer-i18n";
@@ -79,6 +80,7 @@ const navGroups: NavGroup[] = [
     items: [
       { href: "/admin/analytics", label: "Platform Analytics", labelSo: "Falanqaynta", icon: BarChart3 },
       { href: "/admin/audit-logs", label: "Audit Logs", labelSo: "Diiwaanka Amniga", icon: ScrollText },
+      { href: "/admin/profile", label: "Profile", labelSo: "Xogta Shaqsiga", icon: User },
       { href: "/admin/settings", label: "Settings", labelSo: "Dejinta", icon: Settings },
     ],
   },

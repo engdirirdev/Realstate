@@ -711,39 +711,39 @@ function CentralBookingsRentalsView({
               <>
                 {/* ─── DESKTOP & TABLET: HORIZONTAL SCROLL TABLE (Section 8-21) ─── */}
                 <div className="hidden md:block w-full max-w-full overflow-x-auto momentum-scroll">
-                  <table className="w-full min-w-[960px] lg:min-w-0 text-left border-collapse text-xs table-fixed-layout">
-                    <thead className="bg-[#F8FAFC] border-b border-[#E5E7EB]">
+                  <table className="w-full min-w-[1220px] table-auto text-left border-collapse text-xs">
+                    <thead className="bg-[#FAF7F2] border-b border-[#E8E1D4]">
                       <tr>
-                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[130px]">
+                        <th className="py-3.5 px-4 font-bold text-[11px] uppercase tracking-wider text-[#6B7280] whitespace-nowrap">
                           Booking ID
                         </th>
-                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] min-w-[170px] max-w-[210px]">
+                        <th className="py-3.5 px-4 font-bold text-[11px] uppercase tracking-wider text-[#6B7280] min-w-[220px]">
                           Property
                         </th>
-                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] min-w-[130px] max-w-[170px]">
+                        <th className="py-3.5 px-4 font-bold text-[11px] uppercase tracking-wider text-[#6B7280] min-w-[180px]">
                           Customer
                         </th>
-                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] min-w-[120px]">
+                        <th className="py-3.5 px-4 font-bold text-[11px] uppercase tracking-wider text-[#6B7280] whitespace-nowrap">
                           Rental Period
                         </th>
-                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[120px]">
+                        <th className="py-3.5 px-4 font-bold text-[11px] uppercase tracking-wider text-[#6B7280] whitespace-nowrap">
                           Total Amount
                         </th>
-                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[140px]">
+                        <th className="py-3.5 px-4 font-bold text-[11px] uppercase tracking-wider text-[#6B7280] whitespace-nowrap">
                           Booking Status
                         </th>
-                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[150px]">
+                        <th className="py-3.5 px-4 font-bold text-[11px] uppercase tracking-wider text-[#6B7280] whitespace-nowrap">
                           Payment Status
                         </th>
-                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[110px]">
+                        <th className="py-3.5 px-4 font-bold text-[11px] uppercase tracking-wider text-[#6B7280] whitespace-nowrap">
                           Created Date
                         </th>
-                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[130px] text-right">
+                        <th className="py-3.5 px-4 font-bold text-[11px] uppercase tracking-wider text-[#6B7280] text-right whitespace-nowrap">
                           Actions
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#F1F5F9]">
+                    <tbody className="divide-y divide-[#F1ECE1]">
                       {bookings.map((b) => {
                         const isApprovedOrConfirmed =
                           b.bookingStatus === "CONFIRMED" ||
@@ -756,16 +756,18 @@ function CentralBookingsRentalsView({
                         const isPending = displayStatus === "PENDING";
 
                         return (
-                          <tr key={b.id} className="hover:bg-[#F8FAFC] transition-colors">
+                          <tr key={b.id} className="hover:bg-[#FAF7F2]/80 transition-colors align-middle">
                             {/* Booking ID */}
-                            <td className="py-3.5 px-4 font-mono font-semibold text-[#071426] whitespace-nowrap">
-                              #{b.requestNo}
+                            <td className="py-4 px-4 font-mono font-bold text-[#071426] whitespace-nowrap">
+                              <span className="px-2.5 py-1 rounded-lg bg-[#F7F3EA] border border-[#E8E1D4] text-[11px]">
+                                #{b.requestNo}
+                              </span>
                             </td>
 
                             {/* Property Column (Section 12) */}
-                            <td className="py-3.5 px-4">
-                              <div className="flex items-center gap-2.5">
-                                <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-slate-100 border border-[#E5E7EB] shrink-0">
+                            <td className="py-4 px-4">
+                              <div className="flex items-center gap-3">
+                                <div className="relative w-11 h-11 rounded-xl overflow-hidden bg-slate-100 border border-[#E8E1D4] shrink-0 shadow-2xs">
                                   <Image
                                     src={
                                       b.property?.images?.[0]?.url ||
@@ -773,17 +775,17 @@ function CentralBookingsRentalsView({
                                     }
                                     alt=""
                                     fill
-                                    sizes="40px"
+                                    sizes="44px"
                                     className="object-cover"
                                     loading="lazy"
                                   />
                                 </div>
-                                <div className="min-w-0 max-w-[200px]">
-                                  <p className="font-semibold text-xs text-[#0F172A] line-clamp-2 leading-tight">
+                                <div className="min-w-0 max-w-[220px]">
+                                  <p className="font-bold text-xs text-[#07111F] line-clamp-1 leading-snug">
                                     {b.property?.title}
                                   </p>
-                                  <p className="text-[11px] text-[#64748B] truncate flex items-center gap-1 mt-0.5">
-                                    <MapPin className="h-3 w-3 text-[#D4A72C] shrink-0" />
+                                  <p className="text-[11px] text-[#6B7280] truncate flex items-center gap-1 mt-0.5">
+                                    <MapPin className="h-3 w-3 text-[#C89B3C] shrink-0" />
                                     <span>{b.property?.city || b.property?.location}</span>
                                   </p>
                                 </div>
@@ -791,16 +793,16 @@ function CentralBookingsRentalsView({
                             </td>
 
                             {/* Customer Column (Section 13) */}
-                            <td className="py-3.5 px-4">
-                              <div className="flex items-center gap-2">
-                                <div className="w-7 h-7 rounded-full bg-[#071426] text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                            <td className="py-4 px-4">
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-full bg-[#07111F] text-[#D9B45B] border border-[#C89B3C]/40 text-[10px] font-bold flex items-center justify-center shrink-0">
                                   {getInitials(b.customer?.name)}
                                 </div>
-                                <div className="min-w-0 max-w-[170px]">
-                                  <p className="font-semibold text-xs text-[#0F172A] truncate">
+                                <div className="min-w-0 max-w-[180px]">
+                                  <p className="font-bold text-xs text-[#07111F] truncate">
                                     {b.customer?.name || "Customer"}
                                   </p>
-                                  <p className="text-[11px] text-[#64748B] truncate">
+                                  <p className="text-[11px] text-[#6B7280] truncate">
                                     {b.customer?.email || b.customer?.phone || "No contact"}
                                   </p>
                                 </div>
@@ -808,28 +810,28 @@ function CentralBookingsRentalsView({
                             </td>
 
                             {/* Rental Period Column (Section 14) */}
-                            <td className="py-3.5 px-4 whitespace-nowrap">
-                              <p className="font-semibold text-xs text-[#0F172A]">
+                            <td className="py-4 px-4 whitespace-nowrap">
+                              <p className="font-semibold text-xs text-[#07111F]">
                                 {b.startDate ? new Date(b.startDate).toLocaleDateString() : "—"} →{" "}
                                 {b.endDate ? new Date(b.endDate).toLocaleDateString() : "—"}
                               </p>
-                              <p className="text-[11px] text-[#64748B] mt-0.5">
+                              <p className="text-[11px] text-[#6B7280] mt-0.5">
                                 {b.periods ? `${b.periods} ${b.rentalPeriod?.toLowerCase() || "mo"}` : "1 Month"}
                               </p>
                             </td>
 
                             {/* Total Rent Amount */}
-                            <td className="py-3.5 px-4 font-mono font-bold text-xs text-[#071426] whitespace-nowrap">
+                            <td className="py-4 px-4 font-mono font-extrabold text-xs text-[#07111F] whitespace-nowrap">
                               {formatPrice(b.totalAmount || b.rentAmount)}
                             </td>
 
                             {/* Booking Status Pill (Section 15) */}
-                            <td className="py-3.5 px-4">
+                            <td className="py-4 px-4 whitespace-nowrap">
                               {getStatusBadge(displayStatus)}
                             </td>
 
                             {/* Payment Status Pill (Section 16) */}
-                            <td className="py-3.5 px-4">
+                            <td className="py-4 px-4 whitespace-nowrap">
                               {getStatusBadge(
                                 payment?.status === "PAID"
                                   ? "PAID / VERIFIED"
@@ -838,20 +840,20 @@ function CentralBookingsRentalsView({
                             </td>
 
                             {/* Created Date */}
-                            <td className="py-3.5 px-4 text-[#64748B] text-[11px] whitespace-nowrap">
+                            <td className="py-4 px-4 text-[#6B7280] text-xs font-medium whitespace-nowrap">
                               {new Date(b.createdAt).toLocaleDateString()}
                             </td>
 
                             {/* Actions Column (Section 17) */}
-                            <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                              <div className="flex items-center justify-end gap-1.5">
+                            <td className="py-4 px-4 text-right whitespace-nowrap">
+                              <div className="inline-flex items-center justify-end gap-2">
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   onClick={() => setViewBookingTarget(b)}
-                                  className="h-7 px-2 text-xs border-[#E5E7EB] hover:bg-[#F8FAFC] text-[#071426] rounded-md gap-1 font-medium cursor-pointer"
+                                  className="h-8 px-2.5 text-xs border-[#E8E1D4] hover:bg-[#F7F3EA] text-[#07111F] rounded-lg gap-1.5 font-semibold cursor-pointer"
                                 >
-                                  <Eye className="h-3 w-3 text-[#D4A72C]" /> View
+                                  <Eye className="h-3.5 w-3.5 text-[#C89B3C]" /> View
                                 </Button>
 
                                 {!isAdmin && isPending && (
@@ -860,12 +862,12 @@ function CentralBookingsRentalsView({
                                       size="sm"
                                       onClick={() => handleApproveBooking(b.id)}
                                       disabled={busyId === b.id}
-                                      className="h-7 px-2.5 text-xs bg-emerald-700 hover:bg-emerald-800 text-white rounded-md gap-1 font-bold shadow-xs cursor-pointer border-0"
+                                      className="h-8 px-3 text-xs bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg gap-1.5 font-bold shadow-xs cursor-pointer border-0"
                                     >
                                       {busyId === b.id ? (
-                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                       ) : (
-                                        <Check className="h-3 w-3" />
+                                        <Check className="h-3.5 w-3.5" />
                                       )}
                                       Approve
                                     </Button>
@@ -874,15 +876,15 @@ function CentralBookingsRentalsView({
                                       variant="outline"
                                       onClick={() => setRejectingBooking(b)}
                                       disabled={busyId === b.id}
-                                      className="h-7 px-2 text-xs border-rose-200 text-rose-700 hover:bg-rose-50 rounded-md gap-1 font-semibold cursor-pointer"
+                                      className="h-8 px-2.5 text-xs border-rose-200 text-rose-700 hover:bg-rose-50 rounded-lg gap-1.5 font-semibold cursor-pointer"
                                     >
-                                      <XCircle className="h-3 w-3" /> Reject
+                                      <XCircle className="h-3.5 w-3.5" /> Reject
                                     </Button>
                                   </>
                                 )}
 
                                 {!isAdmin && isApprovedOrConfirmed && (
-                                  <span className="inline-flex items-center justify-center h-7 px-2.5 text-xs font-bold rounded-md bg-emerald-600 text-white border border-emerald-700/20 shadow-xs gap-1 select-none whitespace-nowrap">
+                                  <span className="inline-flex items-center justify-center h-8 px-3 text-xs font-bold rounded-lg bg-emerald-600 text-white border border-emerald-700/20 shadow-xs gap-1.5 select-none whitespace-nowrap">
                                     <Check className="h-3.5 w-3.5 text-white stroke-[2.5]" /> Approved
                                   </span>
                                 )}
@@ -1142,34 +1144,34 @@ function CentralBookingsRentalsView({
               <>
                 {/* ─── DESKTOP & TABLET: HORIZONTAL SCROLL TABLE (Section 8-21) ─── */}
                 <div className="hidden md:block w-full max-w-full overflow-x-auto momentum-scroll">
-                  <table className="w-full min-w-[960px] lg:min-w-0 text-left border-collapse text-xs table-fixed-layout">
-                    <thead className="bg-[#F8FAFC] border-b border-[#E5E7EB]">
+                  <table className="w-full min-w-[1220px] table-auto text-left border-collapse text-xs">
+                    <thead className="bg-[#FAF7F2] border-b border-[#E8E1D4]">
                       <tr>
-                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[140px]">
+                        <th className="py-3.5 px-4 font-bold text-[11px] uppercase tracking-wider text-[#6B7280] whitespace-nowrap">
                           Rental Agreement #
                         </th>
-                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[110px]">
+                        <th className="py-3.5 px-4 font-bold text-[11px] uppercase tracking-wider text-[#6B7280] whitespace-nowrap">
                           Booking Ref
                         </th>
-                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] min-w-[170px] max-w-[210px]">
+                        <th className="py-3.5 px-4 font-bold text-[11px] uppercase tracking-wider text-[#6B7280] min-w-[220px]">
                           Property
                         </th>
-                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] min-w-[130px] max-w-[170px]">
+                        <th className="py-3.5 px-4 font-bold text-[11px] uppercase tracking-wider text-[#6B7280] min-w-[180px]">
                           Customer
                         </th>
-                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] min-w-[120px]">
+                        <th className="py-3.5 px-4 font-bold text-[11px] uppercase tracking-wider text-[#6B7280] whitespace-nowrap">
                           Rental Period
                         </th>
-                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[120px]">
+                        <th className="py-3.5 px-4 font-bold text-[11px] uppercase tracking-wider text-[#6B7280] whitespace-nowrap">
                           Total Rent
                         </th>
-                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[140px]">
+                        <th className="py-3.5 px-4 font-bold text-[11px] uppercase tracking-wider text-[#6B7280] whitespace-nowrap">
                           Payment
                         </th>
-                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[130px]">
+                        <th className="py-3.5 px-4 font-bold text-[11px] uppercase tracking-wider text-[#6B7280] whitespace-nowrap">
                           Rental Status
                         </th>
-                        <th className="py-2.5 px-3 font-semibold text-[11px] uppercase tracking-wider text-[#64748B] w-[120px] text-right">
+                        <th className="py-3.5 px-4 font-bold text-[11px] uppercase tracking-wider text-[#6B7280] text-right whitespace-nowrap">
                           Actions
                         </th>
                       </tr>

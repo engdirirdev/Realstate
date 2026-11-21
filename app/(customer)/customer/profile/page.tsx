@@ -240,35 +240,9 @@ export default function CustomerProfilePage() {
           </h1>
           <p className="text-[#6B7280] text-sm mt-1">
             {isSo
-              ? "Halkan ka beddel sawirkaaga, magacaaga, username-kaaga, lambarka sirta ah, iyo luuqadda."
-              : "Update your profile picture, username, full name, password, and portal language."}
+              ? "Halkan ka beddel sawirkaaga, magacaaga, username-kaaga, iyo lambarka sirta ah."
+              : "Update your profile picture, username, full name, and password."}
           </p>
-        </div>
-
-        {/* Quick Language Switcher Pill */}
-        <div className="inline-flex items-center bg-[#07111F] p-1 rounded-xl border border-[#C89B3C]/40 self-start">
-          <button
-            type="button"
-            onClick={() => setLang("en")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              lang === "en"
-                ? "bg-gradient-to-r from-[#C89B3C] to-[#D9B45B] text-[#07111F]"
-                : "text-slate-300 hover:text-white"
-            }`}
-          >
-            🇬🇧 English
-          </button>
-          <button
-            type="button"
-            onClick={() => setLang("so")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              lang === "so"
-                ? "bg-gradient-to-r from-[#C89B3C] to-[#D9B45B] text-[#07111F]"
-                : "text-slate-300 hover:text-white"
-            }`}
-          >
-            🇸🇴 Soomaali
-          </button>
         </div>
       </div>
 

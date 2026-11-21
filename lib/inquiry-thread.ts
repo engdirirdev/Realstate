@@ -1,6 +1,6 @@
 export interface InquiryThreadMessage {
   id: string;
-  sender: "CUSTOMER" | "MANAGER";
+  sender: "CUSTOMER" | "MANAGER" | "ADMIN";
   senderName: string;
   text: string;
   timestamp: string;

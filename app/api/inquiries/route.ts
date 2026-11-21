@@ -4,7 +4,23 @@ import { requireAuth, forbiddenResponse } from "@/lib/auth-guards";
 import { dbCache } from "@/lib/cache";
 import { parseInquiryThread, serializeInquiryThread } from "@/lib/inquiry-thread";
 
-// GET: Fetch inquiries for Customer, Manager, or Admin
+const INQUIRY_INCLUDE = {
+  property: {
+    select: {
+      id: true,
+      title: true,
+      city: true,
+      price: true,
+      type: true,
+      listingType: true,
+      images: { take: 1, orderBy: { order: "asc" as const } },
+    },
+  },
+  customer: { select: { id: true, name: true, email: true, phone: true, role: true } },
+  manager: { select: { id: true, name: true, email: true, phone: true, role: true } },
+};
+
+// GET: Fetch inquiries & shared conversations for Customer, Manager, or Admin
 export async function GET(request: NextRequest) {
   try {
     const authResult = await requireAuth();
@@ -18,6 +34,7 @@ export async function GET(request: NextRequest) {
         ? {
             OR: [
               { managerId: user.id },
+              { customerId: user.id },
               { property: { managerId: user.id } },
               { managerId: null },
             ],
@@ -30,27 +47,13 @@ export async function GET(request: NextRequest) {
     const pageParam = searchParams.get("page");
     const pageSizeParam = searchParams.get("pageSize");
     const page = Math.max(1, parseInt(pageParam || "1", 10));
-    const pageSize = pageSizeParam ? Math.min(100, Math.max(1, parseInt(pageSizeParam, 10))) : 50;
+    const pageSize = pageSizeParam ? Math.min(100, Math.max(1, parseInt(pageSizeParam, 10))) : 80;
     const skip = (page - 1) * pageSize;
 
     const [inquiries, total] = await Promise.all([
       prisma.inquiry.findMany({
         where,
-        include: {
-          property: {
-            select: {
-              id: true,
-              title: true,
-              city: true,
-              price: true,
-              type: true,
-              listingType: true,
-              images: { take: 1, orderBy: { order: "asc" } },
-            },
-          },
-          customer: { select: { id: true, name: true, email: true, phone: true } },
-          manager: { select: { id: true, name: true, email: true, phone: true } },
-        },
+        include: INQUIRY_INCLUDE,
         orderBy: { updatedAt: "desc" },
         take: pageSize,
         skip,
@@ -75,7 +78,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST: Customer sends message / inquiry to a Property Manager
+// POST: Start a Customer->Manager inquiry OR an Admin<->Manager direct conversation
 export async function POST(request: NextRequest) {
   try {
     const authResult = await requireAuth();
@@ -85,7 +88,7 @@ export async function POST(request: NextRequest) {
     const { user } = authResult;
 
     const body = await request.json();
-    const { propertyId, managerId: requestedManagerId, subject, message } = body;
+    const { propertyId, managerId: requestedManagerId, targetUserId, subject, message } = body;
 
     if (!message || !String(message).trim()) {
       return NextResponse.json(
@@ -94,6 +97,139 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const timestamp = new Date().toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    // ── Direct Admin <-> Manager Conversation ──────────────────────────
+    if (user.role === "ADMIN" || user.role === "USER") {
+      // Pick any property to satisfy FK constraint (optional anchor if propertyId passed)
+      let property = propertyId
+        ? await prisma.property.findUnique({ where: { id: propertyId } })
+        : null;
+
+      if (!property) {
+        property =
+          (await prisma.property.findFirst({
+            where: { isActive: true },
+            orderBy: { createdAt: "desc" },
+          })) ||
+          (await prisma.property.findFirst({
+            orderBy: { createdAt: "desc" },
+          }));
+      }
+
+      if (!property) {
+        return NextResponse.json(
+          { success: false, error: "No property available to anchor conversation." },
+          { status: 404 }
+        );
+      }
+
+      let customerIdForThread = user.id;
+      let managerIdForThread: string | null = null;
+      let notifyUserId: string | null = null;
+      let notifyLink = "/dashboard/inquiries";
+      let senderType: "ADMIN" | "MANAGER" = user.role === "ADMIN" ? "ADMIN" : "MANAGER";
+
+      if (user.role === "ADMIN") {
+        // Admin messaging a Manager
+        let targetMgrId = targetUserId || requestedManagerId || null;
+        if (!targetMgrId) {
+          const activeManager = await prisma.user.findFirst({
+            where: { role: "USER", isActive: true },
+            orderBy: { createdAt: "asc" },
+            select: { id: true },
+          });
+          targetMgrId = activeManager?.id || null;
+        }
+        if (!targetMgrId) {
+          return NextResponse.json(
+            { success: false, error: "No active Property Manager found." },
+            { status: 404 }
+          );
+        }
+        customerIdForThread = user.id; // Admin stored in customerId slot (role: ADMIN)
+        managerIdForThread = targetMgrId;
+        notifyUserId = targetMgrId;
+        notifyLink = "/dashboard/inquiries";
+      } else {
+        // Manager messaging an Admin
+        let targetAdminId = targetUserId || null;
+        if (!targetAdminId) {
+          const activeAdmin = await prisma.user.findFirst({
+            where: { role: "ADMIN", isActive: true },
+            orderBy: { createdAt: "asc" },
+            select: { id: true },
+          });
+          targetAdminId = activeAdmin?.id || null;
+        }
+        if (!targetAdminId) {
+          return NextResponse.json(
+            { success: false, error: "No active Super Admin found." },
+            { status: 404 }
+          );
+        }
+        customerIdForThread = targetAdminId; // Admin stored in customerId slot (role: ADMIN)
+        managerIdForThread = user.id;        // Manager stored in managerId slot (role: USER)
+        notifyUserId = targetAdminId;
+        notifyLink = "/admin/messages";
+      }
+
+      const initialTurns = [
+        {
+          id: `turn-${Date.now()}`,
+          sender: senderType,
+          senderName: user.name || (senderType === "ADMIN" ? "Super Admin" : "Property Manager"),
+          text: String(message).trim(),
+          timestamp,
+        },
+      ];
+
+      const cleanSubject =
+        subject && String(subject).trim()
+          ? String(subject).trim()
+          : "Admin ↔ Manager Coordination";
+
+      const inquiry = await prisma.inquiry.create({
+        data: {
+          propertyId: property.id,
+          customerId: customerIdForThread,
+          managerId: managerIdForThread,
+          subject: cleanSubject,
+          message: String(message).trim(),
+          response: serializeInquiryThread(initialTurns),
+          status: "NEW",
+        },
+        include: INQUIRY_INCLUDE,
+      });
+
+      dbCache.invalidateTags(["inquiries", "notifications"]);
+
+      if (notifyUserId) {
+        await prisma.notification
+          .create({
+            data: {
+              userId: notifyUserId,
+              type: "INQUIRY",
+              title:
+                user.role === "ADMIN"
+                  ? "New Message from Super Admin 💬"
+                  : "New Message from Property Manager 💬",
+              message: `${user.name || "Team Member"}: "${cleanSubject}"`,
+              linkUrl: notifyLink,
+            },
+          })
+          .catch(() => {});
+      }
+
+      return NextResponse.json({ success: true, inquiry });
+    }
+
+    // ── Standard Customer -> Property Manager Inquiry ──────────────────
     let property = null;
     if (propertyId) {
       property = await prisma.property.findUnique({
@@ -133,13 +269,6 @@ export async function POST(request: NextRequest) {
       targetManagerId = activeManager?.id || null;
     }
 
-    const timestamp = new Date().toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
     const initialTurns = [
       {
         id: `turn-${Date.now()}`,
@@ -163,20 +292,7 @@ export async function POST(request: NextRequest) {
         response: serializeInquiryThread(initialTurns),
         status: "NEW",
       },
-      include: {
-        property: {
-          select: {
-            id: true,
-            title: true,
-            city: true,
-            price: true,
-            listingType: true,
-            images: { take: 1, orderBy: { order: "asc" } },
-          },
-        },
-        customer: { select: { id: true, name: true, email: true, phone: true } },
-        manager: { select: { id: true, name: true, email: true, phone: true } },
-      },
+      include: INQUIRY_INCLUDE,
     });
 
     dbCache.invalidateTags(["inquiries", "notifications"]);
@@ -205,7 +321,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PATCH: Manager replies to inquiry OR Customer sends a follow-up reply in the chronological thread
+// PATCH: Customer, Manager, or Admin replies in the shared chronological thread
 export async function PATCH(request: NextRequest) {
   try {
     const authResult = await requireAuth();
@@ -228,8 +344,8 @@ export async function PATCH(request: NextRequest) {
       where: { id: inquiryId },
       include: {
         property: { select: { id: true, title: true, managerId: true } },
-        customer: { select: { id: true, name: true } },
-        manager: { select: { id: true, name: true } },
+        customer: { select: { id: true, name: true, role: true } },
+        manager: { select: { id: true, name: true, role: true } },
       },
     });
 
@@ -248,6 +364,7 @@ export async function PATCH(request: NextRequest) {
     });
 
     const currentTurns = parseInquiryThread(existing);
+    const isInternalAdminManager = existing.customer?.role === "ADMIN";
 
     // Case A: Customer is sending the next reply in the thread
     if (customerReply && String(customerReply).trim()) {
@@ -272,20 +389,7 @@ export async function PATCH(request: NextRequest) {
           response: serializeInquiryThread(nextTurns),
           status: "NEW",
         },
-        include: {
-          property: {
-            select: {
-              id: true,
-              title: true,
-              city: true,
-              price: true,
-              listingType: true,
-              images: { take: 1, orderBy: { order: "asc" } },
-            },
-          },
-          customer: { select: { id: true, name: true, email: true, phone: true } },
-          manager: { select: { id: true, name: true, email: true, phone: true } },
-        },
+        include: INQUIRY_INCLUDE,
       });
 
       dbCache.invalidateTags(["inquiries", "notifications"]);
@@ -308,9 +412,10 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ success: true, inquiry: updated });
     }
 
-    // Case B: Manager or Admin is sending the next reply in the thread
+    // Case B: Manager or Admin is sending the next reply in the shared thread
     const isAssignedManager =
       existing.managerId === user.id ||
+      existing.customerId === user.id ||
       existing.property?.managerId === user.id ||
       (user.role === "USER" && !existing.managerId);
     const isAdmin = user.role === "ADMIN";
@@ -321,12 +426,13 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    let nextTurns = [...currentTurns];
+    const nextTurns = [...currentTurns];
     if (response && String(response).trim()) {
       nextTurns.push({
-        id: `turn-${Date.now()}-m`,
-        sender: "MANAGER" as const,
-        senderName: user.name || existing.manager?.name || "Property Manager",
+        id: `turn-${Date.now()}-${isAdmin ? "a" : "m"}`,
+        sender: isAdmin ? ("ADMIN" as const) : ("MANAGER" as const),
+        senderName:
+          user.name || (isAdmin ? "Super Admin" : existing.manager?.name || "Property Manager"),
         text: String(response).trim(),
         timestamp,
       });
@@ -339,36 +445,63 @@ export async function PATCH(request: NextRequest) {
         status: status || "RESPONDED",
         ...(!existing.managerId && user.role === "USER" ? { managerId: user.id } : {}),
       },
-      include: {
-        property: {
-          select: {
-            id: true,
-            title: true,
-            city: true,
-            price: true,
-            listingType: true,
-            images: { take: 1, orderBy: { order: "asc" } },
-          },
-        },
-        customer: { select: { id: true, name: true, email: true, phone: true } },
-        manager: { select: { id: true, name: true, email: true, phone: true } },
-      },
+      include: INQUIRY_INCLUDE,
     });
 
     dbCache.invalidateTags(["inquiries", "notifications"]);
 
-    if (response && updated.customerId) {
-      await prisma.notification
-        .create({
-          data: {
-            userId: updated.customerId,
-            type: "INQUIRY",
-            title: "Property Manager Replied 💬",
-            message: `${user.name || "The property manager"} replied to your message for "${updated.property.title}".`,
-            linkUrl: `/customer/messages`,
-          },
-        })
-        .catch(() => {});
+    if (response) {
+      if (isInternalAdminManager) {
+        // Admin <-> Manager direct thread: notify the counterpart
+        const recipientId = isAdmin ? updated.managerId : updated.customerId;
+        const recipientLink = isAdmin ? "/dashboard/inquiries" : "/admin/messages";
+        if (recipientId && recipientId !== user.id) {
+          await prisma.notification
+            .create({
+              data: {
+                userId: recipientId,
+                type: "INQUIRY",
+                title: isAdmin
+                  ? "Super Admin Replied 💬"
+                  : "Property Manager Replied 💬",
+                message: `${user.name || "Team Member"} replied on "${updated.subject || "Direct Conversation"}".`,
+                linkUrl: recipientLink,
+              },
+            })
+            .catch(() => {});
+        }
+      } else {
+        // Shared Customer conversation: notify customer AND (if Admin replied) also notify the assigned manager
+        if (updated.customerId) {
+          await prisma.notification
+            .create({
+              data: {
+                userId: updated.customerId,
+                type: "INQUIRY",
+                title: isAdmin
+                  ? "Kiro-Maal Admin Replied 💬"
+                  : "Property Manager Replied 💬",
+                message: `${user.name || "Our team"} replied to your message for "${updated.property.title}".`,
+                linkUrl: `/customer/messages`,
+              },
+            })
+            .catch(() => {});
+        }
+
+        if (isAdmin && updated.managerId && updated.managerId !== user.id) {
+          await prisma.notification
+            .create({
+              data: {
+                userId: updated.managerId,
+                type: "INQUIRY",
+                title: "Admin Joined Customer Thread 💬",
+                message: `${user.name || "Super Admin"} replied to ${updated.customer?.name || "a customer"} on "${updated.property.title}".`,
+                linkUrl: `/dashboard/inquiries`,
+              },
+            })
+            .catch(() => {});
+        }
+      }
     }
 
     return NextResponse.json({ success: true, inquiry: updated });

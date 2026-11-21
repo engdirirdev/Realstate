@@ -63,7 +63,7 @@ const navGroups: NavGroup[] = [
     title: "CLIENT ENGAGEMENT",
     titleSo: "XIRIIRKA MACAAMIISHA",
     items: [
-      { href: "/admin/messages", label: "Contact Inquiries", labelSo: "Farriimaha", icon: MessageSquare },
+      { href: "/admin/messages", label: "Messages & Inquiries", labelSo: "Farriimaha", icon: MessageSquare },
     ],
   },
   {

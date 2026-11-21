@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export const revalidate = 60;
+export const revalidate = 30;
 
 export default async function AdminAuditLogsPage() {
   const session = await auth();
@@ -24,17 +24,36 @@ export default async function AdminAuditLogsPage() {
 
   const rawLogs = await prisma.auditLog.findMany({
     orderBy: { createdAt: "desc" },
-    take: 100,
+    take: 150,
   });
 
-  const logs: AuditItem[] = rawLogs.map((l) => ({
-    id: l.id,
-    userId: l.userId,
-    action: l.action,
-    details: l.details,
-    ipAddress: l.ipAddress,
-    createdAt: l.createdAt.toISOString(),
-  }));
+  const userIds = Array.from(
+    new Set(rawLogs.map((l) => l.userId).filter((id): id is string => Boolean(id)))
+  );
+
+  const users = userIds.length
+    ? await prisma.user.findMany({
+        where: { id: { in: userIds } },
+        select: { id: true, name: true, email: true, role: true },
+      })
+    : [];
+
+  const userMap = new Map(users.map((u) => [u.id, u]));
+
+  const logs: AuditItem[] = rawLogs.map((l) => {
+    const actor = l.userId ? userMap.get(l.userId) : null;
+    return {
+      id: l.id,
+      userId: l.userId,
+      actorName: actor?.name || null,
+      actorEmail: actor?.email || null,
+      actorRole: actor?.role || null,
+      action: l.action,
+      details: l.details,
+      ipAddress: l.ipAddress,
+      createdAt: l.createdAt.toISOString(),
+    };
+  });
 
   return <AdminAuditLogsClient initialLogs={logs} />;
 }

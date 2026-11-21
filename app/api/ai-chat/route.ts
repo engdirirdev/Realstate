@@ -10,8 +10,9 @@ import {
 import { processConversationalTurn } from "@/lib/ai/conversation/chat-engine";
 
 /**
- * GET /api/ai-chat?sessionId=...
- * Fetch conversation history for a specific session with authorization check.
+ * GET /api/ai-chat?sessionId=... OR GET /api/ai-chat?list=true
+ * - With sessionId: Fetch full conversation history for a specific session.
+ * - With list=true (or no sessionId): Fetch recent chat sessions for the logged-in user.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -19,17 +20,48 @@ export async function GET(request: NextRequest) {
     const userId = session?.user?.id || null;
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get("sessionId");
+    const listMode = searchParams.get("list") === "true" || !sessionId;
 
-    if (!sessionId) {
-      return NextResponse.json({ error: "sessionId query parameter is required" }, { status: 400 });
+    if (listMode) {
+      if (!userId) {
+        return NextResponse.json({ success: true, sessions: [] });
+      }
+
+      const sessions = await prisma.chatSession.findMany({
+        where: { userId, isActive: true },
+        orderBy: { updatedAt: "desc" },
+        take: 30,
+        include: {
+          _count: { select: { messages: true } },
+          messages: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: { content: true, role: true, createdAt: true },
+          },
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        sessions: sessions
+          .filter((s) => s._count.messages > 0)
+          .map((s) => ({
+            id: s.id,
+            title: s.title,
+            messageCount: s._count.messages,
+            lastMessage: s.messages[0]?.content || "",
+            updatedAt: s.updatedAt.toISOString(),
+            createdAt: s.createdAt.toISOString(),
+          })),
+      });
     }
 
     const chatSession = await prisma.chatSession.findUnique({
-      where: { id: sessionId },
+      where: { id: sessionId! },
       include: {
         messages: {
           orderBy: { createdAt: "asc" },
-          take: 50,
+          take: 80,
         },
       },
     });
@@ -49,6 +81,7 @@ export async function GET(request: NextRequest) {
         id: chatSession.id,
         title: chatSession.title,
         createdAt: chatSession.createdAt,
+        updatedAt: chatSession.updatedAt,
         messages: chatSession.messages.map((m) => ({
           id: m.id,
           role: m.role,
@@ -59,6 +92,45 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("GET /api/ai-chat error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+/**
+ * DELETE /api/ai-chat?sessionId=...
+ * Delete a past chat session owned by the current user.
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await auth();
+    const userId = session?.user?.id || null;
+    const { searchParams } = new URL(request.url);
+    const sessionId = searchParams.get("sessionId");
+
+    if (!userId) {
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+    if (!sessionId) {
+      return NextResponse.json({ error: "sessionId is required" }, { status: 400 });
+    }
+
+    const existing = await prisma.chatSession.findUnique({
+      where: { id: sessionId },
+      select: { id: true, userId: true },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ success: true });
+    }
+
+    if (existing.userId !== userId) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+
+    await prisma.chatSession.delete({ where: { id: sessionId } });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("DELETE /api/ai-chat error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -234,6 +306,14 @@ export async function POST(request: NextRequest) {
           }),
         },
       }).catch((err) => console.warn("Background assistant message save skipped:", err?.message));
+
+      // Bump session updatedAt so it appears at the top of Recent Chats
+      await prisma.chatSession
+        .update({
+          where: { id: activeSessionId },
+          data: { updatedAt: new Date() },
+        })
+        .catch(() => {});
     }
 
     return NextResponse.json({

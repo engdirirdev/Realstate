@@ -1,12 +1,14 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
 import ManagerInquiriesClient from "@/components/dashboard/ManagerInquiriesClient";
 import { getInquiriesDashboardData } from "@/lib/server/dashboard-data";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Inquiries – Manager Portal | Kiro-Maal Real Estate",
-  description: "Customer property inquiries, advisory responses, and direct consultations.",
+  title: "Inquiries & Messages – Manager Portal | Kiro-Maal Real Estate",
+  description:
+    "Shared conversations with customers and direct coordination with Super Admin.",
   robots: { index: false, follow: false },
 };
 
@@ -16,14 +18,25 @@ export default async function ManagerInquiriesPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  const inquiries = await getInquiriesDashboardData(
-    session.user.id,
-    (session.user as any).role || "USER"
-  );
+  const role = ((session.user as any).role || "USER") as "ADMIN" | "USER";
+
+  const [inquiries, admins] = await Promise.all([
+    getInquiriesDashboardData(session.user.id, role),
+    prisma.user.findMany({
+      where: { role: "ADMIN", isActive: true },
+      select: { id: true, name: true, email: true, role: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
   return (
     <div className="w-full min-w-0">
-      <ManagerInquiriesClient initialInquiries={inquiries} />
+      <ManagerInquiriesClient
+        initialInquiries={inquiries}
+        portalRole={role}
+        currentUserId={session.user.id}
+        counterparts={admins}
+      />
     </div>
   );
 }

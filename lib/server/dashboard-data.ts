@@ -290,7 +290,7 @@ export async function getCustomersDashboardData() {
   }, ["users", "customers"]);
 }
 
-// ─── 4. MANAGER INQUIRIES DASHBOARD DATA ───────────────────────────
+// ─── 4. MANAGER / ADMIN SHARED INQUIRIES DASHBOARD DATA ───────────
 export async function getInquiriesDashboardData(userId?: string, role?: string) {
   const cacheKey = `dashboard:inquiries:${role || "ALL"}:${userId || "ALL"}`;
   return dbCache.getOrSet(cacheKey, 5, async () => {
@@ -299,6 +299,7 @@ export async function getInquiriesDashboardData(userId?: string, role?: string) 
         ? {
             OR: [
               { managerId: userId },
+              { customerId: userId },
               { property: { managerId: userId } },
               { managerId: null },
             ],
@@ -323,6 +324,7 @@ export async function getInquiriesDashboardData(userId?: string, role?: string) 
             name: true,
             email: true,
             phone: true,
+            role: true,
           },
         },
         manager: {
@@ -330,11 +332,13 @@ export async function getInquiriesDashboardData(userId?: string, role?: string) 
             id: true,
             name: true,
             email: true,
+            phone: true,
+            role: true,
           },
         },
       },
       orderBy: { updatedAt: "desc" },
-      take: 50,
+      take: 80,
     });
 
     return rawInquiries.map((inq) => ({

@@ -269,4 +269,49 @@ button, a, input, select, textarea, [role="button"] {
   }
 }
 
+/* ── Customer Portal Day & Night Theme Overrides ─────────────── */
+html[data-portal-theme="night"] {
+  color-scheme: dark;
+}
+
+html[data-portal-theme="night"] body,
+html[data-portal-theme="night"] .bg-\[\#F7F3EA\],
+html[data-portal-theme="night"] .bg-\[\#FAF7F2\] {
+  background-color: #07111F !important;
+  color: #F7F3EA !important;
+}
+
+html[data-portal-theme="night"] .bg-\[\#FCFBF7\],
+html[data-portal-theme="night"] .bg-white {
+  background-color: #0D1B2E !important;
+  color: #F7F3EA !important;
+}
+
+html[data-portal-theme="night"] .text-\[\#07111F\] {
+  color: #F7F3EA !important;
+}
+
+html[data-portal-theme="night"] .bg-\[\#C89B3C\].text-\[\#07111F\],
+html[data-portal-theme="night"] .bg-\[\#D9B45B\].text-\[\#07111F\],
+html[data-portal-theme="night"] .from-\[\#C89B3C\].text-\[\#07111F\] {
+  color: #07111F !important;
+}
+
+html[data-portal-theme="night"] .text-\[\#6B7280\] {
+  color: #9CA3AF !important;
+}
+
+html[data-portal-theme="night"] .border-\[\#E8E1D4\] {
+  border-color: rgba(200, 155, 60, 0.24) !important;
+}
+
+html[data-portal-theme="night"] input,
+html[data-portal-theme="night"] select,
+html[data-portal-theme="night"] textarea {
+  background-color: #081323 !important;
+  color: #F7F3EA !important;
+  border-color: rgba(200, 155, 60, 0.28) !important;
+}
+
+
 

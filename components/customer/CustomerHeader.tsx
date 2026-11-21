@@ -15,6 +15,8 @@ import {
   Heart,
   Settings,
   LogOut,
+  Sun,
+  Moon,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -26,7 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import CustomerSidebarNav from "@/app/(customer)/customer/CustomerSidebarNav";
 import BrandLogo from "@/components/layout/BrandLogo";
-import { usePortalLanguage } from "@/lib/customer-i18n";
+import { usePortalLanguage, usePortalTheme } from "@/lib/customer-i18n";
 
 interface CustomerHeaderProps {
   userName?: string | null;
@@ -44,6 +46,7 @@ export default function CustomerHeader({
   const [searchValue, setSearchValue] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [lang, setLang] = usePortalLanguage();
+  const [theme, setTheme] = usePortalTheme();
 
   const initial = userName?.charAt(0).toUpperCase() || "C";
 
@@ -79,6 +82,26 @@ export default function CustomerHeader({
 
         {/* Right: Language Switcher, Public Site Link, Notifications & Customer Profile */}
         <div className="flex items-center gap-2.5 sm:gap-3.5">
+          {/* Quick Day / Night Theme Toggle */}
+          <button
+            type="button"
+            onClick={() => setTheme(theme === "night" ? "day" : "night")}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-[#E8E1D4] bg-[#F7F3EA] hover:border-[#C89B3C] text-[#07111F] text-[11px] font-bold transition-all cursor-pointer"
+            title={theme === "night" ? "Switch to Day Mode" : "Switch to Night Mode"}
+          >
+            {theme === "night" ? (
+              <>
+                <Moon className="h-3.5 w-3.5 text-[#D9B45B]" />
+                <span className="hidden sm:inline">{lang === "so" ? "Habeen" : "Night"}</span>
+              </>
+            ) : (
+              <>
+                <Sun className="h-3.5 w-3.5 text-[#C89B3C]" />
+                <span className="hidden sm:inline">{lang === "so" ? "Maalin" : "Day"}</span>
+              </>
+            )}
+          </button>
+
           {/* Quick Language Toggle (EN / SO) */}
           <div className="inline-flex items-center bg-[#F7F3EA] p-0.5 rounded-xl border border-[#E8E1D4]">
             <button

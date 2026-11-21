@@ -135,52 +135,18 @@ export default function Navbar() {
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator className="bg-[#E8E1D4]" />
-                    {isAdmin ? (
-                      <DropdownMenuItem asChild>
-                        <Link href="/admin" prefetch={true} className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
-                          <LayoutDashboard className="h-4 w-4 text-[#C89B3C]" /> Admin Dashboard
-                        </Link>
-                      </DropdownMenuItem>
-                    ) : isCustomer ? (
-                      <>
-                        <DropdownMenuItem asChild>
-                          <Link href="/customer" prefetch={true} className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
-                            <LayoutDashboard className="h-4 w-4 text-[#C89B3C]" /> Customer Portal
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href="/customer/favorites" prefetch={true} className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
-                            <Heart className="h-4 w-4 text-[#C89B3C]" /> Saved Favorites
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href="/customer/profile" prefetch={true} className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
-                            <User className="h-4 w-4 text-[#6B7280]" /> Profile Settings
-                          </Link>
-                        </DropdownMenuItem>
-                      </>
-                    ) : (
-                      <>
-                        <DropdownMenuItem asChild>
-                          <Link href="/dashboard" prefetch={true} className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
-                            <LayoutDashboard className="h-4 w-4 text-[#C89B3C]" /> Manager Dashboard
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href="/dashboard/profile" prefetch={true} className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer">
-                            <User className="h-4 w-4 text-[#6B7280]" /> Profile Settings
-                          </Link>
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                    <DropdownMenuSeparator className="bg-[#E8E1D4]" />
                     <DropdownMenuItem asChild>
-                      <Link href="/login?switch=true" prefetch={true} className="flex items-center gap-2 text-[#6B7280] hover:text-[#C89B3C] hover:bg-[#F7F3EA] rounded-xl cursor-pointer">
-                        <User className="h-4 w-4 text-[#C89B3C]" /> Switch Account
+                      <Link
+                        href={isAdmin ? "/admin" : isCustomer ? "/customer" : "/dashboard"}
+                        prefetch={true}
+                        className="flex items-center gap-2 text-[#07111F] hover:bg-[#F7F3EA] hover:text-[#C89B3C] rounded-xl cursor-pointer font-semibold"
+                      >
+                        <LayoutDashboard className="h-4 w-4 text-[#C89B3C]" /> Switch to Dashboard
                       </Link>
                     </DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-[#E8E1D4]" />
                     <DropdownMenuItem
-                      className="text-[#DC2626] focus:text-[#B91C1C] focus:bg-[#FEF2F2] rounded-xl cursor-pointer"
+                      className="text-[#DC2626] focus:text-[#B91C1C] focus:bg-[#FEF2F2] rounded-xl cursor-pointer font-semibold"
                       onClick={() => signOut({ callbackUrl: "/" })}
                     >
                       <LogOut className="h-4 w-4 mr-2" /> Sign Out

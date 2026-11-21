@@ -12,10 +12,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, email, password, phone } = body;
+    const { name, username, email, password, phone } = body;
 
     if (!name || !email || !password) {
-      return NextResponse.json({ success: false, error: "Name, email, and password are required." }, { status: 400 });
+      return NextResponse.json({ success: false, error: "Name, username, email, and password are required." }, { status: 400 });
     }
 
     if (password.length < 8) {
@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
 
     const cleanEmail = email.trim().toLowerCase();
     const cleanName = name.trim();
+    const cleanUsername = typeof username === "string" ? username.trim().replace(/\s+/g, "").toLowerCase() : "";
 
     // Check if email already exists
     const existing = await prisma.user.findUnique({ where: { email: cleanEmail } });
@@ -45,7 +46,13 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      user: {
+        id: user.id,
+        name: user.name,
+        username: cleanUsername || user.email.split("@")[0],
+        email: user.email,
+        role: user.role,
+      },
     });
   } catch (error) {
     console.error("Registration error:", error);

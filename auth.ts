@@ -56,7 +56,7 @@ const { handlers, auth: baseAuth, signIn, signOut } = NextAuth({
           throw new TooManyAttemptsError();
         }
 
-        const user = await prisma.user.findUnique({
+        let user = await prisma.user.findUnique({
           where: { email },
           select: {
             id: true,
@@ -68,6 +68,27 @@ const { handlers, auth: baseAuth, signIn, signOut } = NextAuth({
             password: true,
           },
         });
+
+        // Allow signing in by username prefix if identifier has no '@'
+        if (!user && !email.includes("@")) {
+          user = await prisma.user.findFirst({
+            where: {
+              OR: [
+                { email: { startsWith: `${email}@` } },
+                { name: { equals: email } },
+              ],
+            },
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              image: true,
+              role: true,
+              isActive: true,
+              password: true,
+            },
+          });
+        }
 
         if (!user || !user.password) {
           // Timing attack defense: run bcrypt.compare against dummy hash before throwing

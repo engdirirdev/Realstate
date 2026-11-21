@@ -21,6 +21,7 @@ import {
   Mail,
   Lock,
   User,
+  AtSign,
   Phone,
   ArrowRight,
   Sparkles,
@@ -101,6 +102,7 @@ function AuthContent({ initialTab = "login" }: AuthPageProps) {
   // Register form state
   const [registerForm, setRegisterForm] = useState({
     name: "",
+    username: "",
     email: "",
     phone: "",
     password: "",
@@ -179,7 +181,7 @@ function AuthContent({ initialTab = "login" }: AuthPageProps) {
   // Handle Register Submit
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!registerForm.name || !registerForm.email || !registerForm.password) {
+    if (!registerForm.name || !registerForm.username || !registerForm.email || !registerForm.password) {
       toast({
         title: "Missing fields",
         description: "Please fill in all required fields.",
@@ -710,7 +712,35 @@ function AuthContent({ initialTab = "login" }: AuthPageProps) {
                     </div>
                   </div>
 
-                  {/* Email & Phone in clean 2-column or stacked */}
+                  {/* Username */}
+                  <div className="space-y-0.5">
+                    <Label
+                      htmlFor="register-username"
+                      className="text-[11px] font-bold text-[#07111F]"
+                    >
+                      Username <span className="text-[#991B1B]">*</span>
+                    </Label>
+                    <div className="relative">
+                      <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#A97918]" />
+                      <Input
+                        id="register-username"
+                        name="username"
+                        value={registerForm.username}
+                        onChange={(e) =>
+                          setRegisterForm((p) => ({
+                            ...p,
+                            username: e.target.value.replace(/\s+/g, ""),
+                          }))
+                        }
+                        placeholder="ahmed_hassan"
+                        className="pl-9 h-8.5 bg-white border-[#E8E1D4] text-[#07111F] placeholder:text-[#9CA3AF] focus:border-[#C89B3C] focus:ring-2 focus:ring-[#C89B3C]/20 rounded-xl text-xs transition-all"
+                        required
+                        autoComplete="username"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Email Address */}
                   <div className="space-y-0.5">
                     <Label
                       htmlFor="register-email"

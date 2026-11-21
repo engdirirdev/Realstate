@@ -69,13 +69,13 @@ export default function Navbar() {
         scrolled ? "shadow-xs" : ""
       )}
     >
-      <div className="section-container">
-        <div className="flex items-center justify-between h-16">
+      <div className="w-full px-4 sm:px-6 lg:px-8">
+        <div className="relative flex items-center justify-between h-16">
           {/* ── Logo ── */}
           <BrandLogo variant="light" size="md" />
 
-          {/* ── Desktop Nav: 5 Main Tabs ── */}
-          <div className="hidden md:flex items-center gap-1.5 lg:gap-2">
+          {/* ── Desktop Nav: 5 Main Tabs (Centered) ── */}
+          <div className="hidden md:flex items-center gap-1.5 lg:gap-2 absolute left-1/2 -translate-x-1/2">
             {publicNavLinks.map(({ href, label }) => {
               const isActive = pathname === href || (href !== "/" && pathname.startsWith(href));
               return (

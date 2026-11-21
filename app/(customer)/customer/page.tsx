@@ -560,11 +560,11 @@ export default async function CustomerDashboardPage() {
           </div>
 
           <Link
-            href="/customer/bookings"
+            href="/customer/requests"
             prefetch={true}
             className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs hover:brightness-105 self-start sm:self-auto cursor-pointer"
           >
-            View My Bookings &amp; Requests <ArrowUpRight className="h-4 w-4" />
+            View My Requests <ArrowUpRight className="h-4 w-4" />
           </Link>
         </div>
 

@@ -54,7 +54,6 @@ const customerNavGroups: NavGroup[] = [
     title: "TRANSACTIONS",
     titleSo: "HESHIISYADA",
     items: [
-      { href: "/customer/bookings", label: "My Bookings", labelSo: "Ballamaha", icon: Calendar },
       { href: "/customer/requests", label: "My Requests", labelSo: "Codsiyadayda", icon: FileText },
       { href: "/customer/rentals", label: "My Rentals", labelSo: "Kiradayda", icon: Key },
       { href: "/customer/purchases", label: "My Purchases", labelSo: "Iibsashadayda", icon: ShoppingBag },

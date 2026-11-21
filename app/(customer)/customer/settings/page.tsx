@@ -1,6 +1,7 @@
 "use client";
 
-import { Globe, Sun, Moon, Sparkles, Settings, CheckCircle2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Globe, Sun, Moon, Bell, Sparkles, Settings, CheckCircle2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { usePortalLanguage, usePortalTheme } from "@/lib/customer-i18n";
 
@@ -9,6 +10,54 @@ export default function CustomerSettingsPage() {
   const [theme, setTheme] = usePortalTheme();
   const isSo = lang === "so";
   const isNight = theme === "night";
+
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [recommendationAlerts, setRecommendationAlerts] = useState(true);
+
+  useEffect(() => {
+    try {
+      const savedTx = window.localStorage.getItem("kiromaal_notify_tx");
+      const savedAi = window.localStorage.getItem("kiromaal_notify_ai");
+      if (savedTx !== null) setEmailNotifications(savedTx === "true");
+      if (savedAi !== null) setRecommendationAlerts(savedAi === "true");
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
+
+  const toggleTxAlerts = (checked: boolean) => {
+    setEmailNotifications(checked);
+    try {
+      window.localStorage.setItem("kiromaal_notify_tx", String(checked));
+    } catch {}
+    toast({
+      title: isSo ? "Ogeysiisyada Waa La Cusboonaysiiyay 🔔" : "Notification Preference Saved 🔔",
+      description: checked
+        ? isSo
+          ? "Ogeysiisyada codsiyada iyo fariimaha waa la shiday."
+          : "Transaction & booking status alerts enabled."
+        : isSo
+          ? "Ogeysiisyada codsiyada waa la damiyay."
+          : "Transaction & booking status alerts muted.",
+    });
+  };
+
+  const toggleAiAlerts = (checked: boolean) => {
+    setRecommendationAlerts(checked);
+    try {
+      window.localStorage.setItem("kiromaal_notify_ai", String(checked));
+    } catch {}
+    toast({
+      title: isSo ? "Ogeysiisyada AI Waa La Cusboonaysiiyay 🔔" : "AI Alert Preference Saved 🔔",
+      description: checked
+        ? isSo
+          ? "Ogeysiisyada guryaha kugu habboon waa la shiday."
+          : "AI property match alerts enabled."
+        : isSo
+          ? "Ogeysiisyada guryaha AI waa la damiyay."
+          : "AI property match alerts muted.",
+    });
+  };
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto min-h-screen p-5 sm:p-7">
@@ -210,6 +259,65 @@ export default function CustomerSettingsPage() {
             {theme === "night" && <CheckCircle2 className="h-5 w-5 text-[#D9B45B] shrink-0" />}
           </button>
         </div>
+      </div>
+
+      {/* 3. Notification Channels Card */}
+      <div className="bg-[#FCFBF7] rounded-2xl border border-[#E8E1D4] p-6 shadow-xs space-y-4">
+        <div className="flex items-center gap-3 pb-3 border-b border-[#E8E1D4]">
+          <div className="w-11 h-11 rounded-xl bg-[#07111F] text-[#D9B45B] flex items-center justify-center border border-[#C89B3C]/40 shrink-0">
+            <Bell className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="font-serif font-bold text-base text-[#07111F]">
+              {isSo ? "Kanaalada Ogeysiisyada" : "Notification Channels"}
+            </h3>
+            <p className="text-xs text-[#6B7280]">
+              {isSo
+                ? "Maamul fariimaha degdega ah ee codsiyada iyo guryaha cusub."
+                : "Control real-time alerts for transaction updates and new listings."}
+            </p>
+          </div>
+        </div>
+
+        <label className="flex items-center justify-between p-4 rounded-xl bg-white border border-[#E8E1D4] cursor-pointer hover:border-[#C89B3C]/40 transition-colors">
+          <div>
+            <p className="font-semibold text-xs text-[#07111F]">
+              {isSo
+                ? "Ogeysiisyada Codsiyada & Ballamaha"
+                : "Transaction & Booking Status Alerts"}
+            </p>
+            <p className="text-[11px] text-[#6B7280] mt-0.5">
+              {isSo
+                ? "Hel fariin degdeg ah marka codsigaaga la aqbalo ama maamuluhu kuu soo jawaabo."
+                : "Receive instant notifications when requests are approved or managers reply."}
+            </p>
+          </div>
+          <input
+            type="checkbox"
+            checked={emailNotifications}
+            onChange={(e) => toggleTxAlerts(e.target.checked)}
+            className="w-4 h-4 accent-[#C89B3C] rounded cursor-pointer"
+          />
+        </label>
+
+        <label className="flex items-center justify-between p-4 rounded-xl bg-white border border-[#E8E1D4] cursor-pointer hover:border-[#C89B3C]/40 transition-colors">
+          <div>
+            <p className="font-semibold text-xs text-[#07111F]">
+              {isSo ? "Ogeysiisyada Guryaha AI" : "AI Property Match Alerts"}
+            </p>
+            <p className="text-[11px] text-[#6B7280] mt-0.5">
+              {isSo
+                ? "Hel ogeysiis marka guryo cusub oo ku habboon dookhaaga la soo galiyo."
+                : "Get notified when new verified properties match your target city and budget."}
+            </p>
+          </div>
+          <input
+            type="checkbox"
+            checked={recommendationAlerts}
+            onChange={(e) => toggleAiAlerts(e.target.checked)}
+            className="w-4 h-4 accent-[#C89B3C] rounded cursor-pointer"
+          />
+        </label>
       </div>
     </div>
   );

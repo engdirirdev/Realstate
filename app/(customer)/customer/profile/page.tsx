@@ -55,22 +55,11 @@ export default function CustomerProfilePage() {
     confirmPassword: "",
   });
 
-  const [preferences, setPreferences] = useState({
-    preferredLocation: "Mogadishu",
-    minBudget: 20000,
-    maxBudget: 150000,
-    preferredType: "VILLA",
-    preferredBedrooms: 3,
-  });
-
   useEffect(() => {
     async function loadData() {
       try {
-        const [profRes, prefRes] = await Promise.all([
-          fetch("/api/user/profile"),
-          fetch("/api/user/preferences"),
-        ]);
-        const [profJson, prefJson] = await Promise.all([profRes.json(), prefRes.json()]);
+        const profRes = await fetch("/api/user/profile");
+        const profJson = await profRes.json();
 
         if (profJson.success && profJson.user) {
           const u = profJson.user;
@@ -80,16 +69,6 @@ export default function CustomerProfilePage() {
             email: u.email || "",
             phone: u.phone || "",
             image: u.image || "",
-          });
-        }
-        const p = prefJson.preferences || prefJson.data?.preferences;
-        if (p) {
-          setPreferences({
-            preferredLocation: p.preferredLocation || p.preferredCity || "Mogadishu",
-            minBudget: p.minBudget ?? 20000,
-            maxBudget: p.maxBudget ?? 150000,
-            preferredType: p.preferredType || p.propertyType || "VILLA",
-            preferredBedrooms: p.preferredBedrooms || p.minBedrooms || 3,
           });
         }
       } catch {
@@ -190,28 +169,21 @@ export default function CustomerProfilePage() {
           ? `${profile.username.trim()}@${domain}`
           : profile.email.trim();
 
-      const [profileRes, prefRes] = await Promise.all([
-        fetch("/api/user/profile", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: profile.name,
-            email: finalEmail,
-            username: profile.username,
-            phone: profile.phone,
-            image: profile.image,
-            currentPassword: passwords.currentPassword || undefined,
-            newPassword: passwords.newPassword || undefined,
-          }),
+      const profileRes = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: profile.name,
+          email: finalEmail,
+          username: profile.username,
+          phone: profile.phone,
+          image: profile.image,
+          currentPassword: passwords.currentPassword || undefined,
+          newPassword: passwords.newPassword || undefined,
         }),
-        fetch("/api/user/preferences", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(preferences),
-        }),
-      ]);
+      });
 
-      const [profData, prefData] = await Promise.all([profileRes.json(), prefRes.json()]);
+      const profData = await profileRes.json();
 
       if (profileRes.ok && profData.success) {
         if (profData.user) {
@@ -234,12 +206,12 @@ export default function CustomerProfilePage() {
           title: isSo ? "Xogtaada Waa La Kaydiyay! 🎉" : "Profile Updated Successfully! 🎉",
           description: isSo
             ? "Dhammaan xogtaada shaqsiga ah iyo sawirkaaga waa la cusboonaysiiyay."
-            : "Your personal details, profile picture, and preferences have been saved.",
+            : "Your personal details and profile picture have been saved.",
         });
       } else {
         toast({
           title: isSo ? "Cilad" : "Update Error",
-          description: profData.error || prefData.error || "Could not update profile.",
+          description: profData.error || "Could not update profile.",
           variant: "destructive",
         });
       }
@@ -515,116 +487,6 @@ export default function CustomerProfilePage() {
                   }
                   placeholder={isSo ? "Ku celi password-ka" : "Repeat new password"}
                   className="bg-white border-[#E8E1D4] text-[#07111F] rounded-xl h-10"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* 3. Language & AI Match Preferences Card */}
-          <div className="bg-[#FCFBF7] rounded-2xl shadow-sm border border-[#E8E1D4] p-6 space-y-4">
-            <h2 className="text-base font-serif font-bold text-[#07111F] flex items-center gap-2 border-b border-[#E8E1D4] pb-3">
-              <Globe className="h-4 w-4 text-[#C89B3C]" />{" "}
-              {isSo
-                ? "Luuqadda & Dooqyada Guryaha (Language & AI Preferences)"
-                : "Portal Language & AI Property Match Criteria"}
-            </h2>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">
-                  {isSo ? "Luuqadda Nidaamka (Language)" : "System Language"}
-                </Label>
-                <select
-                  value={lang}
-                  onChange={(e) => setLang(e.target.value as PortalLanguage)}
-                  className="w-full h-10 px-3 rounded-xl border border-[#E8E1D4] bg-white text-xs font-bold text-[#07111F]"
-                >
-                  <option value="en">🇬🇧 English</option>
-                  <option value="so">🇸🇴 Somali (Af-Soomaali)</option>
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">
-                  {isSo ? "Magaalada La Doorbidayo" : "Preferred City"}
-                </Label>
-                <select
-                  value={preferences.preferredLocation}
-                  onChange={(e) =>
-                    setPreferences((p) => ({ ...p, preferredLocation: e.target.value }))
-                  }
-                  className="w-full h-10 px-3 rounded-xl border border-[#E8E1D4] bg-white text-xs font-semibold text-[#07111F]"
-                >
-                  {["Mogadishu", "Hargeisa", "Bosaso", "Kismayo", "Garowe", "Baidoa"].map(
-                    (city) => (
-                      <option key={city} value={city}>
-                        {city}
-                      </option>
-                    )
-                  )}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">
-                  {isSo ? "Nooca Guriga" : "Property Type"}
-                </Label>
-                <select
-                  value={preferences.preferredType}
-                  onChange={(e) =>
-                    setPreferences((p) => ({ ...p, preferredType: e.target.value }))
-                  }
-                  className="w-full h-10 px-3 rounded-xl border border-[#E8E1D4] bg-white text-xs font-semibold text-[#07111F]"
-                >
-                  {["VILLA", "APARTMENT", "HOUSE", "TOWNHOUSE", "OFFICE", "COMMERCIAL", "LAND"].map(
-                    (t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    )
-                  )}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">
-                  {isSo ? "Miisaaniyadda Ugu Yar ($)" : "Minimum Budget ($)"}
-                </Label>
-                <Input
-                  type="number"
-                  value={preferences.minBudget}
-                  onChange={(e) =>
-                    setPreferences((p) => ({ ...p, minBudget: Number(e.target.value) }))
-                  }
-                  className="h-10 border-[#E8E1D4] bg-white rounded-xl text-sm"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">
-                  {isSo ? "Miisaaniyadda Ugu Badan ($)" : "Maximum Budget ($)"}
-                </Label>
-                <Input
-                  type="number"
-                  value={preferences.maxBudget}
-                  onChange={(e) =>
-                    setPreferences((p) => ({ ...p, maxBudget: Number(e.target.value) }))
-                  }
-                  className="h-10 border-[#E8E1D4] bg-white rounded-xl text-sm"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">
-                  {isSo ? "Tirada Qolalka" : "Preferred Bedrooms"}
-                </Label>
-                <Input
-                  type="number"
-                  value={preferences.preferredBedrooms}
-                  onChange={(e) =>
-                    setPreferences((p) => ({ ...p, preferredBedrooms: Number(e.target.value) }))
-                  }
-                  className="h-10 border-[#E8E1D4] bg-white rounded-xl text-sm"
                 />
               </div>
             </div>

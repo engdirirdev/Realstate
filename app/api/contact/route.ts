@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, getClientIdentifier, createRateLimitResponse } from "@/lib/rate-limiter";
+import { verifyRealEmailServer, validateSomaliPhone } from "@/lib/server/identity-validation";
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,20 +12,26 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, email, subject, message } = body;
+    const { name, email, phone, subject, message } = body;
 
     if (!name?.trim() || !email?.trim() || !subject?.trim() || !message?.trim()) {
       return NextResponse.json({ success: false, error: "All fields (name, email, subject, message) are required." }, { status: 400 });
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      return NextResponse.json({ success: false, error: "Please enter a valid email address." }, { status: 400 });
+    const emailCheck = await verifyRealEmailServer(email);
+    if (!emailCheck.valid) {
+      return NextResponse.json({ success: false, error: emailCheck.error }, { status: 400 });
+    }
+
+    const phoneCheck = validateSomaliPhone(phone, { required: false });
+    if (!phoneCheck.valid) {
+      return NextResponse.json({ success: false, error: phoneCheck.error }, { status: 400 });
     }
 
     await prisma.contactMessage.create({
       data: {
         name: name.trim().slice(0, 100),
-        email: email.trim().toLowerCase().slice(0, 150),
+        email: emailCheck.normalized.slice(0, 150),
         subject: subject.trim().slice(0, 200),
         message: message.trim().slice(0, 5000),
       },

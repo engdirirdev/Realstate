@@ -25,6 +25,8 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { SomaliPhoneInput } from "@/components/ui/SomaliPhoneInput";
+import { validateEmailFormat, validateSomaliPhone } from "@/lib/validation";
 
 export interface CustomerCreatedData {
   id: string;
@@ -85,10 +87,21 @@ export function AddCustomerModal({
       return;
     }
 
-    if (!email.trim()) {
+    const emailCheck = validateEmailFormat(email);
+    if (!emailCheck.valid) {
       toast({
-        title: "Email Required",
-        description: "Please enter a valid email address.",
+        title: "Invalid Email Address",
+        description: emailCheck.error,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const phoneCheck = validateSomaliPhone(phone, { required: false });
+    if (!phoneCheck.valid) {
+      toast({
+        title: "Invalid Phone Number",
+        description: phoneCheck.error,
         variant: "destructive",
       });
       return;
@@ -204,14 +217,12 @@ export function AddCustomerModal({
           <div className="space-y-1.5">
             <Label className="text-xs font-bold text-[#07111F] flex items-center gap-1.5">
               <Phone className="h-3.5 w-3.5 text-[#C89B3C]" />
-              Phone Number <span className="text-[#9CA3AF] font-normal">(Optional)</span>
+              Phone Number <span className="text-[#9CA3AF] font-normal">(+252 + 9 digits)</span>
             </Label>
-            <Input
-              type="tel"
-              placeholder="e.g. +1 (555) 234-5678"
+            <SomaliPhoneInput
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="bg-white border-[#E8E1D4] rounded-xl text-xs h-10 text-[#07111F] placeholder:text-[#9CA3AF] focus:border-[#C89B3C] focus:ring-[#C89B3C]"
+              onChange={(val) => setPhone(val)}
+              placeholder="612345678"
             />
           </div>
 

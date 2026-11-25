@@ -22,6 +22,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SomaliPhoneInput } from "@/components/ui/SomaliPhoneInput";
+import { validateEmailFormat, validateSomaliPhone } from "@/lib/validation";
 import { toast } from "@/hooks/use-toast";
 
 export interface UserItem {
@@ -251,6 +253,16 @@ function UsersDirectoryContent({ initialUsers = [] }: { initialUsers?: UserItem[
     e.preventDefault();
     if (!form.name || !form.email || !form.password) {
       toast({ title: "Missing fields", description: "Name, email, and password are required.", variant: "destructive" });
+      return;
+    }
+    const emailCheck = validateEmailFormat(form.email);
+    if (!emailCheck.valid) {
+      toast({ title: "Invalid Email", description: emailCheck.error, variant: "destructive" });
+      return;
+    }
+    const phoneCheck = validateSomaliPhone(form.phone, { required: false });
+    if (!phoneCheck.valid) {
+      toast({ title: "Invalid Phone Number", description: phoneCheck.error, variant: "destructive" });
       return;
     }
     setSubmitting(true);
@@ -511,11 +523,10 @@ function UsersDirectoryContent({ initialUsers = [] }: { initialUsers?: UserItem[
 
             <div className="space-y-1.5">
               <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">Phone Number</Label>
-              <Input
+              <SomaliPhoneInput
                 value={form.phone}
-                onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
-                placeholder="+252 61 000 0000"
-                className="h-10 border-[#E8E1D4] bg-white rounded-xl text-sm focus:border-[#C89B3C] focus:ring-1 focus:ring-[#C89B3C]"
+                onChange={(val) => setForm((p) => ({ ...p, phone: val }))}
+                placeholder="612345678"
               />
             </div>
 

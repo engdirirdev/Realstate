@@ -27,6 +27,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
+import { SomaliPhoneInput } from "@/components/ui/SomaliPhoneInput";
+import { validateEmailFormat, validateSomaliPhone } from "@/lib/validation";
 
 interface PropertyScheduleTourModalProps {
   propertyId: string;
@@ -91,6 +93,28 @@ export default function PropertyScheduleTourModal({
         variant: "destructive",
       });
       return;
+    }
+
+    const phoneCheck = validateSomaliPhone(phone, { required: true });
+    if (!phoneCheck.valid) {
+      toast({
+        title: "Invalid Phone Number",
+        description: phoneCheck.error,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (email.trim()) {
+      const emailCheck = validateEmailFormat(email);
+      if (!emailCheck.valid) {
+        toast({
+          title: "Invalid Email Address",
+          description: emailCheck.error,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -276,16 +300,12 @@ export default function PropertyScheduleTourModal({
 
                 <div className="space-y-1">
                   <Label className="text-xs font-bold text-[#07111F]">Phone Number *</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-2.5 h-4 w-4 text-[#C89B3C]" />
-                    <Input
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+252 61 000 0000"
-                      className="pl-9 h-10 rounded-xl bg-white border-[#E8E1D4] text-xs font-medium text-[#07111F] focus:border-[#C89B3C]"
-                      required
-                    />
-                  </div>
+                  <SomaliPhoneInput
+                    value={phone}
+                    onChange={(val) => setPhone(val)}
+                    required
+                    placeholder="612345678"
+                  />
                 </div>
               </div>
 

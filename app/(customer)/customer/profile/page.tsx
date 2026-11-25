@@ -27,6 +27,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SomaliPhoneInput } from "@/components/ui/SomaliPhoneInput";
+import { validateSomaliPhone } from "@/lib/validation";
 import { toast } from "@/hooks/use-toast";
 import { usePortalLanguage, PortalLanguage } from "@/lib/customer-i18n";
 
@@ -159,6 +161,16 @@ export default function CustomerProfilePage() {
         });
         return;
       }
+    }
+
+    const phoneCheck = validateSomaliPhone(profile.phone, { required: false });
+    if (!phoneCheck.valid) {
+      toast({
+        title: isSo ? "Lambar Khaldan" : "Invalid Phone Number",
+        description: phoneCheck.error,
+        variant: "destructive",
+      });
+      return;
     }
 
     setSaving(true);
@@ -396,13 +408,12 @@ export default function CustomerProfilePage() {
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F] flex items-center gap-1.5">
                   <Phone className="h-3.5 w-3.5 text-[#C89B3C]" />{" "}
-                  {isSo ? "Lambarkaobaylka (Phone Number)" : "Phone Number"}
+                  {isSo ? "Lambarka Mobaylka (Phone Number)" : "Phone Number"}
                 </Label>
-                <Input
+                <SomaliPhoneInput
                   value={profile.phone}
-                  onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                  className="bg-white border-[#E8E1D4] text-[#07111F] rounded-xl h-10"
-                  placeholder="+252 61 XXXXXXX"
+                  onChange={(val) => setProfile({ ...profile, phone: val })}
+                  placeholder="612345678"
                 />
               </div>
             </div>

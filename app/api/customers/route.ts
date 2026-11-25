@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth-guards";
 import bcrypt from "bcryptjs";
+import {
+  verifyRealEmailServer,
+  validateSomaliPhone,
+  assertUniqueUserIdentity,
+} from "@/lib/server/identity-validation";
 
 // GET /api/customers - List customers for managers and admins
 export async function GET(req: NextRequest) {
@@ -100,21 +105,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Customer email address is required." }, { status: 400 });
     }
 
-    const trimmedEmail = email.trim().toLowerCase();
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmedEmail)) {
-      return NextResponse.json({ success: false, error: "Please provide a valid email address." }, { status: 400 });
+    // 1. Validate real, existing email
+    const emailCheck = await verifyRealEmailServer(email);
+    if (!emailCheck.valid) {
+      return NextResponse.json({ success: false, error: emailCheck.error }, { status: 400 });
     }
 
-    // Check if account already exists with this email
-    const existing = await prisma.user.findUnique({
-      where: { email: trimmedEmail },
-    });
+    // 2. Validate Somali phone number (+252 + 9 digits starting with 61-66, 90, 77)
+    const phoneCheck = validateSomaliPhone(phone, { required: false });
+    if (!phoneCheck.valid) {
+      return NextResponse.json({ success: false, error: phoneCheck.error }, { status: 400 });
+    }
 
-    if (existing) {
+    const trimmedEmail = emailCheck.normalized;
+
+    // 3. Enforce global cross-portal uniqueness for email & phone
+    const uniqueCheck = await assertUniqueUserIdentity({
+      email: trimmedEmail,
+      phone: phoneCheck.normalized,
+    });
+    if (!uniqueCheck.ok) {
       return NextResponse.json({
         success: false,
-        error: `An account with email "${trimmedEmail}" already exists in the system (${existing.role}).`,
+        error: uniqueCheck.error,
       }, { status: 409 });
     }
 
@@ -133,7 +146,7 @@ export async function POST(req: NextRequest) {
       data: {
         name: name.trim(),
         email: trimmedEmail,
-        phone: phone && typeof phone === "string" && phone.trim() ? phone.trim() : null,
+        phone: phoneCheck.normalized,
         password: hashedPassword,
         role: "CUSTOMER",
         isActive: true,

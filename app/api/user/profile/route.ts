@@ -3,6 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { dbCache } from "@/lib/cache";
 import bcrypt from "bcryptjs";
+import {
+  verifyRealEmailServer,
+  validateSomaliPhone,
+  assertUniqueUserIdentity,
+} from "@/lib/server/identity-validation";
 
 // GET — get current user profile + preferences
 export async function GET() {
@@ -93,16 +98,24 @@ export async function PATCH(request: NextRequest) {
     if (email !== undefined && String(email).trim()) {
       const targetEmail = String(email).trim().toLowerCase();
       if (targetEmail !== existingUser.email.toLowerCase()) {
-        const collision = await prisma.user.findUnique({
-          where: { email: targetEmail },
-        });
-        if (collision && collision.id !== existingUser.id) {
+        const emailCheck = await verifyRealEmailServer(targetEmail);
+        if (!emailCheck.valid) {
           return NextResponse.json(
-            { success: false, error: "This email/username is already taken by another account." },
+            { success: false, error: emailCheck.error },
             { status: 400 }
           );
         }
-        updateData.email = targetEmail;
+        const uniqueCheck = await assertUniqueUserIdentity({
+          email: emailCheck.normalized,
+          excludeUserId: existingUser.id,
+        });
+        if (!uniqueCheck.ok) {
+          return NextResponse.json(
+            { success: false, error: uniqueCheck.error },
+            { status: 409 }
+          );
+        }
+        updateData.email = emailCheck.normalized;
       }
     } else if (username !== undefined && String(username).trim()) {
       const rawUser = String(username).trim().toLowerCase();
@@ -111,21 +124,48 @@ export async function PATCH(request: NextRequest) {
         : "kiromaal.com";
       const targetEmail = rawUser.includes("@") ? rawUser : `${rawUser}@${domain}`;
       if (targetEmail !== existingUser.email.toLowerCase()) {
-        const collision = await prisma.user.findUnique({
-          where: { email: targetEmail },
-        });
-        if (collision && collision.id !== existingUser.id) {
+        const emailCheck = await verifyRealEmailServer(targetEmail);
+        if (!emailCheck.valid) {
           return NextResponse.json(
-            { success: false, error: "This username is already taken by another account." },
+            { success: false, error: emailCheck.error },
             { status: 400 }
           );
         }
-        updateData.email = targetEmail;
+        const uniqueCheck = await assertUniqueUserIdentity({
+          email: emailCheck.normalized,
+          excludeUserId: existingUser.id,
+        });
+        if (!uniqueCheck.ok) {
+          return NextResponse.json(
+            { success: false, error: uniqueCheck.error },
+            { status: 409 }
+          );
+        }
+        updateData.email = emailCheck.normalized;
       }
     }
 
     if (phone !== undefined) {
-      updateData.phone = String(phone).trim() || null;
+      const phoneCheck = validateSomaliPhone(phone, { required: false });
+      if (!phoneCheck.valid) {
+        return NextResponse.json(
+          { success: false, error: phoneCheck.error },
+          { status: 400 }
+        );
+      }
+      if (phoneCheck.normalized) {
+        const uniqueCheck = await assertUniqueUserIdentity({
+          phone: phoneCheck.normalized,
+          excludeUserId: existingUser.id,
+        });
+        if (!uniqueCheck.ok) {
+          return NextResponse.json(
+            { success: false, error: uniqueCheck.error },
+            { status: 409 }
+          );
+        }
+      }
+      updateData.phone = phoneCheck.normalized;
     }
 
     if (image !== undefined) {

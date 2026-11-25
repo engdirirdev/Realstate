@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth-guards";
+import {
+  validateSomaliPhone,
+  assertUniqueUserIdentity,
+} from "@/lib/server/identity-validation";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -62,7 +66,20 @@ export async function PATCH(req: NextRequest, { params }: Props) {
       dataToUpdate.name = name.trim();
     }
     if (phone !== undefined) {
-      dataToUpdate.phone = typeof phone === "string" && phone.trim() ? phone.trim() : null;
+      const phoneCheck = validateSomaliPhone(phone, { required: false });
+      if (!phoneCheck.valid) {
+        return NextResponse.json({ success: false, error: phoneCheck.error }, { status: 400 });
+      }
+      if (phoneCheck.normalized) {
+        const uniqueCheck = await assertUniqueUserIdentity({
+          phone: phoneCheck.normalized,
+          excludeUserId: id,
+        });
+        if (!uniqueCheck.ok) {
+          return NextResponse.json({ success: false, error: uniqueCheck.error }, { status: 409 });
+        }
+      }
+      dataToUpdate.phone = phoneCheck.normalized;
     }
     if (typeof isActive === "boolean") {
       dataToUpdate.isActive = isActive;

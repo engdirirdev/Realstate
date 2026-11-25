@@ -34,6 +34,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SomaliPhoneInput } from "@/components/ui/SomaliPhoneInput";
+import { validateEmailFormat, validateSomaliPhone } from "@/lib/validation";
 import { toast } from "@/hooks/use-toast";
 
 interface AuthPageProps {
@@ -193,6 +195,24 @@ function AuthContent({ initialTab = "login" }: AuthPageProps) {
       toast({
         title: "Weak password",
         description: "Password must be at least 8 characters.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const emailCheck = validateEmailFormat(registerForm.email);
+    if (!emailCheck.valid) {
+      toast({
+        title: "Invalid email",
+        description: emailCheck.error,
+        variant: "destructive",
+      });
+      return;
+    }
+    const phoneCheck = validateSomaliPhone(registerForm.phone, { required: false });
+    if (!phoneCheck.valid) {
+      toast({
+        title: "Invalid phone number",
+        description: phoneCheck.error,
         variant: "destructive",
       });
       return;
@@ -775,25 +795,21 @@ function AuthContent({ initialTab = "login" }: AuthPageProps) {
                       htmlFor="register-phone"
                       className="text-[11px] font-bold text-[#07111F]"
                     >
-                      Phone Number <span className="text-[#6B7280] font-normal text-[10px]">(optional)</span>
+                      Phone Number <span className="text-[#6B7280] font-normal text-[10px]">(+252 + 9 digits)</span>
                     </Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#A97918]" />
-                      <Input
-                        id="register-phone"
-                        name="phone"
-                        type="tel"
-                        value={registerForm.phone}
-                        onChange={(e) =>
-                          setRegisterForm((p) => ({
-                            ...p,
-                            phone: e.target.value,
-                          }))
-                        }
-                        placeholder="+252 61 234 5678"
-                        className="pl-9 h-8.5 bg-white border-[#E8E1D4] text-[#07111F] placeholder:text-[#9CA3AF] focus:border-[#C89B3C] focus:ring-2 focus:ring-[#C89B3C]/20 rounded-xl text-xs transition-all"
-                      />
-                    </div>
+                    <SomaliPhoneInput
+                      id="register-phone"
+                      name="phone"
+                      compact
+                      value={registerForm.phone}
+                      onChange={(val) =>
+                        setRegisterForm((p) => ({
+                          ...p,
+                          phone: val,
+                        }))
+                      }
+                      placeholder="612345678"
+                    />
                   </div>
 
                   {/* Password field */}

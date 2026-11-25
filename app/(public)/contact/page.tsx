@@ -9,6 +9,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { MapPin, Phone, Mail, Clock, Send, CheckCircle2, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SomaliPhoneInput } from "@/components/ui/SomaliPhoneInput";
+import { validateEmailFormat, validateSomaliPhone } from "@/lib/validation";
 
 const DEFAULT_CONTACT_SETTINGS = {
   contact_address: "Abudwak, Galmudug, Somalia",
@@ -22,6 +24,7 @@ export default function ContactPage() {
   const [form, setForm] = useState({ name: "", email: "", phone: "", subject: "", message: "" });
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const loadContactSettings = useCallback(async () => {
     try {
@@ -67,6 +70,20 @@ export default function ContactPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
+
+    const emailCheck = validateEmailFormat(form.email);
+    if (!emailCheck.valid) {
+      setFormError(emailCheck.error || "Please enter a valid email address.");
+      return;
+    }
+
+    const phoneCheck = validateSomaliPhone(form.phone, { required: false });
+    if (!phoneCheck.valid) {
+      setFormError(phoneCheck.error || "Please enter a valid Somali phone number.");
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch("/api/contact", {
@@ -77,7 +94,11 @@ export default function ContactPage() {
       const data = await res.json();
       if (data.success) {
         setSent(true);
+      } else {
+        setFormError(data.error || "Failed to send inquiry. Please verify your details.");
       }
+    } catch {
+      setFormError("Network error. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -159,13 +180,11 @@ export default function ContactPage() {
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-[#07111F] mb-1.5">Phone Number</label>
-                    <input
+                    <SomaliPhoneInput
                       name="phone"
-                      type="tel"
                       value={form.phone}
-                      onChange={handleChange}
-                      placeholder="+252 61 234 5678"
-                      className="w-full px-4 py-2.5 rounded-xl border border-[#E8E1D4] focus:border-[#C89B3C] focus:ring-1 focus:ring-[#C89B3C] bg-white text-[#07111F] text-sm outline-none transition-colors"
+                      onChange={(val) => setForm((prev) => ({ ...prev, phone: val }))}
+                      placeholder="612345678"
                     />
                   </div>
                   <div>
@@ -198,6 +217,11 @@ export default function ContactPage() {
                     className="w-full px-4 py-2.5 rounded-xl border border-[#E8E1D4] focus:border-[#C89B3C] focus:ring-1 focus:ring-[#C89B3C] bg-white text-[#07111F] text-sm resize-none outline-none transition-colors"
                   />
                 </div>
+                {formError && (
+                  <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">
+                    {formError}
+                  </div>
+                )}
                 <Button
                   type="submit"
                   disabled={loading}

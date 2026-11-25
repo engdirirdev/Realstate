@@ -136,7 +136,7 @@ model User {
   name          String
   email         String    @unique
   emailVerified DateTime?
-  phone         String?
+  phone         String?   @unique
   password      String
   image         String?
   role          Role      @default(USER)

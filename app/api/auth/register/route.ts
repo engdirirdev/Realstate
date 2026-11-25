@@ -2,11 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { checkRateLimit, getClientIdentifier, createRateLimitResponse } from "@/lib/rate-limiter";
+import {
+  verifyRealEmailServer,
+  validateSomaliPhone,
+  assertUniqueUserIdentity,
+} from "@/lib/server/identity-validation";
 
 export async function POST(request: NextRequest) {
   try {
     const clientId = getClientIdentifier(request);
-    const rateCheck = checkRateLimit(`register:${clientId}`, { limit: 5, windowSeconds: 60 });
+    const rateCheck = checkRateLimit(`register:${clientId}`, { limit: 10, windowSeconds: 60 });
     if (!rateCheck.allowed) {
       return createRateLimitResponse(rateCheck);
     }
@@ -22,14 +27,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Password must be at least 8 characters." }, { status: 400 });
     }
 
-    const cleanEmail = email.trim().toLowerCase();
+    // 1. Validate real, existing email
+    const emailCheck = await verifyRealEmailServer(email);
+    if (!emailCheck.valid) {
+      return NextResponse.json({ success: false, error: emailCheck.error }, { status: 400 });
+    }
+
+    // 2. Validate Somali phone number (+252 + 9 digits starting with 61-66, 90, 77)
+    const phoneCheck = validateSomaliPhone(phone, { required: false });
+    if (!phoneCheck.valid) {
+      return NextResponse.json({ success: false, error: phoneCheck.error }, { status: 400 });
+    }
+
+    const cleanEmail = emailCheck.normalized;
+    const cleanPhone = phoneCheck.normalized;
     const cleanName = name.trim();
     const cleanUsername = typeof username === "string" ? username.trim().replace(/\s+/g, "").toLowerCase() : "";
 
-    // Check if email already exists
-    const existing = await prisma.user.findUnique({ where: { email: cleanEmail } });
-    if (existing) {
-      return NextResponse.json({ success: false, error: "An account with this email already exists." }, { status: 409 });
+    // 3. Enforce global cross-portal uniqueness (email & phone)
+    const uniqueCheck = await assertUniqueUserIdentity({
+      email: cleanEmail,
+      phone: cleanPhone,
+    });
+    if (!uniqueCheck.ok) {
+      return NextResponse.json({ success: false, error: uniqueCheck.error }, { status: 409 });
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
@@ -39,7 +60,7 @@ export async function POST(request: NextRequest) {
         name: cleanName,
         email: cleanEmail,
         password: hashedPassword,
-        phone: phone?.trim() || null,
+        phone: cleanPhone,
         role: "CUSTOMER",
       },
     });

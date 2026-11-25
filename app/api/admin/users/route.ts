@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import bcrypt from "bcryptjs";
+import {
+  verifyRealEmailServer,
+  validateSomaliPhone,
+  assertUniqueUserIdentity,
+} from "@/lib/server/identity-validation";
 
 // POST: Admin creates a new User or Admin account
 export async function POST(request: NextRequest) {
@@ -22,21 +27,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Password must be at least 8 characters." }, { status: 400 });
     }
 
+    // 1. Validate real, existing email
+    const emailCheck = await verifyRealEmailServer(email);
+    if (!emailCheck.valid) {
+      return NextResponse.json({ success: false, error: emailCheck.error }, { status: 400 });
+    }
+
+    // 2. Validate Somali phone number (+252 + 9 digits starting with 61-66, 90, 77)
+    const phoneCheck = validateSomaliPhone(phone, { required: false });
+    if (!phoneCheck.valid) {
+      return NextResponse.json({ success: false, error: phoneCheck.error }, { status: 400 });
+    }
+
     const assignedRole = role === "ADMIN" ? "ADMIN" : role === "CUSTOMER" ? "CUSTOMER" : "USER";
 
-    const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing) {
-      return NextResponse.json({ success: false, error: "An account with this email already exists." }, { status: 409 });
+    // 3. Enforce global cross-portal uniqueness for email & phone
+    const uniqueCheck = await assertUniqueUserIdentity({
+      email: emailCheck.normalized,
+      phone: phoneCheck.normalized,
+    });
+    if (!uniqueCheck.ok) {
+      return NextResponse.json({ success: false, error: uniqueCheck.error }, { status: 409 });
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
     const newUser = await prisma.user.create({
       data: {
-        name,
-        email,
+        name: name.trim(),
+        email: emailCheck.normalized,
         password: hashedPassword,
-        phone: phone || null,
+        phone: phoneCheck.normalized,
         role: assignedRole,
         isActive: true,
         preferences: { create: {} },

@@ -46,6 +46,8 @@ export async function POST(request: NextRequest) {
     dbCache.invalidateTags(["settings"]);
     revalidatePath("/", "layout");
     revalidatePath("/about");
+    revalidatePath("/contact");
+    revalidatePath("/customer/contact");
     revalidatePath("/admin/settings");
 
     return NextResponse.json({ success: true });

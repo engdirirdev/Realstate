@@ -61,6 +61,7 @@ interface AdminSettingsClientProps {
     contact_email: string;
     contact_phone?: string;
     contact_address?: string;
+    contact_hours?: string;
     company_description?: string;
     social_facebook?: string;
     social_twitter?: string;
@@ -121,6 +122,7 @@ function AdminSettingsClient({
     contact_email: initialSettings?.contact_email || "concierge@kiro-maal.so",
     contact_phone: initialSettings?.contact_phone || "+252 61 200 0000 / +252 61 900 0000",
     contact_address: initialSettings?.contact_address || "Abudwak, Galmudug, Somalia",
+    contact_hours: initialSettings?.contact_hours || "Sat – Thu: 8:30 AM – 6:00 PM EAT",
     company_description:
       initialSettings?.company_description ||
       "Kiro-Maal Real Estate is Abudwak's premier luxury property platform. Discover verified properties, unlock AI-driven valuations, and find your dream home with unmatched trust and precision.",
@@ -764,7 +766,7 @@ function AdminSettingsClient({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">
-                  Office Phone Number(s)
+                  Direct Advisory Phone (Footer &amp; Contact)
                 </Label>
                 <Input
                   value={form.contact_phone}
@@ -776,7 +778,7 @@ function AdminSettingsClient({
 
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">
-                  Office Address (Footer)
+                  Headquarters / Office Address (Footer &amp; Contact)
                 </Label>
                 <Input
                   value={form.contact_address}
@@ -785,6 +787,18 @@ function AdminSettingsClient({
                   className="h-10 rounded-xl border-[#E8E1D4] bg-white focus:border-[#C89B3C] focus:ring-2 focus:ring-[#C89B3C]/20"
                 />
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">
+                Private / Office Hours (Contact Page)
+              </Label>
+              <Input
+                value={form.contact_hours}
+                onChange={(e) => setForm((p) => ({ ...p, contact_hours: e.target.value }))}
+                placeholder="Sat – Thu: 8:30 AM – 6:00 PM EAT"
+                className="h-10 rounded-xl border-[#E8E1D4] bg-white focus:border-[#C89B3C] focus:ring-2 focus:ring-[#C89B3C]/20"
+              />
             </div>
 
             <div className="space-y-1.5">

@@ -7,7 +7,7 @@
 //              Kiro-Maal Real Estate Master Design System
 // ================================================================
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import {
@@ -26,39 +26,83 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const contactCards = [
-  {
-    icon: Phone,
-    label: "Direct Advisory Desk",
-    value: "+252 61 200 0000",
-    action: "tel:+252612000000",
-    actionLabel: "Call Now",
-  },
-  {
-    icon: MessageSquare,
-    label: "WhatsApp VIP Line",
-    value: "+252 61 200 0000",
-    action: "https://wa.me/252612000000",
-    actionLabel: "Open WhatsApp",
-    isExternal: true,
-  },
-  {
-    icon: Mail,
-    label: "Private Concierge Email",
-    value: "concierge@kiromaal.com",
-    action: "mailto:concierge@kiromaal.com",
-    actionLabel: "Send Email",
-  },
-  {
-    icon: MapPin,
-    label: "Private Advisory Office",
-    value: "Maka Al-Mukarama Ave, Hodan, Mogadishu",
-    sub: "Private Client Lounge (Level 4)",
-  },
-];
+const DEFAULT_CONTACT_SETTINGS = {
+  contact_address: "Abudwak, Galmudug, Somalia",
+  contact_phone: "+252 61 200 0000 / +252 61 900 0000",
+  contact_email: "concierge@kiro-maal.so",
+  contact_hours: "Sat – Thu: 8:30 AM – 6:00 PM EAT",
+};
 
 export default function CustomerContactPage() {
   const { data: session } = useSession();
+
+  const [contactSettings, setContactSettings] = useState(DEFAULT_CONTACT_SETTINGS);
+
+  const loadContactSettings = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/settings", { cache: "no-store" });
+      const data = await res.json();
+      if (data?.success && data.settings) {
+        setContactSettings({
+          contact_address: data.settings.contact_address || DEFAULT_CONTACT_SETTINGS.contact_address,
+          contact_phone: data.settings.contact_phone || DEFAULT_CONTACT_SETTINGS.contact_phone,
+          contact_email: data.settings.contact_email || DEFAULT_CONTACT_SETTINGS.contact_email,
+          contact_hours: data.settings.contact_hours || DEFAULT_CONTACT_SETTINGS.contact_hours,
+        });
+      }
+    } catch {
+      // Keep defaults on network error
+    }
+  }, []);
+
+  useEffect(() => {
+    loadContactSettings();
+    let channel: BroadcastChannel | null = null;
+    if (typeof BroadcastChannel !== "undefined") {
+      channel = new BroadcastChannel("kiromaal-live-sync");
+      channel.onmessage = () => {
+        loadContactSettings();
+      };
+    }
+    return () => {
+      channel?.close();
+    };
+  }, [loadContactSettings]);
+
+  const primaryPhone = contactSettings.contact_phone.split("/")[0].trim() || contactSettings.contact_phone;
+  const telDigits = primaryPhone.replace(/[^+\d]/g, "");
+  const waDigits = primaryPhone.replace(/\D/g, "");
+
+  const contactCards = [
+    {
+      icon: Phone,
+      label: "Direct Advisory Desk",
+      value: contactSettings.contact_phone,
+      action: telDigits ? `tel:${telDigits}` : undefined,
+      actionLabel: "Call Now",
+    },
+    {
+      icon: MessageSquare,
+      label: "WhatsApp VIP Line",
+      value: primaryPhone,
+      action: waDigits ? `https://wa.me/${waDigits}` : undefined,
+      actionLabel: "Open WhatsApp",
+      isExternal: true,
+    },
+    {
+      icon: Mail,
+      label: "Private Concierge Email",
+      value: contactSettings.contact_email,
+      action: `mailto:${contactSettings.contact_email}`,
+      actionLabel: "Send Email",
+    },
+    {
+      icon: MapPin,
+      label: "Private Advisory Office",
+      value: contactSettings.contact_address,
+      sub: contactSettings.contact_hours,
+    },
+  ];
 
   const [form, setForm] = useState({
     subject: "",
@@ -281,7 +325,7 @@ export default function CustomerContactPage() {
                     <input
                       type="text"
                       required
-                      placeholder="e.g. Inquiring about luxury villa in Mogadishu"
+                      placeholder="e.g. Inquiring about a villa in Abudwak"
                       value={form.subject}
                       onChange={(e) => setForm({ ...form, subject: e.target.value })}
                       className="w-full bg-[#FCFBF7] border border-[#E8E1D4] text-[#07111F] text-xs sm:text-sm rounded-xl px-4 py-2.5 font-medium focus:outline-none focus:border-[#C89B3C]"

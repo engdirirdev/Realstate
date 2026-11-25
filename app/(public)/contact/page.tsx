@@ -6,21 +6,60 @@
 // ================================================================
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { MapPin, Phone, Mail, Clock, Send, CheckCircle2, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const contactInfo = [
-  { icon: MapPin, label: "Headquarters", value: "Hodan District, Maka Al-Mukarama Ave, Mogadishu, Somalia" },
-  { icon: Phone, label: "Direct Advisory", value: "+252 61 200 0000" },
-  { icon: Mail, label: "Concierge Email", value: "concierge@kiromaal.com" },
-  { icon: Clock, label: "Private Hours", value: "Sat – Thu: 8:30 AM – 6:00 PM EAT" },
-];
+const DEFAULT_CONTACT_SETTINGS = {
+  contact_address: "Abudwak, Galmudug, Somalia",
+  contact_phone: "+252 61 200 0000 / +252 61 900 0000",
+  contact_email: "concierge@kiro-maal.so",
+  contact_hours: "Sat – Thu: 8:30 AM – 6:00 PM EAT",
+};
 
 export default function ContactPage() {
+  const [contactSettings, setContactSettings] = useState(DEFAULT_CONTACT_SETTINGS);
   const [form, setForm] = useState({ name: "", email: "", phone: "", subject: "", message: "" });
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+
+  const loadContactSettings = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/settings", { cache: "no-store" });
+      const data = await res.json();
+      if (data?.success && data.settings) {
+        setContactSettings({
+          contact_address: data.settings.contact_address || DEFAULT_CONTACT_SETTINGS.contact_address,
+          contact_phone: data.settings.contact_phone || DEFAULT_CONTACT_SETTINGS.contact_phone,
+          contact_email: data.settings.contact_email || DEFAULT_CONTACT_SETTINGS.contact_email,
+          contact_hours: data.settings.contact_hours || DEFAULT_CONTACT_SETTINGS.contact_hours,
+        });
+      }
+    } catch {
+      // Keep defaults on network error
+    }
+  }, []);
+
+  useEffect(() => {
+    loadContactSettings();
+    let channel: BroadcastChannel | null = null;
+    if (typeof BroadcastChannel !== "undefined") {
+      channel = new BroadcastChannel("kiromaal-live-sync");
+      channel.onmessage = () => {
+        loadContactSettings();
+      };
+    }
+    return () => {
+      channel?.close();
+    };
+  }, [loadContactSettings]);
+
+  const contactInfo = [
+    { icon: MapPin, label: "Headquarters", value: contactSettings.contact_address },
+    { icon: Phone, label: "Direct Advisory", value: contactSettings.contact_phone },
+    { icon: Mail, label: "Concierge Email", value: contactSettings.contact_email },
+    { icon: Clock, label: "Private Hours", value: contactSettings.contact_hours },
+  ];
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));

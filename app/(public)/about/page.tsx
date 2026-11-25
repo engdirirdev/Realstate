@@ -158,13 +158,13 @@ export default async function AboutPage() {
               <p className="text-[#C89B3C] font-semibold text-xs tracking-wider uppercase mb-2">✦ The Leadership</p>
               <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#07111F]">Meet Our Executive Team</h2>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+            <div className="flex flex-nowrap items-stretch justify-start xl:justify-center gap-4 overflow-x-auto pb-3 px-1 touch-pan-x">
               {team.map((member) => (
                 <div
                   key={member.id}
-                  className="text-center bg-[#FCFBF7] border border-[#E8E1D4] shadow-sm rounded-2xl p-6 transition-all hover:border-[#C89B3C] hover:shadow-md flex flex-col items-center"
+                  className="w-[185px] sm:w-[195px] xl:flex-1 xl:min-w-[175px] xl:max-w-[215px] shrink-0 text-center bg-[#FCFBF7] border border-[#E8E1D4] shadow-sm rounded-2xl p-5 transition-all hover:border-[#C89B3C] hover:shadow-md flex flex-col items-center"
                 >
-                  <div className="w-22 h-22 rounded-full overflow-hidden mx-auto mb-4 border-2 border-[#C89B3C]/50 shadow-sm bg-[#07111F] flex items-center justify-center shrink-0">
+                  <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-3.5 border-2 border-[#C89B3C]/50 shadow-sm bg-[#07111F] flex items-center justify-center shrink-0">
                     {member.image ? (
                       <img
                         src={member.image}
@@ -172,17 +172,17 @@ export default async function AboutPage() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <span className="font-serif text-xl font-bold text-[#D9B45B]">
+                      <span className="font-serif text-lg font-bold text-[#D9B45B]">
                         {getInitials(member.name)}
                       </span>
                     )}
                   </div>
-                  <h3 className="font-serif font-bold text-[#07111F] text-base">{member.name}</h3>
-                  <p className="text-xs text-[#C89B3C] font-semibold mt-1 uppercase tracking-wide">
+                  <h3 className="font-serif font-bold text-[#07111F] text-sm leading-snug">{member.name}</h3>
+                  <p className="text-[11px] text-[#C89B3C] font-semibold mt-1 uppercase tracking-wide leading-snug">
                     {member.role}
                   </p>
                   {member.bio && (
-                    <p className="text-xs text-[#6B7280] mt-2 leading-relaxed line-clamp-3">
+                    <p className="text-[11px] text-[#6B7280] mt-2 leading-relaxed line-clamp-3">
                       {member.bio}
                     </p>
                   )}

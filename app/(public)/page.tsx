@@ -7,7 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   Building2, Users, Award, Star, ArrowRight, Bot,
-  Sparkles, Search, TrendingUp, Compass
+  Sparkles, Search, TrendingUp, Compass, Home
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import PropertyCard from "@/components/PropertyCard";
@@ -376,7 +376,15 @@ export default async function HomePage() {
                   href={`/properties?location=${encodeURIComponent(name)}`}
                   className="group flex flex-col items-center text-center p-4 rounded-2xl border border-[#E8E1D4] bg-[#FCFBF7] hover:border-[#C89B3C] hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
                 >
-                  <span className="text-3xl mb-2.5 group-hover:scale-110 transition-transform">{emoji}</span>
+                  <div className="relative w-12 h-12 mb-3 rounded-2xl bg-[#07111F] border border-[#C89B3C]/40 flex items-center justify-center text-[#D9B45B] shadow-sm group-hover:scale-110 transition-transform">
+                    <Home className="w-6 h-6 text-[#D9B45B]" />
+                    <span
+                      aria-hidden="true"
+                      className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-[#FCFBF7] border border-[#C89B3C]/50 shadow-xs flex items-center justify-center text-xs leading-none"
+                    >
+                      {emoji}
+                    </span>
+                  </div>
                   <h3 className="font-bold text-[#07111F] group-hover:text-[#C89B3C] transition-colors text-sm font-serif">
                     {name}
                   </h3>

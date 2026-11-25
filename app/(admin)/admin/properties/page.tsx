@@ -1,4 +1,4 @@
-export const revalidate = 30;
+export const dynamic = "force-dynamic";
 // ================================================================
 // PAGE NAME  : Admin Dashboard — Property Management
 // ROUTE      : /admin/properties
@@ -99,7 +99,7 @@ export default async function AdminPropertiesPage({
           <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#07111F] flex items-center gap-2.5">
             <Building2 className="h-7 w-7 text-[#C89B3C]" /> Property Portfolio Management
           </h1>
-          <p className="text-[#6B7280] text-sm mt-1">Review, approve, and oversee all real estate listings across Somalia</p>
+          <p className="text-[#6B7280] text-sm mt-1">Review, approve, and oversee all real estate listings in Abudwak, Galmudug, Somalia</p>
         </div>
 
         <Link
@@ -137,28 +137,18 @@ export default async function AdminPropertiesPage({
 
       {/* Table */}
       <div className="bg-[#FCFBF7] rounded-2xl shadow-sm border border-[#E8E1D4] overflow-hidden w-full">
-        <div className="w-full overflow-x-auto momentum-scroll">
-          <table className="w-full text-sm table-fixed-layout min-w-[920px]">
-            <colgroup>
-              <col className="w-[240px]" />
-              <col className="w-[120px]" />
-              <col className="w-[130px]" />
-              <col className="w-[110px]" />
-              <col className="w-[100px]" />
-              <col className="w-[100px]" />
-              <col className="w-[100px]" />
-              <col className="w-[120px]" />
-            </colgroup>
+        <div className="w-full overflow-x-auto overscroll-x-contain touch-pan-x">
+          <table className="w-full text-sm table-auto min-w-[1260px]">
             <thead className="bg-[#F7F3EA] border-b border-[#E8E1D4]">
               <tr>
-                <th className="text-left px-3.5 py-3 font-bold uppercase tracking-wider text-[11px] text-[#07111F]">Property</th>
-                <th className="text-left px-2.5 py-3 font-bold uppercase tracking-wider text-[11px] text-[#07111F]">Type &amp; Listing</th>
-                <th className="text-left px-2.5 py-3 font-bold uppercase tracking-wider text-[11px] text-[#07111F]">Manager</th>
-                <th className="text-left px-2.5 py-3 font-bold uppercase tracking-wider text-[11px] text-[#07111F]">Price</th>
-                <th className="text-left px-2.5 py-3 font-bold uppercase tracking-wider text-[11px] text-[#07111F]">Approval</th>
-                <th className="text-left px-2.5 py-3 font-bold uppercase tracking-wider text-[11px] text-[#07111F]">Availability</th>
-                <th className="text-left px-2.5 py-3 font-bold uppercase tracking-wider text-[11px] text-[#07111F]">Listed Date</th>
-                <th className="text-right px-3.5 py-3 font-bold uppercase tracking-wider text-[11px] text-[#07111F]">Actions</th>
+                <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-[11px] text-[#07111F] whitespace-nowrap">Property</th>
+                <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-[11px] text-[#07111F] whitespace-nowrap">Type &amp; Listing</th>
+                <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-[11px] text-[#07111F] whitespace-nowrap">Manager</th>
+                <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-[11px] text-[#07111F] whitespace-nowrap">Price</th>
+                <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-[11px] text-[#07111F] whitespace-nowrap">Approval</th>
+                <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-[11px] text-[#07111F] whitespace-nowrap">Availability</th>
+                <th className="text-left px-4 py-3.5 font-bold uppercase tracking-wider text-[11px] text-[#07111F] whitespace-nowrap">Listed Date</th>
+                <th className="text-right px-4 py-3.5 font-bold uppercase tracking-wider text-[11px] text-[#07111F] whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E8E1D4]">
@@ -176,7 +166,7 @@ export default async function AdminPropertiesPage({
                   const isRented = p.status === "RENTED" || p.availabilityStatus === "RENTED";
                   return (
                     <tr key={p.id} className="hover:bg-[#F7F3EA]/50 transition-colors">
-                      <td className="px-3.5 py-2.5">
+                      <td className="px-4 py-3.5">
                         <div className="flex items-center gap-2.5">
                           <div className="w-10 h-10 rounded-lg overflow-hidden bg-[#F7F3EA] border border-[#E8E1D4] shrink-0 relative">
                             {img ? (
@@ -196,18 +186,18 @@ export default async function AdminPropertiesPage({
                             )}
                           </div>
                           <div className="min-w-0">
-                            <Link href={`/properties/${p.id}`} className="font-semibold text-[#07111F] text-xs hover:text-[#C89B3C] max-w-[170px] truncate block" title={p.title}>
+                            <Link href={`/properties/${p.id}`} className="font-semibold text-[#07111F] text-xs hover:text-[#C89B3C] max-w-[220px] truncate block" title={p.title}>
                               {p.title}
                             </Link>
-                            <p className="text-[11px] text-[#6B7280] truncate max-w-[170px]">
-                              {p.city}
+                            <p className="text-[11px] text-[#6B7280] truncate max-w-[220px]">
+                              {p.location ? `${p.location}, ${p.city}` : p.city}
                               {p.type !== "LAND" && p.bedrooms > 0 ? ` · ${p.bedrooms} bed${p.bedrooms > 1 ? "s" : ""}` : ""}
                               {(p.type === "LAND" || p.bedrooms === 0) && p.area ? ` · ${p.area} m²` : ""}
                             </p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-2.5 py-2.5 whitespace-nowrap">
+                      <td className="px-4 py-3.5 whitespace-nowrap">
                         <p className="text-[10px] text-[#A97918] uppercase tracking-wide font-bold">{getPropertyTypeLabel(p.type)}</p>
                         <span className={`inline-block px-1.5 py-0.5 rounded text-[9px] font-extrabold ${
                           p.listingType === "FOR_RENT" ? "bg-gradient-to-r from-[#D9A336] via-[#E8B849] to-[#C99126] text-[#07111F] border border-[#E8B849]/70 shadow-2xs" : "bg-[#07111F] text-[#D9B45B] border border-[#C89B3C]/40"
@@ -215,16 +205,16 @@ export default async function AdminPropertiesPage({
                           {p.listingType === "FOR_RENT" ? "FOR RENT" : "FOR SALE"}
                         </span>
                       </td>
-                      <td className="px-2.5 py-2.5 text-xs whitespace-nowrap">
-                        <p className="font-medium text-[#07111F] text-xs truncate max-w-[110px]">{p.manager?.name || "System"}</p>
-                        <p className="text-[10px] text-[#6B7280] truncate max-w-[110px]">{p.manager?.email || ""}</p>
+                      <td className="px-4 py-3.5 text-xs whitespace-nowrap">
+                        <p className="font-medium text-[#07111F] text-xs">{p.manager?.name || "System"}</p>
+                        <p className="text-[10px] text-[#6B7280]">{p.manager?.email || ""}</p>
                       </td>
-                      <td className="px-2.5 py-2.5 font-bold text-[#07111F] text-xs sm:text-sm whitespace-nowrap">
+                      <td className="px-4 py-3.5 font-bold text-[#07111F] text-xs sm:text-sm whitespace-nowrap">
                         {formatPrice(p.price)}
                         {p.listingType === "FOR_RENT" && <span className="text-[10px] font-normal text-[#6B7280]">/{p.rentPeriod?.toLowerCase() || "mo"}</span>}
                       </td>
-                      <td className="px-2.5 py-2.5 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      <td className="px-4 py-3.5 whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                           p.status === "APPROVED" || p.status === "PUBLISHED" ? "bg-[#07111F] text-[#D9B45B] border border-[#C89B3C]/30" :
                           p.status === "PENDING" ? "bg-amber-50 text-amber-700 border border-amber-200" :
                           p.status === "REJECTED" ? "bg-red-50 text-red-700 border border-red-200" :
@@ -236,8 +226,8 @@ export default async function AdminPropertiesPage({
                           {p.status === "PENDING" ? "PENDING REVIEW" : p.status}
                         </span>
                       </td>
-                      <td className="px-2.5 py-2.5 whitespace-nowrap">
-                        <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase ${
+                      <td className="px-4 py-3.5 whitespace-nowrap">
+                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase ${
                           isSold ? "bg-slate-900 text-slate-100 border border-slate-700" :
                           isRented ? "bg-indigo-900 text-indigo-100 border border-indigo-700" :
                           p.availabilityStatus === "BOOKING_PENDING" ? "bg-amber-100 text-amber-800 border border-amber-300" :
@@ -247,11 +237,11 @@ export default async function AdminPropertiesPage({
                           {isSold ? "SOLD" : isRented ? "RENTED" : p.availabilityStatus || "AVAILABLE"}
                         </span>
                       </td>
-                      <td className="px-2.5 py-2.5 text-[#6B7280] text-[11px] whitespace-nowrap">
+                      <td className="px-4 py-3.5 text-[#6B7280] text-[11px] whitespace-nowrap">
                         {new Date(p.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                       </td>
-                      <td className="px-3.5 py-2.5 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1">
+                      <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5">
                           <Link
                             href={`/properties/${p.id}`}
                             className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-xs font-semibold text-[#6B7280] hover:text-[#07111F] bg-[#FCFBF7] border border-[#E8E1D4] hover:bg-[#F7F3EA]"

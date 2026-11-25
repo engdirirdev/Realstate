@@ -136,16 +136,16 @@ export default function DashboardSidebarNav() {
                 className={cn(
                   "group flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150",
                   isActive
-                    ? "bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] font-extrabold shadow-lg shadow-[#C89B3C]/25"
-                    : "text-white/80 hover:text-white hover:bg-white/5 active:bg-white/10"
+                    ? "bg-gradient-to-r from-[#D6A536] via-[#E2B952] to-[#C29124] text-[#0B1728] font-bold shadow-md shadow-[#D6A536]/25"
+                    : "text-slate-300 hover:text-white hover:bg-white/[0.06] active:bg-white/10"
                 )}
               >
                 <Icon
                   className={cn(
                     "h-4 w-4 flex-shrink-0 transition-transform duration-200",
                     isActive
-                      ? "text-[#07111F] scale-110"
-                      : "text-[#D9B45B] group-hover:text-[#F3D78A] group-hover:scale-110"
+                      ? "text-[#0B1728] scale-110"
+                      : "text-[#D6A536] group-hover:text-[#E5BE5C] group-hover:scale-110"
                   )}
                 />
                 <span className="truncate">{isSo ? labelSo : label}</span>

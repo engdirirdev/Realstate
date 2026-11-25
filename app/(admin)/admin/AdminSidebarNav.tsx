@@ -140,16 +140,16 @@ export default function AdminSidebarNav() {
                 className={cn(
                   "group flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150",
                   isActive
-                    ? "bg-gradient-to-r from-[#D9A336] via-[#E8B849] to-[#C99126] text-[#0B1523] font-bold shadow-md shadow-[#C99126]/20"
-                    : "text-slate-300 hover:text-white hover:bg-white/5 active:bg-white/10"
+                    ? "bg-gradient-to-r from-[#D6A536] via-[#E2B952] to-[#C29124] text-[#0B1728] font-bold shadow-md shadow-[#D6A536]/25"
+                    : "text-slate-300 hover:text-white hover:bg-white/[0.06] active:bg-white/10"
                 )}
               >
                 <Icon
                   className={cn(
                     "h-4 w-4 shrink-0 transition-transform duration-200",
                     isActive
-                      ? "text-[#0B1523] scale-110"
-                      : "text-[#D9A336] group-hover:text-[#E8B849] group-hover:scale-110"
+                      ? "text-[#0B1728] scale-110"
+                      : "text-[#D6A536] group-hover:text-[#E5BE5C] group-hover:scale-110"
                   )}
                 />
                 <span className="truncate">{isSo ? labelSo : label}</span>

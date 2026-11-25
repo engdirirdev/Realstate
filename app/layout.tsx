@@ -26,7 +26,7 @@ const playfair = Playfair_Display({
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://kiromaal.com";
 
 export const viewport: Viewport = {
-  themeColor: "#07111F",
+  themeColor: "#0B1728",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
@@ -211,7 +211,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <JsonLd data={agentSchema} />
         <JsonLd data={webSiteSchema} />
       </head>
-      <body suppressHydrationWarning className="font-sans antialiased min-h-screen bg-white text-gray-900">
+      <body suppressHydrationWarning className="font-sans antialiased min-h-screen bg-[#F5F1E8] text-[#0B1728]">
         <SkipToContent />
         <Providers>
           <GlobalLanguageTranslator />

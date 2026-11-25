@@ -46,30 +46,30 @@ export default async function AdminLayout({
   const activeImage = dbUser?.image || session.user?.image || null;
 
   return (
-    <div suppressHydrationWarning className="min-h-screen bg-[#F5EFEB] flex font-sans">
-      {/* ─── Sidebar (Dark Navy #0B1523 Matching Reference) ─── */}
-      <aside suppressHydrationWarning className="hidden lg:flex w-64 flex-col bg-[#0B1523] border-r border-[#1B2738] fixed inset-y-0 left-0 z-30 shadow-2xl">
+    <div suppressHydrationWarning className="min-h-screen bg-[#F5F1E8] flex font-sans">
+      {/* ─── Sidebar (Deep Navy #0B1728) ─── */}
+      <aside suppressHydrationWarning className="hidden lg:flex w-64 flex-col bg-[#0B1728] border-r border-white/10 fixed inset-y-0 left-0 z-30 shadow-2xl">
         {/* Top Kiro-Maal Logo Brand Header */}
-        <div suppressHydrationWarning className="h-[72px] min-h-[72px] px-5 border-b border-[#1B2738] flex items-center bg-[#0B1523] shrink-0">
+        <div suppressHydrationWarning className="h-[72px] min-h-[72px] px-5 border-b border-white/10 flex items-center bg-[#0B1728] shrink-0">
           <BrandLogo variant="dark" href="/admin" size="md" />
         </div>
 
-        {/* Navigation Items (Scrollable if screen is scaled or low height) */}
-        <div suppressHydrationWarning className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-[#1B2738] hover:scrollbar-thumb-[#C89B3C]/50 py-3">
+        {/* Navigation Items */}
+        <div suppressHydrationWarning className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 hover:scrollbar-thumb-[#D6A536]/50 py-3">
           <AdminSidebarNav />
         </div>
       </aside>
 
-      {/* ─── Main Content Area (Warm Cream #F5EFEB) ─── */}
-      <div suppressHydrationWarning className="lg:ml-64 flex-1 flex flex-col min-h-screen min-w-0 bg-[#F5EFEB]">
+      {/* ─── Main Content Area (Warm Cream #F5F1E8) ─── */}
+      <div suppressHydrationWarning className="lg:ml-64 flex-1 flex flex-col min-h-screen min-w-0 bg-[#F5F1E8]">
         <AdminHeader
           userName={activeName}
           userEmail={activeEmail}
           userImage={activeImage}
-          unreadCount={unreadCount || 5}
+          unreadCount={unreadCount || 0}
         />
 
-        <main className="flex-1 min-w-0 p-3 sm:p-5 lg:p-6 bg-[#F5EFEB]">
+        <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-7 bg-[#F5F1E8]">
           {children}
         </main>
       </div>

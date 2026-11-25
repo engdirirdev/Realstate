@@ -42,22 +42,22 @@ export default async function CustomerLayout({ children }: { children: React.Rea
   const activeImage = dbUser?.image || session.user?.image || null;
 
   return (
-    <div suppressHydrationWarning className="min-h-screen bg-[#F7F3EA] flex">
-      {/* ─── Sidebar (Kiro-Maal Master Deep Navy) ─── */}
-      <aside suppressHydrationWarning className="hidden lg:flex w-64 flex-col bg-[#07111F] border-r border-[#C89B3C]/20 fixed inset-y-0 left-0 z-30 shadow-2xl">
+    <div suppressHydrationWarning className="min-h-screen bg-[#F5F1E8] flex font-sans">
+      {/* ─── Sidebar (Deep Navy #0B1728) ─── */}
+      <aside suppressHydrationWarning className="hidden lg:flex w-64 flex-col bg-[#0B1728] border-r border-white/10 fixed inset-y-0 left-0 z-30 shadow-2xl">
         {/* Brand Logo */}
-        <div suppressHydrationWarning className="h-18 px-6 border-b border-[#C89B3C]/20 flex items-center bg-[#07111F] shrink-0">
-          <BrandLogo variant="dark" />
+        <div suppressHydrationWarning className="h-[72px] min-h-[72px] px-5 border-b border-white/10 flex items-center bg-[#0B1728] shrink-0">
+          <BrandLogo variant="dark" href="/customer" size="md" />
         </div>
 
-        {/* Navigation (Scrollable if screen is scaled or low height) */}
-        <div suppressHydrationWarning className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-[#1B2738] hover:scrollbar-thumb-[#C89B3C]/50 py-4">
+        {/* Navigation */}
+        <div suppressHydrationWarning className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 hover:scrollbar-thumb-[#D6A536]/50 py-3">
           <CustomerSidebarNav />
         </div>
       </aside>
 
-      {/* ─── Main Content Area ─── */}
-      <div suppressHydrationWarning className="lg:ml-64 flex-1 flex flex-col min-h-screen bg-[#F7F3EA] min-w-0">
+      {/* ─── Main Content Area (Warm Cream #F5F1E8) ─── */}
+      <div suppressHydrationWarning className="lg:ml-64 flex-1 flex flex-col min-h-screen bg-[#F5F1E8] min-w-0">
         <CustomerHeader
           userName={activeName}
           userEmail={activeEmail}
@@ -65,7 +65,7 @@ export default async function CustomerLayout({ children }: { children: React.Rea
           unreadCount={unreadCount}
         />
 
-        <main className="flex-1 p-3 sm:p-5 lg:p-6 bg-[#F7F3EA] min-w-0">
+        <main className="flex-1 p-4 sm:p-6 lg:p-7 bg-[#F5F1E8] min-w-0">
           {children}
         </main>
       </div>

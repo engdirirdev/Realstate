@@ -4,34 +4,34 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-xl text-sm font-semibold ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C89B3C]/40 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-95",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-xl text-sm font-semibold ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D6A536]/45 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]",
   {
     variants: {
       variant: {
-        // Primary — Luxury Gold with Dark Navy Text & Gold Glow
+        // Primary — Luxury Gold (#D6A536) with Deep Navy (#0B1728) Text
         default:
-          "bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] font-bold hover:opacity-95 shadow-md shadow-[#C89B3C]/15 border-0",
-        // Destructive — Subtle Red
+          "bg-gradient-to-r from-[#D6A536] via-[#E2B952] to-[#C29124] text-[#0B1728] font-bold hover:brightness-105 shadow-sm hover:shadow-md hover:shadow-[#D6A536]/25 border-0",
+        // Destructive — Refined Crimson
         destructive:
           "bg-[#991B1B] text-white hover:bg-[#7F1D1D] shadow-sm font-semibold",
-        // Secondary — Ivory/white surface with gold border & navy text
+        // Secondary — Crisp White with Soft Beige border & Deep Navy text
         secondary:
-          "border border-[#C89B3C]/50 bg-[#FCFBF7] text-[#07111F] hover:bg-[#F7F3EA] hover:border-[#C89B3C] font-semibold shadow-xs",
-        // Outline — Transparent/white with gold border and gold text
+          "border border-[#E8E1D5] bg-white text-[#0B1728] hover:bg-[#F5F1E8] hover:border-[#D6A536]/70 font-semibold shadow-xs",
+        // Outline — Gold border and text
         outline:
-          "border border-[#C89B3C] bg-transparent text-[#C89B3C] hover:bg-[#C89B3C]/10 font-semibold",
+          "border border-[#D6A536] bg-transparent text-[#0B1728] hover:bg-[#D6A536]/12 font-semibold",
         // Ghost
         ghost:
-          "bg-transparent text-[#6B7280] hover:bg-[#F7F3EA] hover:text-[#07111F]",
+          "bg-transparent text-[#5F6C7B] hover:bg-[#F5F1E8] hover:text-[#0B1728]",
         // Link
         link:
-          "text-[#C89B3C] underline-offset-4 hover:underline bg-transparent font-semibold",
+          "text-[#B88A24] underline-offset-4 hover:underline bg-transparent font-semibold",
         // AI Assistant — Deep Navy & Gold Accent
         ai:
-          "bg-[#07111F] text-[#D9B45B] border border-[#C89B3C]/40 hover:bg-[#0B1728] shadow-sm font-bold",
-        // Navy — Luxury Dark Navy Solid
+          "bg-[#0B1728] text-[#D6A536] border border-[#D6A536]/45 hover:bg-[#13233A] shadow-sm font-bold",
+        // Navy — Deep Navy Solid
         navy:
-          "bg-[#07111F] text-[#FCFBF7] hover:bg-[#0B1728] shadow-sm font-semibold",
+          "bg-[#0B1728] text-white hover:bg-[#13233A] shadow-sm font-semibold",
       },
       size: {
         default: "h-10 px-5 py-2",

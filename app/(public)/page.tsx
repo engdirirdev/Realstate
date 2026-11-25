@@ -85,9 +85,9 @@ export default async function HomePage() {
   const { featuredProperties, totalCount, villageCounts } = await getHomeData();
 
   return (
-    <div className="overflow-x-hidden bg-[#F7F3EA]">
+    <div className="overflow-x-hidden bg-[#F5F1E8]">
       {/* ─── 1. HERO SECTION ────────────────────────────────── */}
-      <section className="relative min-h-[640px] lg:min-h-[720px] flex items-center justify-center pt-24 pb-16 px-4">
+      <section className="relative min-h-[620px] lg:min-h-[700px] flex items-center justify-center pt-24 pb-16 px-4">
         {/* Background Image with Gradient Overlay */}
         <div className="absolute inset-0 z-0 overflow-hidden">
           <Image
@@ -98,17 +98,17 @@ export default async function HomePage() {
             sizes="100vw"
             className="object-cover object-center scale-105"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#07111F]/95 via-[#0B1728]/85 to-[#07111F]/70" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0B1728]/95 via-[#0B1728]/82 to-[#0B1728]/68" />
         </div>
 
         <div className="section-container relative z-10 w-full">
           <div className="max-w-3xl mx-auto text-white text-center py-6 sm:py-10">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#C89B3C]/20 border border-[#C89B3C]/40 text-[#D9B45B] text-xs font-bold uppercase tracking-wider mb-5">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#D6A536]/15 border border-[#D6A536]/45 text-[#D6A536] text-xs font-bold uppercase tracking-wider mb-5 backdrop-blur-xs">
               <span>✦ Official Kiro-Maal Real Estate • {SYSTEM_LOCATION_LABEL}</span>
             </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black font-serif tracking-tight leading-tight text-[#FCFBF7] mb-5">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black font-serif tracking-tight leading-tight text-white mb-5">
               Smart Property Search <br />
-              <span className="bg-gradient-to-r from-[#C89B3C] via-[#F3D78A] to-[#D9B45B] bg-clip-text text-transparent">Powered by AI</span>
+              <span className="bg-gradient-to-r from-[#D6A536] via-[#F2D37A] to-[#D6A536] bg-clip-text text-transparent">Powered by AI</span>
             </h1>
             <p className="text-base sm:text-lg text-[#E2E8F0] leading-relaxed max-w-2xl mx-auto mb-9">
               Discover verified homes, modern apartments, and prime land plots across Abudwak, Galmudug, Somalia with precision AI valuations and trusted local agents.
@@ -119,11 +119,11 @@ export default async function HomePage() {
               <Link
                 href="/properties"
                 id="hero-search-properties-btn"
-                className="inline-flex items-center gap-3 px-9 py-4 rounded-2xl bg-gradient-to-r from-[#C89B3C] via-[#E8B849] to-[#D9A336] text-[#07111F] font-black text-base sm:text-lg shadow-xl shadow-[#C89B3C]/35 hover:shadow-2xl hover:shadow-[#C89B3C]/50 hover:scale-[1.03] active:scale-95 transition-all duration-300 group border border-[#F3D78A]/60 cursor-pointer"
+                className="inline-flex items-center gap-3 px-9 py-4 rounded-2xl bg-gradient-to-r from-[#D6A536] via-[#E5BE5C] to-[#C29124] text-[#0B1728] font-black text-base sm:text-lg shadow-xl shadow-[#D6A536]/30 hover:shadow-2xl hover:shadow-[#D6A536]/45 hover:scale-[1.02] active:scale-95 transition-all duration-300 group border border-[#F2D37A]/50 cursor-pointer"
               >
-                <Search className="w-5 h-5 text-[#07111F] transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
+                <Search className="w-5 h-5 text-[#0B1728] transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />
                 <span>Search Properties</span>
-                <ArrowRight className="w-5 h-5 text-[#07111F] transition-transform duration-300 group-hover:translate-x-1" />
+                <ArrowRight className="w-5 h-5 text-[#0B1728] transition-transform duration-300 group-hover:translate-x-1" />
               </Link>
             </div>
           </div>
@@ -131,47 +131,47 @@ export default async function HomePage() {
       </section>
 
       {/* ─── 2. HERO STATISTICS STRIP ───────────────────────── */}
-      <section className="bg-[#07111F] border-y border-[#C89B3C]/20 py-6">
+      <section className="bg-[#0B1728] border-y border-[#D6A536]/25 py-6">
         <div className="section-container">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#0B1728] border border-[#C89B3C]/20 text-white">
-              <div className="w-10 h-10 rounded-xl bg-[#C89B3C]/15 border border-[#C89B3C]/30 flex items-center justify-center text-[#D9B45B] flex-shrink-0">
+            <div className="flex items-center gap-3.5 p-4 rounded-2xl bg-white/[0.04] border border-[#D6A536]/20 text-white">
+              <div className="w-10 h-10 rounded-xl bg-[#D6A536]/15 border border-[#D6A536]/35 flex items-center justify-center text-[#D6A536] flex-shrink-0">
                 <Building2 className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xl sm:text-2xl font-black text-[#FCFBF7]">
+                <p className="text-xl sm:text-2xl font-black text-white">
                   {totalCount}
                 </p>
                 <p className="text-xs text-[#94A3B8] font-medium">Verified Listings</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#0B1728] border border-[#C89B3C]/20 text-white">
-              <div className="w-10 h-10 rounded-xl bg-[#C89B3C]/15 border border-[#C89B3C]/30 flex items-center justify-center text-[#D9B45B] flex-shrink-0">
+            <div className="flex items-center gap-3.5 p-4 rounded-2xl bg-white/[0.04] border border-[#D6A536]/20 text-white">
+              <div className="w-10 h-10 rounded-xl bg-[#D6A536]/15 border border-[#D6A536]/35 flex items-center justify-center text-[#D6A536] flex-shrink-0">
                 <Users className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xl sm:text-2xl font-black text-[#FCFBF7]">6 Villages</p>
+                <p className="text-xl sm:text-2xl font-black text-white">6 Villages</p>
                 <p className="text-xs text-[#94A3B8] font-medium">Full Abudwak Coverage</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#0B1728] border border-[#C89B3C]/20 text-white">
-              <div className="w-10 h-10 rounded-xl bg-[#C89B3C]/15 border border-[#C89B3C]/30 flex items-center justify-center text-[#D9B45B] flex-shrink-0">
+            <div className="flex items-center gap-3.5 p-4 rounded-2xl bg-white/[0.04] border border-[#D6A536]/20 text-white">
+              <div className="w-10 h-10 rounded-xl bg-[#D6A536]/15 border border-[#D6A536]/35 flex items-center justify-center text-[#D6A536] flex-shrink-0">
                 <Award className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xl sm:text-2xl font-black text-[#FCFBF7]">100%</p>
+                <p className="text-xl sm:text-2xl font-black text-white">100%</p>
                 <p className="text-xs text-[#94A3B8] font-medium">Verified Local Agents</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-[#0B1728] border border-[#C89B3C]/20 text-white">
-              <div className="w-10 h-10 rounded-xl bg-[#C89B3C]/15 border border-[#C89B3C]/30 flex items-center justify-center text-[#D9B45B] flex-shrink-0">
+            <div className="flex items-center gap-3.5 p-4 rounded-2xl bg-white/[0.04] border border-[#D6A536]/20 text-white">
+              <div className="w-10 h-10 rounded-xl bg-[#D6A536]/15 border border-[#D6A536]/35 flex items-center justify-center text-[#D6A536] flex-shrink-0">
                 <Star className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xl sm:text-2xl font-black text-[#FCFBF7]">Galmudug</p>
+                <p className="text-xl sm:text-2xl font-black text-white">Galmudug</p>
                 <p className="text-xs text-[#94A3B8] font-medium">Abudwak Market Leader</p>
               </div>
             </div>
@@ -184,19 +184,19 @@ export default async function HomePage() {
         <div className="section-container">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
             <div>
-              <p className="text-xs font-bold text-[#C89B3C] uppercase tracking-wider mb-1">
+              <p className="text-xs font-bold text-[#B88A24] uppercase tracking-wider mb-1">
                 ✦ Handpicked Selection
               </p>
-              <h2 className="text-2xl sm:text-3xl font-black font-serif text-[#07111F] tracking-tight">
+              <h2 className="text-2xl sm:text-3xl font-black font-serif text-[#0B1728] tracking-tight">
                 Featured Abudwak Properties
               </h2>
-              <p className="text-sm text-[#6B7280] mt-1">
+              <p className="text-sm text-[#5F6C7B] mt-1">
                 Explore verified, premium properties across Abudwak&apos;s villages curated for elegance, security, and growth.
               </p>
             </div>
             <Link
               href="/properties"
-              className="inline-flex items-center gap-1.5 text-sm font-bold text-[#C89B3C] hover:text-[#A97918] transition-colors"
+              className="inline-flex items-center gap-1.5 text-sm font-bold text-[#B88A24] hover:text-[#0B1728] transition-colors"
             >
               View All Properties
               <ArrowRight className="w-4 h-4" />
@@ -204,25 +204,31 @@ export default async function HomePage() {
           </div>
 
           {featuredProperties.length === 0 ? (
-            <div className="bg-[#FCFBF7] border border-[#E8E1D4] rounded-3xl p-12 text-center shadow-xs">
-              <Building2 className="w-10 h-10 text-[#C89B3C]/50 mx-auto mb-3" />
-              <h3 className="font-serif font-bold text-lg text-[#07111F]">
+            <div className="bg-white border border-[#E8E1D5] rounded-3xl p-12 text-center shadow-xs">
+              <Building2 className="w-10 h-10 text-[#D6A536]/60 mx-auto mb-3" />
+              <h3 className="font-serif font-bold text-lg text-[#0B1728]">
                 New Abudwak Listings Coming Soon
               </h3>
-              <p className="text-sm text-[#6B7280] mt-1 max-w-md mx-auto">
+              <p className="text-sm text-[#5F6C7B] mt-1 max-w-md mx-auto">
                 Verified homes, villas, and plots across Ubah, Horsed, October, 1da-Lulio, Ammano, and Waberi will appear here once published.
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
               {featuredProperties.map((p, index) => (
-                <div key={p.id} className="content-visibility-auto">
+                <div key={p.id} className="content-visibility-auto h-full">
                   <PropertyCard
                     priority={index < 4}
                     property={{
                       id: p.id,
                       title: p.title,
                       price: p.price,
+                      basePrice: p.basePrice,
+                      companyServiceFee: p.companyServiceFee,
+                      legalTransferFee: p.legalTransferFee,
+                      listingType: p.listingType,
+                      status: p.status,
+                      rentPeriod: p.rentPeriod,
                       location: p.location,
                       city: p.city,
                       type: p.type,
@@ -241,56 +247,56 @@ export default async function HomePage() {
       </section>
 
       {/* ─── 4. AI SERVICES STRIP ───────────────────────────── */}
-      <section className="bg-[#07111F] py-10 text-white border-y border-[#C89B3C]/20">
+      <section className="bg-[#0B1728] py-10 text-white border-y border-[#D6A536]/25">
         <div className="section-container">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <OpenAIChatButton
-              className="flex items-center gap-3.5 p-4 rounded-2xl bg-[#0B1728] hover:bg-[#0E1D33] border border-[#C89B3C]/20 hover:border-[#C89B3C]/50 transition-all group text-left cursor-pointer"
+              className="flex items-center gap-3.5 p-4 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-[#D6A536]/20 hover:border-[#D6A536]/55 transition-all group text-left cursor-pointer"
             >
-              <div className="w-11 h-11 rounded-xl bg-[#C89B3C]/15 border border-[#C89B3C]/30 flex items-center justify-center text-[#D9B45B] flex-shrink-0 group-hover:scale-110 transition-transform">
+              <div className="w-11 h-11 rounded-xl bg-[#D6A536]/15 border border-[#D6A536]/35 flex items-center justify-center text-[#D6A536] flex-shrink-0 group-hover:scale-110 transition-transform">
                 <Search className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-[#FCFBF7]">AI Smart Search</h3>
+                <h3 className="text-sm font-bold text-white">AI Smart Search</h3>
                 <p className="text-xs text-[#94A3B8]">Match properties in seconds</p>
               </div>
             </OpenAIChatButton>
 
             <Link
               href="/price-prediction"
-              className="flex items-center gap-3.5 p-4 rounded-2xl bg-[#0B1728] hover:bg-[#0E1D33] border border-[#C89B3C]/20 hover:border-[#C89B3C]/50 transition-all group"
+              className="flex items-center gap-3.5 p-4 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-[#D6A536]/20 hover:border-[#D6A536]/55 transition-all group"
             >
-              <div className="w-11 h-11 rounded-xl bg-[#C89B3C]/15 border border-[#C89B3C]/30 flex items-center justify-center text-[#D9B45B] flex-shrink-0 group-hover:scale-110 transition-transform">
+              <div className="w-11 h-11 rounded-xl bg-[#D6A536]/15 border border-[#D6A536]/35 flex items-center justify-center text-[#D6A536] flex-shrink-0 group-hover:scale-110 transition-transform">
                 <TrendingUp className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-[#FCFBF7]">Price Prediction</h3>
+                <h3 className="text-sm font-bold text-white">Price Prediction</h3>
                 <p className="text-xs text-[#94A3B8]">ML future value forecasting</p>
               </div>
             </Link>
 
             <Link
               href="/customer/recommendations"
-              className="flex items-center gap-3.5 p-4 rounded-2xl bg-[#0B1728] hover:bg-[#0E1D33] border border-[#C89B3C]/20 hover:border-[#C89B3C]/50 transition-all group"
+              className="flex items-center gap-3.5 p-4 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-[#D6A536]/20 hover:border-[#D6A536]/55 transition-all group"
             >
-              <div className="w-11 h-11 rounded-xl bg-[#C89B3C]/15 border border-[#C89B3C]/30 flex items-center justify-center text-[#D9B45B] flex-shrink-0 group-hover:scale-110 transition-transform">
+              <div className="w-11 h-11 rounded-xl bg-[#D6A536]/15 border border-[#D6A536]/35 flex items-center justify-center text-[#D6A536] flex-shrink-0 group-hover:scale-110 transition-transform">
                 <Sparkles className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-[#FCFBF7]">Recommendations</h3>
+                <h3 className="text-sm font-bold text-white">Recommendations</h3>
                 <p className="text-xs text-[#94A3B8]">Tailored to your budget</p>
               </div>
             </Link>
 
             <Link
               href="/properties"
-              className="flex items-center gap-3.5 p-4 rounded-2xl bg-[#0B1728] hover:bg-[#0E1D33] border border-[#C89B3C]/20 hover:border-[#C89B3C]/50 transition-all group"
+              className="flex items-center gap-3.5 p-4 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-[#D6A536]/20 hover:border-[#D6A536]/55 transition-all group"
             >
-              <div className="w-11 h-11 rounded-xl bg-[#C89B3C]/15 border border-[#C89B3C]/30 flex items-center justify-center text-[#D9B45B] flex-shrink-0 group-hover:scale-110 transition-transform">
+              <div className="w-11 h-11 rounded-xl bg-[#D6A536]/15 border border-[#D6A536]/35 flex items-center justify-center text-[#D6A536] flex-shrink-0 group-hover:scale-110 transition-transform">
                 <Compass className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-[#FCFBF7]">Virtual Tours</h3>
+                <h3 className="text-sm font-bold text-white">Virtual Tours</h3>
                 <p className="text-xs text-[#94A3B8]">Inspect before visiting</p>
               </div>
             </Link>
@@ -299,27 +305,27 @@ export default async function HomePage() {
       </section>
 
       {/* ─── 5. AI ASSISTANT & TESTIMONIAL SECTION ──────────── */}
-      <section className="py-14 sm:py-16 bg-[#FCFBF7] border-b border-[#E8E1D4]">
+      <section className="py-14 sm:py-16 bg-white border-b border-[#E8E1D5]">
         <div className="section-container">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
             {/* AI Assistant Card */}
-            <div className="bg-gradient-to-br from-[#0B1728] to-[#07111F] border border-[#C89B3C]/30 p-6 sm:p-8 rounded-3xl text-white relative overflow-hidden shadow-xl flex flex-col sm:flex-row items-center gap-6">
+            <div className="bg-[#0B1728] border border-[#D6A536]/35 p-6 sm:p-8 rounded-3xl text-white relative overflow-hidden shadow-xl flex flex-col sm:flex-row items-center gap-6">
               <div className="relative w-28 h-28 sm:w-32 sm:h-32 flex-shrink-0 flex items-center justify-center">
-                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-gradient-to-tr from-[#C89B3C] via-[#D9B45B] to-[#A97918] flex items-center justify-center shadow-lg shadow-[#C89B3C]/20">
-                  <Bot className="w-14 h-14 text-[#07111F]" />
+                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-gradient-to-tr from-[#D6A536] via-[#E5BE5C] to-[#B88A24] flex items-center justify-center shadow-lg shadow-[#D6A536]/25">
+                  <Bot className="w-14 h-14 text-[#0B1728]" />
                 </div>
               </div>
               <div className="text-center sm:text-left space-y-3">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#C89B3C]/15 border border-[#C89B3C]/30 text-xs font-semibold text-[#D9B45B]">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#D6A536]/15 border border-[#D6A536]/35 text-xs font-semibold text-[#D6A536]">
                   <Sparkles className="w-3.5 h-3.5" /> 24/7 AI Real Estate Assistant
                 </div>
-                <h3 className="text-2xl font-black font-serif text-[#FCFBF7]">Meet Kiro-Maal AI</h3>
+                <h3 className="text-2xl font-black font-serif text-white">Meet Kiro-Maal AI</h3>
                 <p className="text-xs sm:text-sm text-[#CBD5E1] leading-relaxed">
                   Ask anything about verified properties, villages in Abudwak, market prices, and investment opportunities in Galmudug.
                 </p>
                 <div>
                   <OpenAIChatButton
-                    className="inline-flex items-center gap-2 bg-gradient-to-r from-[#C89B3C] to-[#D9B45B] hover:brightness-105 text-[#07111F] text-xs sm:text-sm font-bold px-6 py-2.5 rounded-xl shadow-md shadow-[#C89B3C]/20 transition-all cursor-pointer"
+                    className="inline-flex items-center gap-2 bg-gradient-to-r from-[#D6A536] to-[#E5BE5C] hover:brightness-105 text-[#0B1728] text-xs sm:text-sm font-bold px-6 py-2.5 rounded-xl shadow-md shadow-[#D6A536]/25 transition-all cursor-pointer"
                   >
                     <span>Chat With Assistant</span>
                     <ArrowRight className="w-4 h-4" />
@@ -329,22 +335,22 @@ export default async function HomePage() {
             </div>
 
             {/* Testimonial Card */}
-            <div className="bg-[#FCFBF7] border border-[#E8E1D4] p-6 sm:p-8 rounded-3xl shadow-sm flex flex-col justify-between space-y-4">
-              <div className="flex items-center gap-1 text-[#C89B3C]">
+            <div className="bg-[#F5F1E8] border border-[#E8E1D5] p-6 sm:p-8 rounded-3xl shadow-xs flex flex-col justify-between space-y-4">
+              <div className="flex items-center gap-1 text-[#D6A536]">
                 {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-4 h-4 fill-[#C89B3C]" />
+                  <Star key={i} className="w-4 h-4 fill-[#D6A536]" />
                 ))}
               </div>
-              <p className="text-[#07111F] italic text-sm sm:text-base leading-relaxed font-serif">
+              <p className="text-[#0B1728] italic text-sm sm:text-base leading-relaxed font-serif">
                 &ldquo;Kiro-Maal Real Estate made our home purchase in Abudwak completely seamless. The AI valuations gave us total clarity, and every village listing is verified and trustworthy.&rdquo;
               </p>
               <div className="flex items-center gap-3 pt-2">
-                <div className="w-11 h-11 rounded-full bg-[#F7F3EA] border border-[#E8E1D4] flex items-center justify-center font-bold text-[#A97918]">
+                <div className="w-11 h-11 rounded-full bg-white border border-[#E8E1D5] flex items-center justify-center font-bold text-[#98721D] shadow-2xs">
                   AH
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-[#07111F]">Ahmed Hassan</h3>
-                  <p className="text-xs text-[#6B7280]">Verified Buyer • Horsed Village, Abudwak</p>
+                  <h3 className="text-sm font-bold text-[#0B1728]">Ahmed Hassan</h3>
+                  <p className="text-xs text-[#5F6C7B]">Verified Buyer • Horsed Village, Abudwak</p>
                 </div>
               </div>
             </div>

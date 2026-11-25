@@ -50,7 +50,7 @@ export default function AdminHeader({
     <>
       <header
         suppressHydrationWarning
-        className="bg-[#FCFBF7]/95 backdrop-blur-md border-b border-[#E8E1D4] h-[72px] min-h-[72px] px-6 sm:px-8 flex items-center justify-between sticky top-0 z-20 shadow-xs transition-all"
+        className="bg-white/95 backdrop-blur-md border-b border-[#E8E1D5] h-[72px] min-h-[72px] px-4 sm:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-20 shadow-[0_2px_12px_-4px_rgba(11,23,40,0.06)] transition-all"
       >
         {/* Left: Mobile Trigger + Search Input */}
         <div suppressHydrationWarning className="flex items-center gap-3 sm:gap-4 flex-1 max-w-xl">
@@ -197,8 +197,8 @@ export default function AdminHeader({
           />
 
           {/* Drawer content */}
-          <div className="relative flex-1 flex flex-col max-w-xs w-full bg-[#0B1523] shadow-2xl">
-            <div className="h-18 px-5 border-b border-[#1B2738] flex items-center justify-between bg-[#0B1523]">
+          <div className="relative flex-1 flex flex-col max-w-xs w-full bg-[#0B1728] shadow-2xl">
+            <div className="h-[72px] min-h-[72px] px-5 border-b border-white/10 flex items-center justify-between bg-[#0B1728]">
               <BrandLogo variant="dark" href="/admin" size="sm" />
               <button
                 type="button"

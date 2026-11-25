@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useCallback, memo } from "react";
+import { useState, useCallback, useEffect, memo } from "react";
 import { Heart, MapPin, BedDouble, Bath, SquareStack, Sparkles } from "lucide-react";
 
 import { getSession } from "next-auth/react";
@@ -71,6 +71,10 @@ function PropertyCard({
   const imageUrl = property.images?.[0]?.url || DEFAULT_PROPERTY_IMAGE;
   const [imgSrc, setImgSrc] = useState(imageUrl);
 
+  useEffect(() => {
+    setImgSrc(imageUrl);
+  }, [imageUrl]);
+
   const handleFavoriteClick = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -117,11 +121,11 @@ function PropertyCard({
     <div
       suppressHydrationWarning
       className={cn(
-        "group relative bg-[#FCFBF7] rounded-2xl border border-[#E8E1D4] overflow-hidden shadow-xs hover:shadow-xl hover:border-[#C89B3C]/50 hover:-translate-y-1 transition-all duration-300 flex flex-col",
+        "group relative h-full bg-white rounded-2xl border border-[#E8E1D5] overflow-hidden shadow-[0_2px_12px_-3px_rgba(11,23,40,0.07)] hover:shadow-[0_16px_34px_-12px_rgba(11,23,40,0.16)] hover:border-[#D6A536]/65 hover:-translate-y-1 transition-all duration-300 flex flex-col",
         className
       )}
     >
-      <Link href={href || `/properties/${property.id}`} prefetch={true} className="block relative aspect-[16/10] overflow-hidden bg-[#F7F3EA]">
+      <Link href={href || `/properties/${property.id}`} prefetch={true} className="block relative aspect-[16/10] overflow-hidden bg-[#F5F1E8]">
         <Image
           src={imgSrc}
           alt={property.title}
@@ -134,15 +138,16 @@ function PropertyCard({
           blurDataURL={PROPERTY_CARD_BLUR_DATA_URL}
           onError={() => setImgSrc(DEFAULT_PROPERTY_IMAGE)}
         />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-[#0B1728]/35 to-transparent" />
 
         {/* Top Badges */}
         <div className="absolute top-3 left-3 flex flex-wrap items-center gap-1.5 max-w-[80%]">
           <span
             className={cn(
-              "px-2.5 py-1 rounded-full text-xs font-extrabold shadow-xs uppercase tracking-wider transition-all",
+              "px-2.5 py-1 rounded-full text-[11px] font-extrabold shadow-xs uppercase tracking-wider transition-all",
               isRent
-                ? "bg-gradient-to-r from-[#D9A336] via-[#E8B849] to-[#C99126] text-[#07111F] border border-[#E8B849]/80 shadow-md shadow-[#C99126]/20 backdrop-blur-xs"
-                : "bg-[#07111F]/90 text-[#D9B45B] border border-[#C89B3C]/50 backdrop-blur-xs"
+                ? "bg-gradient-to-r from-[#D6A536] via-[#E2B952] to-[#C29124] text-[#0B1728] border border-[#E2B952]/80 shadow-md shadow-[#D6A536]/20"
+                : "bg-[#0B1728]/90 text-[#D6A536] border border-[#D6A536]/50 backdrop-blur-xs"
             )}
           >
             {isRent ? "For Rent" : "For Sale"}
@@ -164,8 +169,8 @@ function PropertyCard({
           )}
 
           {property.score !== undefined && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-[#07111F]/90 text-[#D9B45B] border border-[#C89B3C]/50 shadow-xs">
-              <Sparkles className="w-3 h-3 text-[#D9B45B]" />
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-[#0B1728]/90 text-[#D6A536] border border-[#D6A536]/50 shadow-xs">
+              <Sparkles className="w-3 h-3 text-[#D6A536]" />
               {Math.round(property.score)}% Match
             </span>
           )}
@@ -177,7 +182,7 @@ function PropertyCard({
           onClick={handleFavoriteClick}
           disabled={savingFav}
           aria-label="Save to favorites"
-          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-[#FCFBF7]/90 backdrop-blur-xs flex items-center justify-center text-[#6B7280] hover:text-[#EF4444] hover:bg-white border border-[#E8E1D4] shadow-xs transition-all active:scale-90"
+          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/95 backdrop-blur-xs flex items-center justify-center text-[#5F6C7B] hover:text-[#EF4444] hover:bg-white border border-[#E8E1D5] shadow-sm transition-all active:scale-90 cursor-pointer"
         >
           <Heart
             className={cn("w-4 h-4 transition-colors", isFav ? "fill-[#EF4444] text-[#EF4444]" : "")}
@@ -186,58 +191,58 @@ function PropertyCard({
       </Link>
 
       {/* Card Content */}
-      <div className="p-4 flex-1 flex flex-col justify-between">
+      <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
         <div>
-          <Link href={`/properties/${property.id}`} prefetch={true}>
-            <h3 className="font-bold text-[#07111F] text-base group-hover:text-[#C89B3C] font-serif transition-colors line-clamp-1">
+          <Link href={href || `/properties/${property.id}`} prefetch={true}>
+            <h3 className="font-bold text-[#0B1728] text-base group-hover:text-[#B88A24] font-serif transition-colors line-clamp-1">
               {property.title}
             </h3>
           </Link>
 
-          <p className="flex items-center gap-1.5 text-xs text-[#6B7280] mt-1.5">
-            <MapPin className="w-3.5 h-3.5 text-[#C89B3C] flex-shrink-0" />
-            <span className="truncate">{property.city ? `${property.city}, Somalia` : property.location}</span>
+          <p className="flex items-center gap-1.5 text-xs text-[#5F6C7B] mt-1.5">
+            <MapPin className="w-3.5 h-3.5 text-[#D6A536] flex-shrink-0" />
+            <span className="truncate">{property.location ? `${property.location}, ${property.city || "Abudwak"}` : `${property.city || "Abudwak"}, Somalia`}</span>
           </p>
         </div>
 
-        <div className="mt-3 pt-3 border-t border-[#E8E1D4]">
+        <div className="mt-3.5 pt-3.5 border-t border-[#E8E1D5]">
           <div className="flex items-baseline justify-between mb-3">
             <div>
-              <div className="text-lg font-extrabold text-[#07111F]">
-                <span className="text-[#C89B3C]">$</span>
+              <div className="text-lg font-extrabold text-[#0B1728]">
+                <span className="text-[#D6A536]">$</span>
                 <span>{displayPrice != null ? displayPrice.toLocaleString("en-US") : "0"}</span>
-                {isRent && <span className="text-xs font-normal text-[#6B7280]">{` /${rentUnit}`}</span>}
+                {isRent && <span className="text-xs font-normal text-[#5F6C7B]">{` /${rentUnit}`}</span>}
               </div>
-              <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider block mt-0.5">
+              <span className="text-[10px] font-bold text-[#5F6C7B] uppercase tracking-wider block mt-0.5">
                 {isRent ? "Rental Rate" : "Total Purchase Price"}
               </span>
             </div>
-            <span className="text-[11px] font-bold text-[#A97918] uppercase tracking-wider bg-[#F7F3EA] px-2 py-0.5 rounded-md border border-[#E8E1D4]">
+            <span className="text-[10px] font-bold text-[#98721D] uppercase tracking-wider bg-[#F5F1E8] px-2.5 py-1 rounded-lg border border-[#E8E1D5]">
               {property.type}
             </span>
           </div>
 
           {/* Specs */}
           {isLand ? (
-            <div className="flex items-center justify-center gap-2 text-xs text-[#07111F] font-medium bg-[#F7F3EA]/70 py-2 px-2.5 rounded-xl border border-[#E8E1D4]">
-              <SquareStack className="w-3.5 h-3.5 text-[#C89B3C]" />
+            <div className="flex items-center justify-center gap-2 text-xs text-[#0B1728] font-medium bg-[#F5F1E8] py-2 px-2.5 rounded-xl border border-[#E8E1D5]">
+              <SquareStack className="w-3.5 h-3.5 text-[#D6A536]" />
               <span className="inline-flex items-center gap-1">
                 <span>{String(property.type).toUpperCase() === "LAND" ? "Land Plot:" : "Total Area:"}</span>
                 <strong className="font-bold">{`${property.area} m²`}</strong>
               </span>
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-2 text-xs text-[#07111F] font-medium bg-[#F7F3EA]/70 py-2 px-2.5 rounded-xl border border-[#E8E1D4]">
+            <div className="grid grid-cols-3 gap-2 text-xs text-[#0B1728] font-medium bg-[#F5F1E8] py-2 px-2.5 rounded-xl border border-[#E8E1D5]">
               <div className="flex items-center gap-1.5 justify-center">
-                <BedDouble className="w-3.5 h-3.5 text-[#6B7280]" />
+                <BedDouble className="w-3.5 h-3.5 text-[#5F6C7B]" />
                 <span>{`${property.bedrooms} Beds`}</span>
               </div>
-              <div className="flex items-center gap-1.5 justify-center border-x border-[#E8E1D4]">
-                <Bath className="w-3.5 h-3.5 text-[#6B7280]" />
+              <div className="flex items-center gap-1.5 justify-center border-x border-[#E8E1D5]">
+                <Bath className="w-3.5 h-3.5 text-[#5F6C7B]" />
                 <span>{`${property.bathrooms} Baths`}</span>
               </div>
               <div className="flex items-center gap-1.5 justify-center">
-                <SquareStack className="w-3.5 h-3.5 text-[#6B7280]" />
+                <SquareStack className="w-3.5 h-3.5 text-[#5F6C7B]" />
                 <span>{`${property.area} m²`}</span>
               </div>
             </div>
@@ -248,7 +253,7 @@ function PropertyCard({
             <Link
               href={href || `/properties/${property.id}`}
               prefetch={true}
-              className="flex-1 py-2 px-3 text-center rounded-xl text-xs font-semibold bg-[#FCFBF7] text-[#07111F] hover:bg-[#F7F3EA] border border-[#E8E1D4] hover:border-[#C89B3C] transition-all shadow-2xs"
+              className="flex-1 py-2 px-3 text-center rounded-xl text-xs font-semibold bg-white text-[#0B1728] hover:bg-[#F5F1E8] border border-[#E8E1D5] hover:border-[#D6A536] transition-all shadow-2xs"
             >
               View Details
             </Link>
@@ -258,7 +263,7 @@ function PropertyCard({
                 <Link
                   href={href || `/properties/${property.id}`}
                   prefetch={true}
-                  className="flex-1 py-2 px-3 text-center rounded-xl text-xs font-bold bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] hover:opacity-95 text-[#07111F] transition-all shadow-xs"
+                  className="flex-1 py-2 px-3 text-center rounded-xl text-xs font-bold bg-gradient-to-r from-[#D6A536] via-[#E2B952] to-[#C29124] hover:brightness-105 text-[#0B1728] transition-all shadow-xs"
                 >
                   Book Now
                 </Link>
@@ -266,13 +271,13 @@ function PropertyCard({
                 <Link
                   href={href || `/properties/${property.id}`}
                   prefetch={true}
-                  className="flex-1 py-2 px-3 text-center rounded-xl text-xs font-bold bg-[#07111F] hover:bg-[#112238] text-[#D9B45B] border border-[#C89B3C]/50 transition-all shadow-xs"
+                  className="flex-1 py-2 px-3 text-center rounded-xl text-xs font-bold bg-[#0B1728] hover:bg-[#13233A] text-[#D6A536] border border-[#D6A536]/50 transition-all shadow-xs"
                 >
                   Buy Property
                 </Link>
               )
             ) : (
-              <span className="flex-1 py-2 px-3 text-center rounded-xl text-xs font-medium bg-[#E8E1D4]/60 text-[#6B7280] cursor-not-allowed">
+              <span className="flex-1 py-2 px-3 text-center rounded-xl text-xs font-medium bg-[#E8E1D5]/70 text-[#5F6C7B] cursor-not-allowed">
                 {property.status === "SOLD" ? "Sold" : property.status === "RENTED" ? "Rented" : "Unavailable"}
               </span>
             )}

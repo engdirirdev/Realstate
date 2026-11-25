@@ -40,11 +40,11 @@ export const OPENAI_PROPERTY_SEARCH_TOOL: OpenAI.Chat.Completions.ChatCompletion
       properties: {
         city: {
           type: "string",
-          description: "City to search in, e.g. Mogadishu, Hargeisa, Kismayo.",
+          description: "City to search in from the live database.",
         },
         district: {
           type: "string",
-          description: "Specific neighborhood or district, e.g. Wadajir, Hodan, Waberi.",
+          description: "Specific village, neighborhood, or district from the live database.",
         },
         purpose: {
           type: "string",
@@ -401,29 +401,28 @@ STRICT GROUNDING & ANTI-HALLUCINATION RULES:
     }, OPENAI_CONFIG.CHAT_TIMEOUT_MS);
 
     try {
-      const systemPrompt = `You are AIDA, the dedicated, friendly, professional conversational AI Real Estate Assistant for Kiro-Maal in Somalia, powered by OpenAI.
+      const liveDbBlock = input.liveDbSummary
+        ? `\n${input.liveDbSummary}\n`
+        : "\nLIVE DATABASE SNAPSHOT: Use search_properties to verify inventory.\n";
+
+      const systemPrompt = `You are AIDA, the dedicated, friendly, professional conversational AI Real Estate Assistant for Kiro-Maal, powered by OpenAI.
 
 CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
 1. You are the conversational and natural language understanding authority when acting as AIDA.
-2. Converse warmly, professionally, and politely in Somali, English, or Arabic.
-3. You natively understand:
-   - Natural, colloquial, and imperfect Somali (e.g. "kirro", "dabaq", "qolal jiif", "reer").
-   - Code-switching and mixed languages (e.g. "3 bedroom apartment oo furnished ah").
-   - Negations: "Hodan ma rabo" means Hodan is EXCLUDED/REJECTED.
-   - Corrections: "Maya, Wadajir ayaan rabaa" updates the preferred location to Wadajir.
-   - Soft preferences: "3 qol haddii la helo waa fiican tahay laakiin khasab ma aha" means 3 bedrooms is preferred, but 2 is acceptable.
-   - Workplace proximity: "KM4 ayaan ka shaqeeyaa" is proximity context.
-   - Short answers: "$400", "3 qol", "Hodan".
-   - Questions about previously returned properties (e.g. "Kan labaad ma furnished baa?", "Parking ma leeyahay?").
+2. Converse warmly, professionally, and politely in Somali, English, or Arabic — matching the user's language.
+3. STRICT LIVE-DATABASE COVERAGE RULE (ZERO HALLUCINATION / ZERO OLD LOCATIONS):
+${liveDbBlock}
+   - You MUST ONLY state locations, cities, villages, and property counts that appear in the LIVE DATABASE SNAPSHOT above.
+   - NEVER claim Kiro-Maal operates in any city or district not present in the LIVE DATABASE SNAPSHOT above.
 4. TOOLS:
    - You have the tool: 'search_properties'.
-   - CALL 'search_properties' ONLY when the user explicitly requests to search, find, or view properties (e.g. "ii raadi kan ugu fiican", "find properties", "keen guryo", "waxaan rabaa guri...").
-   - DO NOT call any tool for greetings, general conversation, advice questions, expressing preferences, budget statements, or inquiries about already displayed properties. Answer those with natural conversational text!
+   - CALL 'search_properties' whenever the user requests to search, find, or view properties.
+   - DO NOT call any tool for greetings, coverage/location questions (answer directly from the LIVE DATABASE SNAPSHOT above), advice questions, or inquiries about already displayed properties.
 5. When responding with text, if the user mentioned new criteria, preferences, or constraints during this turn, or if answering an inquiry about a property, append a JSON block at the very end:
 \`\`\`context
 {"city":"...","district":"...","maxPrice":...,"minPrice":...,"bedrooms":...,"propertyType":"...","purpose":"...","excludedLocations":[...],"softPreferences":[...],"responseType":"GREETING|ADVICE|REQUIREMENT_UPDATE|PROPERTY_DETAIL|GENERAL_CONVERSATION"}
 \`\`\`
-6. STRICT TRUTH: Never invent properties, prices, or listings.`;
+6. STRICT TRUTH: Never invent properties, prices, locations, or listings.`;
 
       const historyMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = (input.conversationHistory || []).slice(-16).map((h) => ({
         role: h.role === "assistant" ? ("assistant" as const) : ("user" as const),

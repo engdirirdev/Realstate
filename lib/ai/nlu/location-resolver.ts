@@ -90,11 +90,12 @@ export const SOMALI_CITY_DIRECTORY: CityDefinition[] = [
 
   // ─── 2. RECOGNIZED SOMALI REGIONAL HUBS (0 CURRENT DB INVENTORY) ───────────
   {
-    canonicalName: "Caabudwaaq",
-    hasApprovedInventory: false,
+    canonicalName: "Abudwak",
+    dbCityName: "Abudwak",
+    hasApprovedInventory: true,
     aliases: [
-      "caabudwaaq", "abudwak", "abudwaaq", "caabud waaq", "cabudwaaq", "caabud-waaq",
-      "magaalada caabudwaaq", "abudwaq", "عابودواق"
+      "abudwak", "caabudwaaq", "abudwaaq", "caabud waaq", "cabudwaaq", "caabud-waaq",
+      "magaalada caabudwaaq", "abudwaq", "galmudug", "عابودواق"
     ],
   },
   {

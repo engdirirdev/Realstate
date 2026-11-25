@@ -146,6 +146,93 @@ export function restoreConversationState(
 }
 
 /**
+ * Fetches a 100% live, uncached snapshot of registered locations and active
+ * property inventory directly from the Prisma database.
+ */
+async function getLiveDbSnapshot(): Promise<{
+  cities: string[];
+  villages: { name: string; region: string; count: number }[];
+  totalApproved: number;
+  totalForRent: number;
+  totalForSale: number;
+  pendingCount: number;
+  activeUsersCount: number;
+  summaryText: string;
+}> {
+  const [dbLocations, approvedProps, pendingCount, activeUsersCount] = await Promise.all([
+    prisma.location.findMany({ orderBy: { city: "asc" } }),
+    prisma.property.findMany({
+      where: { status: { in: ["APPROVED", "PUBLISHED"] }, isActive: true },
+      select: { city: true, location: true, listingType: true },
+    }),
+    prisma.property.count({ where: { status: "PENDING" } }),
+    prisma.user.count({ where: { isActive: true } }),
+  ]);
+
+  const citySet = new Set<string>();
+  const villageCounts = new Map<string, number>();
+
+  let totalForRent = 0;
+  let totalForSale = 0;
+
+  for (const p of approvedProps) {
+    if (p.city?.trim()) citySet.add(p.city.trim());
+    if (p.location?.trim()) {
+      const key = p.location.trim().toLowerCase();
+      villageCounts.set(key, (villageCounts.get(key) || 0) + 1);
+    }
+    if (p.listingType === "FOR_RENT") totalForRent++;
+    else totalForSale++;
+  }
+
+  const villages = dbLocations.map((loc) => ({
+    name: loc.city.trim(),
+    region: loc.region.trim(),
+    count: villageCounts.get(loc.city.trim().toLowerCase()) || 0,
+  }));
+
+  // Also include any property location not yet in Location table
+  const registeredLower = new Set(villages.map((v) => v.name.toLowerCase()));
+  for (const p of approvedProps) {
+    const locName = (p.location || "").trim();
+    if (locName && !registeredLower.has(locName.toLowerCase())) {
+      registeredLower.add(locName.toLowerCase());
+      villages.push({
+        name: locName,
+        region: p.city || "",
+        count: villageCounts.get(locName.toLowerCase()) || 0,
+      });
+    }
+  }
+
+  const cities = Array.from(citySet);
+  const villageListStr =
+    villages.length > 0
+      ? villages.map((v) => `${v.name} (${v.count} listings)`).join(", ")
+      : "None registered";
+
+  const summaryText = [
+    `LIVE DATABASE SNAPSHOT (Authoritative — NO other cities or locations exist):`,
+    `- Active Cities in DB: ${cities.length > 0 ? cities.join(", ") : "None"}`,
+    `- Registered Villages / Areas in DB: ${villageListStr}`,
+    `- Total Approved Active Properties: ${approvedProps.length} (${totalForRent} For Rent, ${totalForSale} For Sale)`,
+    `- Pending Review Properties: ${pendingCount}`,
+    `- Active Registered Users: ${activeUsersCount}`,
+  ].join("\n");
+
+  return {
+    cities,
+    villages,
+    totalApproved: approvedProps.length,
+    totalForRent,
+    totalForSale,
+    pendingCount,
+    activeUsersCount,
+    summaryText,
+  };
+}
+
+/**
  * Application Tool Handler for Gemini 3.8 Flash's `search_properties` Tool Call
  *
  * Enforces hard security, approval status, and database integrity independently:
@@ -480,34 +567,43 @@ export async function processConversationalTurn(
     };
   }
 
-  // 2b-2. Direct Coverage & Location List Interceptor
-  // When user asks which locations Kiro-Maal operates in or to list locations, answer directly and accurately!
+  // Always fetch live uncached database snapshot on every turn
+  const liveSnapshot = await getLiveDbSnapshot();
+
+  // 2b-2. Direct Coverage & Location List Interceptor (100% Live Database Driven)
   const isCoverageQuestion =
-    /\b(which locations|list (your|you) locations|what locations|where do you (work|operate|cover)|locations do you|meelahee ka shaqeysaan|magaalooyinkee ka shaqeysaan|goobaha aad ka shaqeysaan|cities do you cover|where are your offices)\b/i.test(message) ||
+    /\b(which locations|list (your|you) locations|what locations|where do you (work|operate|cover)|locations do you|meelahee ka shaqeysaan|magaalooyinkee ka shaqeysaan|goobaha aad ka shaqeysaan|cities do you cover|where are your offices|xaafadahee|xaafadaha)\b/i.test(message) ||
     /^(which locations do you have to work|list you locations|list your locations)\b/i.test(message.trim());
 
   if (isCoverageQuestion) {
-    const coverageReply =
-      activeLanguage === "en"
-        ? `Kiro-Maal operates across major cities in Somalia and Somaliland, with verified property listings in:
-* **Mogadishu** (Hodan, Wadajir/Medina, Waberi, Taleex, Abdiaziz, Hamar Weyne, Dayniile, etc.)
-* **Hargeisa** (Jigjiga Yar, 26 June, Ibrahim Koodbuur, Ga'an Libaax)
-* **Garowe**, **Kismayo**, **Bosaso**, **Burao**, **Berbera**, and **Baidoa**
+    const cityLabel = liveSnapshot.cities.length > 0 ? liveSnapshot.cities.join(", ") : "Abudwak";
+    let coverageReply: string;
 
-Which city or neighborhood would you like to explore properties in?`
-        : activeLanguage === "ar"
-        ? `تعمل كيرو-مال (Kiro-Maal) في جميع المدن الرئيسية في الصومال وأرض الصومال:
-* **مقديشو** (هودان، واداجير/المدينة، وابري، طليح، عبد العزيز، حمروين، دينيلي، إلخ)
-* **هرجيسا** (جيجيجا يار، 26 يونيو، إبراهيم كودبور، غعان ليباح)
-* **غاروي**، **كيسمايو**، **بوساسو**، **برعو**، **بربرة**، و**بيدوا**
+    if (liveSnapshot.villages.length === 0 && liveSnapshot.totalApproved === 0) {
+      coverageReply =
+        activeLanguage === "en"
+          ? `Currently, there are no registered locations or active property listings in our live database. Once locations are added in Admin Settings, they will appear here automatically.`
+          : activeLanguage === "ar"
+          ? `حالياً لا توجد مواقع مسجلة أو عقارات نشطة في قاعدة البيانات المباشرة.`
+          : `Hadda ma jiraan goobo ama guryo diiwaangashan oo ku jira kaydka xogta tooska ah. Marka goobo lagu daro maamulka, si toos ah ayay halkan uga muuqan doonaan.`;
+    } else {
+      const enList = liveSnapshot.villages
+        .map((v) => `* **${v.name}**${v.region ? ` (${v.region})` : ""} — ${v.count} active ${v.count === 1 ? "property" : "properties"}`)
+        .join("\n");
+      const soList = liveSnapshot.villages
+        .map((v) => `* **${v.name}**${v.region ? ` (${v.region})` : ""} — ${v.count} ${v.count === 1 ? "guri" : "guryo"}`)
+        .join("\n");
+      const arList = liveSnapshot.villages
+        .map((v) => `* **${v.name}**${v.region ? ` (${v.region})` : ""} — ${v.count} عقار`)
+        .join("\n");
 
-في أي مدينة ترغب في استكشاف العقارات؟`
-        : `Kiro-Maal waxay ka shaqeysaa dhammaan magaalooyinka waaweyn ee Soomaaliya iyo Somaliland, oo ay ku jiraan:
-* **Muqdisho** (Hodan, Wadajir/Madiina, Waaberi, Taleex, Cabdicasiis, Xamar Weyne, Dayniile, iwm.)
-* **Hargeysa** (Jigjiga Yar, 26 Juun, Ibraahim Koodbuur, Gacan Libaax)
-* **Garoowe**, **Kismaayo**, **Boosaaso**, **Burco**, **Berbera**, iyo **Baydhabo**
-
-Magaaladee ama goobtee ayaad jeceshahay inaad guryo ama hanti ka raadiso?`;
+      coverageReply =
+        activeLanguage === "en"
+          ? `Based on our live database, Kiro-Maal currently operates exclusively in **${cityLabel}** (${liveSnapshot.totalApproved} active listings: ${liveSnapshot.totalForRent} for rent, ${liveSnapshot.totalForSale} for sale) across the following registered areas:\n\n${enList}\n\nWhich village or area would you like to explore properties in?`
+          : activeLanguage === "ar"
+          ? `وفقاً لقاعدة البيانات المباشرة، تعمل كيرو-مال حالياً حصرياً في **${cityLabel}** (${liveSnapshot.totalApproved} عقار نشط) في المناطق المسجلة التالية:\n\n${arList}\n\nأي منطقة ترغب في استكشاف العقارات فيها؟`
+          : `Xogta tooska ah ee kaydka (Live Database), Kiro-Maal waxay hadda ka shaqeysaa oo keliya **${cityLabel}** (${liveSnapshot.totalApproved} guryo shaqeynaya: ${liveSnapshot.totalForRent} kiro ah, ${liveSnapshot.totalForSale} iib ah), gaar ahaan xaafadahan diiwaangashan:\n\n${soList}\n\nXaafaddee ayaad jeceshahay inaan guryo kaaga raadiyo?`;
+    }
 
     state.lastAssistantMessage = coverageReply;
     state.lastUserMessage = message;
@@ -624,13 +720,16 @@ Magaaladee ama goobtee ayaad jeceshahay inaad guryo ama hanti ka raadiso?`;
     }
   }
 
-  // 3. AI PROVIDER STRATEGY: GEMINI 3.8 FLASH (PRIMARY) -> OPENAI GPT-6 LUNA (FALLBACK) -> TECHNICAL NOTICE (LAST RESORT)
+  // 3. AI PROVIDER STRATEGY: GEMINI (PRIMARY) -> OPENAI (FALLBACK) -> LIVE-DB SAFE FALLBACK
   const turnContext = {
     userMessage: message,
     conversationHistory: history.map((h) => ({ role: h.role, content: h.content })),
     contextSlots: state.slots,
     activeResultSet: state.activeResultSet,
     preferredLanguage: activeLanguage,
+    liveDbSummary: liveSnapshot.summaryText,
+    liveCities: liveSnapshot.cities,
+    liveVillages: liveSnapshot.villages.map((v) => v.name),
   };
 
   let activeDecision: GeminiConversationalDecision | null = null;

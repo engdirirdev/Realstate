@@ -47,11 +47,11 @@ export const PROPERTY_SEARCH_FUNCTION_DECLARATION: FunctionDeclaration = {
       },
       city: {
         type: SchemaType.STRING,
-        description: "City to search in, e.g. Mogadishu, Hargeisa, Kismayo.",
+        description: "City to search in from the live database.",
       },
       district: {
         type: SchemaType.STRING,
-        description: "Specific neighborhood or district, e.g. Wadajir, Hodan, Waberi.",
+        description: "Specific village, neighborhood, or district from the live database.",
       },
       purpose: {
         type: SchemaType.STRING,
@@ -120,6 +120,9 @@ export interface GeminiConversationalTurnInput {
   activeResultSet?: any[];
   referencedProperty?: any;
   preferredLanguage?: ExtendedLanguage;
+  liveDbSummary?: string;
+  liveCities?: string[];
+  liveVillages?: string[];
 }
 
 export interface GeminiContextUpdates {
@@ -503,16 +506,20 @@ DOMAIN & DATA GROUNDING (CRITICAL):
     let timer: NodeJS.Timeout | null = null;
 
     try {
-      const systemInstruction = `You are Gemini 3.8 Flash, serving as AIDA — the conversational AI Real Estate Assistant for Kiro-Maal in Somalia.
+      const liveDbBlock = input.liveDbSummary
+        ? `\n${input.liveDbSummary}\n`
+        : "\nLIVE DATABASE SNAPSHOT: Query the database via search_properties before stating any locations or inventory.\n";
+
+      const systemInstruction = `You are Gemini 3.8 Flash, serving as AIDA — the conversational AI Real Estate Assistant for Kiro-Maal.
 
 CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
 1. You are the SOLE conversational and natural language understanding authority for Kiro-Maal Real Estate.
-2. DIRECT ANSWERS: When the user asks informational, general, or platform questions (e.g. "which locations do you have to work in?", "list your locations", "where do you operate?", "how do I rent or buy?", "what payment methods are accepted?", "who are you?"), ALWAYS ANSWER DIRECTLY, comprehensively, and politely. Never deflect, dodge, or respond with a generic counter-question like "Which city are you looking to find property in?" when the user asked for information!
-3. COVERAGE LOCATIONS & AREAS:
-   Kiro-Maal operates across major cities and economic hubs in Somalia and Somaliland:
-   - Mogadishu (including key districts: Hodan, Wadajir/Medina, Waberi, Taleex, Abdiaziz, Hamar Weyne, Shangani, Kaaraan, Dayniile, Howlwadaag, etc.)
-   - Hargeisa (including 26 June, Ibrahim Koodbuur, Ga'an Libaax, Ahmed Dhagax)
-   - Kismayo, Bosaso, Burao, Berbera, Abudwak, Garowe, and Baidoa.
+2. DIRECT ANSWERS: When the user asks informational, general, or platform questions (e.g. "which locations do you have to work in?", "list your locations", "where do you operate?", "how do I rent or buy?", "what payment methods are accepted?", "who are you?"), ALWAYS ANSWER DIRECTLY, accurately, and politely using ONLY the LIVE DATABASE SNAPSHOT below.
+3. STRICT LIVE-DATABASE COVERAGE RULE (ZERO HALLUCINATION / ZERO OLD LOCATIONS):
+${liveDbBlock}
+   - You MUST ONLY state locations, cities, villages, and property counts that appear in the LIVE DATABASE SNAPSHOT above.
+   - NEVER claim Kiro-Maal operates in any city, region, or district that is NOT present in the LIVE DATABASE SNAPSHOT above (even if you remember other Somali cities from training data).
+   - If a user asks about a city not in the live database, politely inform them that Kiro-Maal currently operates only in the live database locations listed above.
 4. STRICT LANGUAGE MATCHING:
    ALWAYS respond in the EXACT language that the user used in their current message:
    - If the user writes in English, reply in natural, fluent, professional English.
@@ -520,24 +527,19 @@ CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
    - If the user writes in Arabic, reply in natural, fluent Arabic.
    - NEVER reply in Somali to an English question, and never switch languages unprompted.
 5. You natively understand:
-   - Natural, colloquial, and imperfect Somali (e.g. "kirro", "dabaq", "qolal jiif", "reer", "xamar" = Mogadishu).
-   - Code-switching and mixed languages (e.g. "3 bedroom apartment oo furnished ah").
-   - Negations: "Hodan ma rabo" means Hodan is EXCLUDED/REJECTED.
-   - Corrections: "Maya, Wadajir ayaan rabaa" updates the preferred location to Wadajir.
-   - Soft preferences: "3 qol haddii la helo waa fiican tahay laakiin khasab ma aha" means 3 bedrooms is preferred, but 2 is acceptable.
-   - Workplace proximity: "KM4 ayaan ka shaqeeyaa" is proximity context.
-   - Short answers: "$400", "5000", "3 qol", "Hodan", "xamar".
-   - Questions about previously returned properties (e.g. "Kan labaad ma furnished baa?", "Parking ma leeyahay?").
+   - Natural, colloquial, and imperfect Somali (e.g. "kirro", "dabaq", "qolal jiif", "reer", "xaafad").
+   - Code-switching and mixed languages (e.g. "3 bedroom house oo kiro ah").
+   - Negations, corrections, soft preferences, short answers ("$150", "3 qol"), and follow-up questions about previously returned properties.
 6. TOOLS & PROPERTY INQUIRIES:
    - You have the tool: 'search_properties'.
-   - CALL 'search_properties' WHENEVER the user asks if a property, home, villa, apartment, or listing exists, or asks about a specific property title/name (e.g. "do you have Contemporary Luxury Villa hargiesa", "do you have any 3-bedroom houses", "are there villas in Hargeisa", "find me...", "Ma haysaan guri..."). Pass all available parameters including query (the title/keywords like "Contemporary Luxury Villa"), city (e.g. "Hargeisa"), and propertyType (e.g. "VILLA")!
-   - NEVER respond with generic acknowledgments like "Waa hagaag, shuruudahaaga waan diiwaangeliyay" or "I recorded your requirements" when the user is asking whether a property exists. You MUST call 'search_properties' to check the database inventory!
-   - DO NOT call any tool for greetings, company location or service questions, advice questions, or payment questions. Answer those directly with clear, natural conversational text in the user's language!
+   - CALL 'search_properties' WHENEVER the user asks if a property, home, villa, apartment, land plot, or listing exists, or asks to search/find/show properties.
+   - NEVER respond with generic acknowledgments like "Waa hagaag, shuruudahaaga waan diiwaangeliyay" when the user is asking whether a property exists. You MUST call 'search_properties' to check live database inventory!
+   - DO NOT call any tool for greetings, company location/coverage questions (answer from the LIVE DATABASE SNAPSHOT above), advice questions, or payment questions.
 7. When responding with text, if the user mentioned new criteria, preferences, or constraints during this turn, or if answering an inquiry about a property, append a JSON block at the very end:
 \`\`\`context
 {"city":"...","district":"...","maxPrice":...,"minPrice":...,"bedrooms":...,"propertyType":"...","purpose":"...","excludedLocations":[...],"softPreferences":[...],"responseType":"GREETING|ADVICE|CLARIFICATION|PROPERTY_DETAIL|GENERAL_CONVERSATION"}
 \`\`\`
-8. STRICT TRUTH: Never invent properties, prices, or listings.`;
+8. STRICT TRUTH: Never invent properties, prices, locations, or listings.`;
 
       const genModel = client.getGenerativeModel({
         model: this.getEffectiveModel(),
@@ -802,8 +804,8 @@ CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
         const reg = new RegExp(`\\b${distKey}\\b`, "i");
         if (reg.test(lower)) {
           detectedDistrict = distName;
-          if (!detectedCity) {
-            detectedCity = "Mogadishu";
+          if (!detectedCity && input.liveCities && input.liveCities.length > 0) {
+            detectedCity = input.liveCities[0];
           }
           break;
         }
@@ -894,19 +896,30 @@ CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
       const finalBeds = detectedBedrooms !== undefined ? [detectedBedrooms] : (input.contextSlots?.bedrooms ? [input.contextSlots.bedrooms] : undefined);
       const finalPeriod = detectedPeriod || input.contextSlots?.pricePeriod;
 
-      // 1. If user is searching but hasn't provided a city, trigger CLARIFICATION interview!
-      if (!finalCity) {
+      // 1. If user is searching but hasn't provided a city, use the sole active DB city if only 1 exists, else ask using live DB locations
+      const liveCities = input.liveCities || [];
+      const liveVillages = input.liveVillages || [];
+      const resolvedDefaultCity = finalCity || (liveCities.length === 1 ? liveCities[0] : undefined);
+
+      if (!resolvedDefaultCity) {
+        const examples = liveCities.length > 0 ? liveCities.join(", ") : liveVillages.join(", ");
         const replyText =
           lang === "en"
-            ? "Which city in Somalia are you looking in? (e.g., Mogadishu, Hargeisa, Garowe, Kismayo)"
+            ? examples
+              ? `Which location are you looking in? Currently available in our database: ${examples}.`
+              : "Which location are you looking in?"
             : lang === "ar"
-            ? "في أي مدينة تبحث عن العقار؟ (مثال: مقديشو، هرجيسا، غاروي، كيسمايو)"
-            : "Magaalo kee ayaad guri ka raadinaysaa? (tusaale: Muqdisho, Hargeysa, Garoowe, ama Kismaayo)?";
+            ? examples
+              ? `في أي منطقة تبحث عن العقار؟ المتوفر حالياً: ${examples}.`
+              : "في أي منطقة تبحث عن العقار؟"
+            : examples
+            ? `Goobtee ayaad guri ka raadinaysaa? Goobaha hadda kaydka ku jira: ${examples}.`
+            : "Goobtee ayaad guri ka raadinaysaa?";
         return {
           type: "TEXT_RESPONSE",
           replyText,
           contextUpdates: {
-            city: finalCity,
+            city: resolvedDefaultCity,
             purpose: finalPurpose,
             propertyType: finalType as any,
             bedrooms: detectedBedrooms !== undefined ? detectedBedrooms : input.contextSlots?.bedrooms,
@@ -924,18 +937,18 @@ CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
       const hasDirectShowCommand = /\b(show|find|search|keen|raadi|i tus|list|browse|wax walba)\b/i.test(lower);
 
       // 2. If city is set, but user hasn't specified a budget yet, ask for budget in conversational clarification!
-      if (finalCity && finalMaxPrice === undefined && finalMinPrice === undefined && !hasDirectShowCommand) {
+      if (resolvedDefaultCity && finalMaxPrice === undefined && finalMinPrice === undefined && !hasDirectShowCommand) {
         const replyText =
           lang === "en"
-            ? `Great, looking for properties in ${finalCity}. What is your preferred budget (e.g. $300 or $500/month)?`
+            ? `Great, looking for properties in ${resolvedDefaultCity}. What is your preferred budget (e.g. $150/month for rent or $30,000 for sale)?`
             : lang === "ar"
-            ? `ممتاز، أبحث لك عن عقارات في ${finalCity}. ما هي الميزانية المناسبة لك (مثال: 500$ شهرياً)؟`
-            : `Hagaag, waxaan kuu raadinayaa guryaha ku yaal ${finalCity}. Miisaaniyadda intee le'eg ayaad qorsheynaysaa (tusaale: $300 ama $500 bishii)?`;
+            ? `ممتاز، أبحث لك عن عقارات في ${resolvedDefaultCity}. ما هي الميزانية المناسبة لك؟`
+            : `Hagaag, waxaan kuu raadinayaa guryaha ku yaal ${resolvedDefaultCity}. Miisaaniyadda intee le'eg ayaad qorsheynaysaa (tusaale: $150 bishii ama $30,000 iib)?`;
         return {
           type: "TEXT_RESPONSE",
           replyText,
           contextUpdates: {
-            city: finalCity,
+            city: resolvedDefaultCity,
             purpose: finalPurpose,
             propertyType: finalType as any,
             bedrooms: detectedBedrooms !== undefined ? detectedBedrooms : input.contextSlots?.bedrooms,
@@ -949,7 +962,7 @@ CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
 
       // 3. If city and budget are set, but bedrooms is not specified yet (and type is not Land), ask for bedroom count!
       if (
-        finalCity &&
+        resolvedDefaultCity &&
         (finalMaxPrice !== undefined || finalMinPrice !== undefined) &&
         !detectedBedrooms &&
         !input.contextSlots?.bedrooms &&
@@ -966,7 +979,7 @@ CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
           type: "TEXT_RESPONSE",
           replyText,
           contextUpdates: {
-            city: finalCity,
+            city: resolvedDefaultCity,
             purpose: finalPurpose,
             propertyType: finalType as any,
             maxPrice: finalMaxPrice,
@@ -985,7 +998,7 @@ CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
         toolCall: {
           name: "search_properties",
           args: {
-            city: finalCity,
+            city: resolvedDefaultCity,
             district: finalDistrict,
             propertyType: finalType as any,
             maxPrice: finalMaxPrice,
@@ -995,7 +1008,7 @@ CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
           },
         },
         contextUpdates: {
-          city: finalCity,
+          city: resolvedDefaultCity,
           district: finalDistrict,
           propertyType: finalType as any,
           maxPrice: finalMaxPrice,
@@ -1011,13 +1024,19 @@ CORE CONVERSATIONAL BEHAVIOR & AUTHORITY:
       };
     }
 
-    // Default conversational reply
+    // Default conversational reply grounded exclusively in live DB locations
+    const liveLocLabel =
+      (input.liveCities && input.liveCities.length > 0
+        ? input.liveCities.join(", ")
+        : input.liveVillages && input.liveVillages.length > 0
+        ? input.liveVillages.join(", ")
+        : "our registered areas");
     const fallbackText =
       lang === "en"
-        ? "Welcome to Kiro-Maal! I can help you search, compare, and book verified properties in Mogadishu, Hargeisa, Bosaso, and across Somalia. What kind of property are you looking for?"
+        ? `Welcome to Kiro-Maal! I can help you search, compare, and book verified properties currently available in ${liveLocLabel}. What kind of property are you looking for?`
         : lang === "ar"
-        ? "مرحباً بك في كيرو-مال! يمكنني مساعدتك في البحث عن عقارات مؤكدة في مقديشو، هرجيسا، وبوساسو. كيف يمكنني مساعدتك اليوم؟"
-        : "Ku soo dhowow Kiro-Maal! Waxaan kaa caawin karaa raadinta, isbarbardhigga, iyo kormeerka guryaha la xaqiijiyay ee Muqdisho, Hargeysa, Boosaaso, iyo dhammaan Soomaaliya. Noocee guri ayaad raadinaysaa?";
+        ? `مرحباً بك في كيرو-مال! يمكنني مساعدتك في البحث عن العقارات المتوفرة حالياً في ${liveLocLabel}. كيف يمكنني مساعدتك اليوم؟`
+        : `Ku soo dhawoow Kiro-Maal! Waxaan kaa caawin karaa raadinta, isbarbardhigga, iyo dalbashada guryaha la hubiyay ee hadda ka jira ${liveLocLabel}. Noocee guri ayaad raadinaysaa?`;
 
     return {
       type: "TEXT_RESPONSE",

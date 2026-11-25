@@ -11,15 +11,18 @@ const EVENT_NAME = "kiromaal-language-change";
 const THEME_STORAGE_KEY = "kiromaal_portal_theme";
 const THEME_EVENT_NAME = "kiromaal-theme-change";
 
+// Somali ("so") is the default base language of the platform
+export const DEFAULT_LANGUAGE: PortalLanguage = "so";
+
 export function getStoredLanguage(): PortalLanguage {
-  if (typeof window === "undefined") return "en";
+  if (typeof window === "undefined") return DEFAULT_LANGUAGE;
   try {
     const saved = window.localStorage.getItem(STORAGE_KEY);
     if (saved === "so" || saved === "en") return saved;
   } catch {
     // ignore
   }
-  return "en";
+  return DEFAULT_LANGUAGE;
 }
 
 export function setStoredLanguage(lang: PortalLanguage) {
@@ -27,6 +30,7 @@ export function setStoredLanguage(lang: PortalLanguage) {
   try {
     window.localStorage.setItem(STORAGE_KEY, lang);
     document.cookie = `${STORAGE_KEY}=${lang}; path=/; max-age=31536000`;
+    document.documentElement.lang = lang;
     window.dispatchEvent(new CustomEvent(EVENT_NAME, { detail: lang }));
   } catch {
     // ignore
@@ -34,10 +38,14 @@ export function setStoredLanguage(lang: PortalLanguage) {
 }
 
 export function usePortalLanguage(): [PortalLanguage, (lang: PortalLanguage) => void] {
-  const [lang, setLangState] = useState<PortalLanguage>("en");
+  const [lang, setLangState] = useState<PortalLanguage>(DEFAULT_LANGUAGE);
 
   useEffect(() => {
-    setLangState(getStoredLanguage());
+    const current = getStoredLanguage();
+    setLangState(current);
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = current;
+    }
 
     const handleLangEvent = (e: Event) => {
       const custom = e as CustomEvent<PortalLanguage>;

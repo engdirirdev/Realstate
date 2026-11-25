@@ -108,13 +108,14 @@ export const metadata: Metadata = {
 };
 
 import SkipToContent from "@/components/layout/SkipToContent";
+import GlobalLanguageTranslator from "@/components/layout/GlobalLanguageTranslator";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const agentSchema = generateRealEstateAgentSchema();
   const webSiteSchema = generateWebSiteSchema();
 
   return (
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${playfair.variable}`}>
+    <html lang="so" suppressHydrationWarning className={`${inter.variable} ${playfair.variable}`}>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -212,6 +213,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body suppressHydrationWarning className="font-sans antialiased min-h-screen bg-white text-gray-900">
         <SkipToContent />
         <Providers>
+          <GlobalLanguageTranslator />
           <div id="main-content" suppressHydrationWarning>
             {children}
           </div>

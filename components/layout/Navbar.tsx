@@ -6,8 +6,8 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
-  Menu, X, ChevronDown, User, LogOut, Heart,
-  LayoutDashboard,
+  Menu, X, ChevronDown, LogOut,
+  LayoutDashboard, Globe,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,14 +16,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import BrandLogo from "@/components/layout/BrandLogo";
 import { cn } from "@/lib/utils";
+import { usePortalLanguage } from "@/lib/customer-i18n";
 
 // 5 Main Tabs for Public Site
 const publicNavLinks = [
-  { href: "/", label: "Home" },
-  { href: "/properties", label: "Properties" },
-  { href: "/services", label: "Services" },
-  { href: "/about", label: "About" },
-  { href: "/contact", label: "Contact" },
+  { href: "/", label: "Home", labelSo: "Hoyga" },
+  { href: "/properties", label: "Properties", labelSo: "Guryaha" },
+  { href: "/services", label: "Services", labelSo: "Adeegyada" },
+  { href: "/about", label: "About", labelSo: "Nagu Saabsan" },
+  { href: "/contact", label: "Contact", labelSo: "Nala Soo Xiriir" },
 ];
 
 export default function Navbar() {
@@ -31,6 +32,8 @@ export default function Navbar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [lang, setLang] = usePortalLanguage();
+  const isSo = lang === "so";
 
   useEffect(() => {
     let ticking = false;
@@ -76,7 +79,7 @@ export default function Navbar() {
 
           {/* ── Desktop Nav: 5 Main Tabs (Centered) ── */}
           <div className="hidden md:flex items-center gap-1.5 lg:gap-2 absolute left-1/2 -translate-x-1/2">
-            {publicNavLinks.map(({ href, label }) => {
+            {publicNavLinks.map(({ href, label, labelSo }) => {
               const isActive = pathname === href || (href !== "/" && pathname.startsWith(href));
               return (
                 <Link
@@ -91,14 +94,30 @@ export default function Navbar() {
                       : "text-[#475569] hover:text-[#07111F] hover:bg-[#F7F3EA]/70"
                   )}
                 >
-                  {label}
+                  {isSo ? labelSo : label}
                 </Link>
               );
             })}
           </div>
 
-          {/* ── Desktop Right: Login Button Tab / Account Dropdown ── */}
-          <div className="hidden md:flex items-center gap-3">
+          {/* ── Desktop Right: SOM/ENG Language Switcher + Login / Account ── */}
+          <div className="hidden md:flex items-center gap-2.5">
+            <button
+              type="button"
+              data-no-translate="true"
+              onClick={() => setLang(isSo ? "en" : "so")}
+              aria-label="Switch language between Somali and English"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#F7F3EA] hover:bg-[#EFE8DA] border border-[#E8E1D4] text-xs font-bold transition-all cursor-pointer shadow-2xs"
+            >
+              <Globe className="h-3.5 w-3.5 text-[#C89B3C]" />
+              <span className={cn("px-1.5 py-0.5 rounded-md transition-colors", isSo ? "bg-[#07111F] text-[#D9B45B]" : "text-[#6B7280]")}>
+                SOM
+              </span>
+              <span className="text-[#C89B3C]/60">/</span>
+              <span className={cn("px-1.5 py-0.5 rounded-md transition-colors", !isSo ? "bg-[#07111F] text-[#D9B45B]" : "text-[#6B7280]")}>
+                ENG
+              </span>
+            </button>
             {status === "loading" ? (
               <div className="h-9 w-24 rounded-xl bg-[#F7F3EA] animate-pulse" />
             ) : session ? (
@@ -163,23 +182,36 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* ── Mobile toggle ── */}
-          <button
-            className="md:hidden p-2 rounded-lg text-[#6B7280] hover:bg-[#F7F3EA] transition-colors cursor-pointer"
-            onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label="Toggle navigation menu"
-            aria-expanded={mobileOpen}
-            aria-controls="mobile-navigation-menu"
-          >
-            {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
+          {/* ── Mobile Right: SOM/ENG + Menu Toggle ── */}
+          <div className="md:hidden flex items-center gap-2">
+            <button
+              type="button"
+              data-no-translate="true"
+              onClick={() => setLang(isSo ? "en" : "so")}
+              aria-label="Switch language between Somali and English"
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-[#F7F3EA] border border-[#E8E1D4] text-[11px] font-bold cursor-pointer"
+            >
+              <span className={isSo ? "text-[#07111F] underline decoration-[#C89B3C]" : "text-[#6B7280]"}>SOM</span>
+              <span className="text-[#C89B3C]">/</span>
+              <span className={!isSo ? "text-[#07111F] underline decoration-[#C89B3C]" : "text-[#6B7280]"}>ENG</span>
+            </button>
+            <button
+              className="p-2 rounded-lg text-[#6B7280] hover:bg-[#F7F3EA] transition-colors cursor-pointer"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              aria-label="Toggle navigation menu"
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-navigation-menu"
+            >
+              {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
+          </div>
         </div>
 
         {/* ── Mobile Menu: 5 Main Tabs + Login ── */}
         {mobileOpen && (
           <div id="mobile-navigation-menu" className="md:hidden py-4 border-t border-[#E8E1D4] animate-fade-in bg-[#FCFBF7]">
             <div className="flex flex-col gap-1">
-              {publicNavLinks.map(({ href, label }) => {
+              {publicNavLinks.map(({ href, label, labelSo }) => {
                 const isActive = pathname === href || (href !== "/" && pathname.startsWith(href));
                 return (
                   <Link
@@ -194,7 +226,7 @@ export default function Navbar() {
                         : "text-[#475569] hover:text-[#C89B3C] hover:bg-[#F7F3EA]"
                     )}
                   >
-                    {label}
+                    {isSo ? labelSo : label}
                   </Link>
                 );
               })}

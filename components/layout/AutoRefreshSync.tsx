@@ -67,6 +67,7 @@ export default function AutoRefreshSync() {
           response.ok &&
           MUTATION_METHODS.has(method) &&
           urlStr.includes("/api/") &&
+          !urlStr.includes("/api/upload") &&
           !urlStr.includes("/api/ai-chat") &&
           !urlStr.includes("/api/auth") &&
           !urlStr.includes("/api/ai/behavior")
@@ -82,11 +83,19 @@ export default function AutoRefreshSync() {
       return response;
     };
 
-    // 3. Refresh when user returns to this tab after > 3 seconds
+    // 3. Refresh when user returns to this tab after > 3 seconds,
+    //    UNLESS a modal dialog or form field is currently active (e.g. returning from file picker)
     const handleVisibility = () => {
-      if (document.visibilityState === "visible" && Date.now() - lastRefreshRef.current > 3000) {
-        scheduleRefresh();
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() - lastRefreshRef.current <= 3000) return;
+      if (document.querySelector('[role="dialog"], [data-state="open"][aria-modal="true"]')) {
+        return;
       }
+      const activeTag = document.activeElement?.tagName;
+      if (activeTag === "INPUT" || activeTag === "TEXTAREA" || activeTag === "SELECT") {
+        return;
+      }
+      scheduleRefresh();
     };
     document.addEventListener("visibilitychange", handleVisibility);
 

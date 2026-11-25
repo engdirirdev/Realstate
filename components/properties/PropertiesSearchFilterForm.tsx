@@ -192,7 +192,7 @@ function PropertiesSearchFilterForm({
             name="q"
             value={currentQuery}
             onChange={(e) => setCurrentQuery(e.target.value)}
-            placeholder="Search by neighborhood (e.g. Hodan, Wadajir, Jigjiga Yar), title, or amenities (pool, garden)..."
+            placeholder="Search by village (e.g. Ubah, Horsed, October, Waberi), title, or amenities..."
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#E8E1D4] bg-[#F7F3EA]/70 hover:bg-white focus:bg-white focus:border-[#C89B3C] focus:ring-2 focus:ring-[#C89B3C]/20 text-[#07111F] text-xs font-semibold h-11 transition-all placeholder:text-[#9CA3AF] shadow-2xs"
           />
           <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#A97918]" />

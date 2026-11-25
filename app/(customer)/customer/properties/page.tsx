@@ -70,7 +70,17 @@ export default async function CustomerPropertiesPage({
     availabilityStatus: "AVAILABLE",
     isActive: true,
   };
-  if (city && city !== "All Cities") where.city = city;
+  const andClauses: any[] = [];
+  if (city && city !== "All Cities") {
+    andClauses.push({
+      OR: [
+        { city: { contains: city } },
+        { location: { contains: city } },
+        { address: { contains: city } },
+        { title: { contains: city } },
+      ],
+    });
+  }
   if (type) where.type = type;
   if (listingType && ["FOR_RENT", "FOR_SALE"].includes(listingType)) {
     where.listingType = listingType;
@@ -79,12 +89,17 @@ export default async function CustomerPropertiesPage({
     where.bedrooms = { gte: bedrooms };
   }
   if (q) {
-    where.OR = [
-      { title: { contains: q } },
-      { description: { contains: q } },
-      { location: { contains: q } },
-      { city: { contains: q } },
-    ];
+    andClauses.push({
+      OR: [
+        { title: { contains: q } },
+        { description: { contains: q } },
+        { location: { contains: q } },
+        { city: { contains: q } },
+      ],
+    });
+  }
+  if (andClauses.length > 0) {
+    where.AND = andClauses;
   }
   if (maxPrice !== null) {
     where.price = { ...(where.price || {}), lte: maxPrice };

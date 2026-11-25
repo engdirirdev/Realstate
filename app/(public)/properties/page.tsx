@@ -136,28 +136,30 @@ export default async function PropertiesPage({
     }
   }
 
-  // 2. City & District resolution with canonical DB alias expansion
+  // 2. City & Village/District resolution (matches city, location, address, and title)
   if (searchLocation) {
     const resolved = resolveLocation(searchLocation);
-    const cityVariants = getCityDbVariants(resolved ? resolved.canonicalCity : searchLocation);
-
-    if (cityVariants.length > 1) {
-      where.city = { in: cityVariants };
-    } else if (cityVariants.length === 1) {
-      where.city = cityVariants[0];
-    } else {
-      where.city = { contains: searchLocation };
-    }
-
     const targetDistrict = resolved?.district || explicitDistrict;
+
     if (targetDistrict) {
-      const districtTerms = getDistrictAliases(targetDistrict);
+      const districtTerms = Array.from(new Set([searchLocation, ...getDistrictAliases(targetDistrict)]));
       andClauses.push({
         OR: districtTerms.flatMap((term) => [
           { location: { contains: term } },
           { address: { contains: term } },
           { title: { contains: term } },
-          { description: { contains: term } },
+          { city: { contains: term } },
+        ]),
+      });
+    } else {
+      const cityVariants = getCityDbVariants(resolved ? resolved.canonicalCity : searchLocation);
+      const locationTerms = Array.from(new Set([searchLocation, ...cityVariants].filter(Boolean)));
+      andClauses.push({
+        OR: locationTerms.flatMap((term) => [
+          { city: { contains: term } },
+          { location: { contains: term } },
+          { address: { contains: term } },
+          { title: { contains: term } },
         ]),
       });
     }

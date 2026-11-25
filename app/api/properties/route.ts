@@ -132,25 +132,27 @@ export async function GET(request: NextRequest) {
 
     if (rawLocation) {
       const resolved = resolveLocation(rawLocation);
-      const cityVariants = getCityDbVariants(resolved ? resolved.canonicalCity : rawLocation);
-
-      if (cityVariants.length > 1) {
-        where.city = { in: cityVariants };
-      } else if (cityVariants.length === 1) {
-        where.city = cityVariants[0];
-      } else {
-        where.city = { contains: rawLocation };
-      }
-
       const targetDistrict = resolved?.district || explicitDistrict;
+
       if (targetDistrict) {
-        const districtTerms = getDistrictAliases(targetDistrict);
+        const districtTerms = Array.from(new Set([rawLocation, ...getDistrictAliases(targetDistrict)]));
         andClauses.push({
           OR: districtTerms.flatMap((term) => [
             { location: { contains: term } },
             { address: { contains: term } },
             { title: { contains: term } },
-            { description: { contains: term } },
+            { city: { contains: term } },
+          ]),
+        });
+      } else {
+        const cityVariants = getCityDbVariants(resolved ? resolved.canonicalCity : rawLocation);
+        const locationTerms = Array.from(new Set([rawLocation, ...cityVariants].filter(Boolean)));
+        andClauses.push({
+          OR: locationTerms.flatMap((term) => [
+            { city: { contains: term } },
+            { location: { contains: term } },
+            { address: { contains: term } },
+            { title: { contains: term } },
           ]),
         });
       }

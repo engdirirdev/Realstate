@@ -358,13 +358,12 @@ export default async function ManagerAnalyticsPage() {
                       </td>
                       <td className="py-3.5 px-3 text-right whitespace-nowrap">
                         <span
-                          className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
-                            p.status === "SOLD"
-                              ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                              : p.status === "RENTED"
+                          className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${p.status === "SOLD"
+                            ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                            : p.status === "RENTED"
                               ? "bg-[#07111F] text-[#D9B45B]"
                               : "bg-amber-50 text-[#A97918] border border-[#C89B3C]/40"
-                          }`}
+                            }`}
                         >
                           {p.status}
                         </span>

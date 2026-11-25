@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { invalidateLocationCache } from "@/lib/cache";
+import {
+  ABUDWAK_VILLAGE_NAMES,
+  SYSTEM_COUNTRY,
+  SYSTEM_REGION_FULL,
+  normalizeAbudwakVillage,
+} from "@/lib/abudwak-locations";
 
 export const dynamic = "force-dynamic";
 
@@ -22,19 +28,56 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const { city, region, country } = await request.json();
-    if (!city || !region) return NextResponse.json({ success: false, error: "City and Region required" }, { status: 400 });
+    const body = await request.json();
 
-    const trimmedCity = String(city).trim();
-    const formattedCity = trimmedCity.charAt(0).toUpperCase() + trimmedCity.slice(1);
-    const trimmedRegion = String(region).trim();
-    const formattedRegion = trimmedRegion.charAt(0).toUpperCase() + trimmedRegion.slice(1);
+    // Support quick-seeding all 6 official Abudwak villages
+    if (body?.seedAllAbudwak) {
+      const created: any[] = [];
+      for (const village of ABUDWAK_VILLAGE_NAMES) {
+        const loc = await prisma.location.upsert({
+          where: {
+            city_region: {
+              city: village,
+              region: SYSTEM_REGION_FULL,
+            },
+          },
+          update: { country: SYSTEM_COUNTRY },
+          create: {
+            city: village,
+            region: SYSTEM_REGION_FULL,
+            country: SYSTEM_COUNTRY,
+          },
+        });
+        created.push(loc);
+      }
+      await invalidateLocationCache().catch(() => {});
+      return NextResponse.json({ success: true, locations: created });
+    }
+
+    const rawVillage = body?.village || body?.city;
+    if (!rawVillage) {
+      return NextResponse.json(
+        { success: false, error: "Village name is required." },
+        { status: 400 }
+      );
+    }
+
+    const canonicalVillage = normalizeAbudwakVillage(String(rawVillage));
+    if (!canonicalVillage) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Only the 6 official villages of Abudwak are allowed: ${ABUDWAK_VILLAGE_NAMES.join(", ")}.`,
+        },
+        { status: 400 }
+      );
+    }
 
     const location = await prisma.location.create({
       data: {
-        city: formattedCity,
-        region: formattedRegion,
-        country: country ? String(country).trim() : "Somalia",
+        city: canonicalVillage,
+        region: SYSTEM_REGION_FULL,
+        country: SYSTEM_COUNTRY,
       },
     });
 
@@ -43,7 +86,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, location });
   } catch (error) {
     console.error("[POST /api/admin/locations]", error);
-    return NextResponse.json({ success: false, error: "Location already exists or invalid" }, { status: 400 });
+    return NextResponse.json(
+      { success: false, error: "This Abudwak village is already registered." },
+      { status: 400 }
+    );
   }
 }
 
@@ -54,22 +100,34 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id, city, region, country } = await request.json();
-    if (!id || !city || !region) {
-      return NextResponse.json({ success: false, error: "Location ID, City, and Region are required" }, { status: 400 });
+    const body = await request.json();
+    const { id } = body;
+    const rawVillage = body?.village || body?.city;
+
+    if (!id || !rawVillage) {
+      return NextResponse.json(
+        { success: false, error: "Location ID and Village name are required." },
+        { status: 400 }
+      );
     }
 
-    const trimmedCity = String(city).trim();
-    const formattedCity = trimmedCity.charAt(0).toUpperCase() + trimmedCity.slice(1);
-    const trimmedRegion = String(region).trim();
-    const formattedRegion = trimmedRegion.charAt(0).toUpperCase() + trimmedRegion.slice(1);
+    const canonicalVillage = normalizeAbudwakVillage(String(rawVillage));
+    if (!canonicalVillage) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Only the 6 official villages of Abudwak are allowed: ${ABUDWAK_VILLAGE_NAMES.join(", ")}.`,
+        },
+        { status: 400 }
+      );
+    }
 
     const location = await prisma.location.update({
       where: { id },
       data: {
-        city: formattedCity,
-        region: formattedRegion,
-        country: country ? String(country).trim() : "Somalia",
+        city: canonicalVillage,
+        region: SYSTEM_REGION_FULL,
+        country: SYSTEM_COUNTRY,
       },
     });
 
@@ -78,7 +136,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ success: true, location });
   } catch (error) {
     console.error("[PATCH /api/admin/locations]", error);
-    return NextResponse.json({ success: false, error: "Failed to update location" }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Failed to update village" }, { status: 500 });
   }
 }
 

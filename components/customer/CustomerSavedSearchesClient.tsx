@@ -288,26 +288,26 @@ export default function CustomerSavedSearchesClient({
               <Input
                 value={formName}
                 onChange={(e) => setFormName(e.target.value)}
-                placeholder="e.g., Hargeisa Family Villas"
+                placeholder="e.g., Horsed Family Villas"
                 className="h-9 border-[#E8E1D4] rounded-xl text-xs bg-white"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-[#07111F]">City / Location</Label>
+                <Label className="text-xs font-semibold text-[#07111F]">Village (Abudwak)</Label>
                 <select
                   value={formLocation}
                   onChange={(e) => setFormLocation(e.target.value)}
                   className="w-full h-9 px-3 rounded-xl border border-[#E8E1D4] bg-white text-[#07111F] text-xs font-medium outline-none"
                 >
-                  <option value="">Any City</option>
-                  <option value="Mogadishu">Mogadishu</option>
-                  <option value="Hargeisa">Hargeisa</option>
-                  <option value="Garowe">Garowe</option>
-                  <option value="Kismayo">Kismayo</option>
-                  <option value="Bosaso">Bosaso</option>
-                  <option value="Baidoa">Baidoa</option>
+                  <option value="">Any Village (Abudwak)</option>
+                  <option value="Ubah">Ubah</option>
+                  <option value="Horsed">Horsed</option>
+                  <option value="October">October</option>
+                  <option value="1da-Lulio">1da-Lulio</option>
+                  <option value="Ammano">Ammano</option>
+                  <option value="Waberi">Waberi</option>
                 </select>
               </div>
 

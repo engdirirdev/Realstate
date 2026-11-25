@@ -50,14 +50,13 @@ interface PastPrediction {
 }
 
 const CITIES = [
-  "Mogadishu",
-  "Hargeisa",
-  "Bosaso",
-  "Kismayo",
-  "Garowe",
-  "Baydhabo",
-  "Berbera",
-  "Afgooye",
+  "Abudwak",
+  "Ubah",
+  "Horsed",
+  "October",
+  "1da-Lulio",
+  "Ammano",
+  "Waberi",
 ];
 
 const TYPES = [
@@ -77,7 +76,7 @@ function DashboardPricePrediction({
   initialPredictions?: PastPrediction[];
 }) {
   const [form, setForm] = useState({
-    city: "Mogadishu",
+    city: "Abudwak",
     type: "VILLA",
     bedrooms: 4,
     bathrooms: 3,

@@ -35,12 +35,12 @@ interface PredictionResult {
   insights: string[];
 }
 
-const CITIES = ["Mogadishu", "Hargeisa", "Bosaso", "Kismayo", "Garowe", "Baydhabo", "Berbera", "Afgooye"];
+const CITIES = ["Abudwak", "Ubah", "Horsed", "October", "1da-Lulio", "Ammano", "Waberi"];
 const TYPES = ["HOUSE", "APARTMENT", "VILLA", "OFFICE", "LAND", "COMMERCIAL", "TOWNHOUSE", "STUDIO"];
 
 export default function PricePredictionPage() {
   const [form, setForm] = useState({
-    city: "",
+    city: "Abudwak",
     type: "HOUSE",
     bedrooms: 3,
     bathrooms: 2,

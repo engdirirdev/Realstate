@@ -17,16 +17,7 @@ function CustomerHeroSearch({ initialCities }: CustomerHeroSearchProps) {
   const [availableCities, setAvailableCities] = useState<string[]>(
     initialCities && initialCities.length > 0
       ? initialCities
-      : [
-          "Abudwak",
-          "Berbera",
-          "Bosaso",
-          "Burao",
-          "Garowe",
-          "Hargeisa",
-          "Kismayo",
-          "Mogadishu",
-        ]
+      : ["Ubah", "Horsed", "October", "1da-Lulio", "Ammano", "Waberi"]
   );
 
   // If initialCities were not supplied via SSR, fetch from API with caching
@@ -36,8 +27,8 @@ function CustomerHeroSearch({ initialCities }: CustomerHeroSearchProps) {
     fetch("/api/locations")
       .then((res) => res.json())
       .then((data) => {
-        if (data.success && Array.isArray(data.cities) && data.cities.length > 0) {
-          setAvailableCities(data.cities);
+        if (data.success && Array.isArray(data.villages) && data.villages.length > 0) {
+          setAvailableCities(data.villages);
         }
       })
       .catch(() => {});
@@ -52,7 +43,7 @@ function CustomerHeroSearch({ initialCities }: CustomerHeroSearchProps) {
     params.set("listingType", effectiveListingType);
 
     if (keyword.trim()) params.set("q", keyword.trim());
-    if (city && city !== "All Cities") params.set("city", city);
+    if (city && city !== "All Villages") params.set("location", city);
     if (propertyType) params.set("type", propertyType);
 
     router.push(`/customer/properties?${params.toString()}`);
@@ -96,22 +87,22 @@ function CustomerHeroSearch({ initialCities }: CustomerHeroSearchProps) {
             type="text"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            placeholder="e.g. Modern Villa, Hodan, pool..."
+            placeholder="e.g. Modern Villa, Ubah, Horsed..."
             className="w-full h-11 px-3.5 rounded-xl border border-[#E8E1D4] bg-white text-sm text-[#07111F] placeholder-[#9CA3AF] focus:outline-hidden focus:border-[#C89B3C]"
           />
         </div>
 
-        {/* City Filter */}
+        {/* Village Filter (Abudwak) */}
         <div>
           <label className="block text-[11px] font-bold uppercase tracking-wider text-[#6B7280] mb-1">
-            City
+            Village (Abudwak)
           </label>
           <select
             value={city}
             onChange={(e) => setCity(e.target.value)}
             className="w-full h-11 px-3 rounded-xl border border-[#E8E1D4] bg-white text-sm text-[#07111F] focus:outline-hidden focus:border-[#C89B3C]"
           >
-            <option value="">All Cities</option>
+            <option value="">All Villages</option>
             {availableCities.map((c) => (
               <option key={c} value={c}>
                 {c}

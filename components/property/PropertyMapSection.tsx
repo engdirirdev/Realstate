@@ -39,16 +39,15 @@ interface PropertyMapSectionProps {
   longitude?: number | null;
 }
 
-// Canonical city coordinates fallback
+// Canonical Abudwak & village coordinates fallback
 const CITY_COORDS: Record<string, { lat: number; lng: number }> = {
-  mogadishu: { lat: 2.0469, lng: 45.3182 },
-  hargeisa: { lat: 9.5624, lng: 44.077 },
-  bosaso: { lat: 11.2842, lng: 49.1816 },
-  garowe: { lat: 8.4021, lng: 48.4845 },
-  kismayo: { lat: -0.3582, lng: 42.5454 },
-  berbera: { lat: 10.4396, lng: 45.0143 },
-  baydhabo: { lat: 3.1138, lng: 43.6498 },
   abudwak: { lat: 6.2417, lng: 46.3986 },
+  ubah: { lat: 6.2442, lng: 46.3971 },
+  horsed: { lat: 6.2465, lng: 46.4012 },
+  october: { lat: 6.2408, lng: 46.3995 },
+  "1da-lulio": { lat: 6.2389, lng: 46.3958 },
+  ammano: { lat: 6.2429, lng: 46.3939 },
+  waberi: { lat: 6.2374, lng: 46.4024 },
 };
 
 // 15 Verification Categories with Icons

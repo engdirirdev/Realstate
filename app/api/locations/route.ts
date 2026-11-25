@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { cachedDbQuery } from "@/lib/cache";
 import { cachedJsonResponse, CACHE_PROFILES } from "@/lib/api-cache";
+import {
+  ABUDWAK_VILLAGE_NAMES,
+  SYSTEM_CITY,
+  SYSTEM_COUNTRY,
+  SYSTEM_REGION,
+} from "@/lib/abudwak-locations";
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,20 +24,21 @@ export async function GET(request: NextRequest) {
           },
         });
 
-        const registeredCities = locations.map((l) => {
-          const c = l.city.trim();
-          return c.charAt(0).toUpperCase() + c.slice(1);
-        });
+        const registeredVillages = locations.map((l) => l.city.trim());
 
-        const cities =
-          registeredCities.length > 0
-            ? Array.from(new Set(registeredCities)).sort((a, b) => a.localeCompare(b))
-            : ["Mogadishu"];
+        const villages =
+          registeredVillages.length > 0
+            ? Array.from(new Set(registeredVillages))
+            : ABUDWAK_VILLAGE_NAMES;
 
         return {
           success: true,
+          city: SYSTEM_CITY,
+          region: SYSTEM_REGION,
+          country: SYSTEM_COUNTRY,
           locations,
-          cities,
+          villages,
+          cities: [SYSTEM_CITY],
         };
       },
       {

@@ -167,21 +167,15 @@ export default function DynamicPropertyForm({
         }
 
         if (locData.success) {
-          const loadedCities: string[] = Array.isArray(locData.cities) && locData.cities.length > 0
-            ? locData.cities
-            : Array.isArray(locData.locations)
-            ? locData.locations.map((l: any) => l.city.trim().charAt(0).toUpperCase() + l.city.trim().slice(1))
-            : [];
-          if (loadedCities.length > 0) {
-            const uniqueCities = Array.from(new Set(loadedCities)).sort((a, b) => a.localeCompare(b));
-            setCities(uniqueCities);
-            setCommon((prev) => {
-              if (!prev.city || !uniqueCities.includes(prev.city)) {
-                return { ...prev, city: uniqueCities[0] };
-              }
-              return prev;
-            });
-          }
+          const loadedVillages: string[] = Array.isArray(locData.villages) && locData.villages.length > 0
+            ? locData.villages
+            : ["Ubah", "Horsed", "October", "1da-Lulio", "Ammano", "Waberi"];
+          setCities(loadedVillages);
+          setCommon((prev) => ({
+            ...prev,
+            city: "Abudwak",
+            location: prev.location || loadedVillages[0] || "Ubah",
+          }));
         }
       } catch (err) {
         console.error("Failed to load registered categories or locations", err);
@@ -229,8 +223,8 @@ export default function DynamicPropertyForm({
     brokerCommission: initialData?.brokerCommission !== undefined && initialData?.brokerCommission !== null
       ? String(initialData.brokerCommission)
       : "500",
-    city: initialData?.city || "Mogadishu",
-    location: initialData?.location || "",
+    city: "Abudwak",
+    location: initialData?.location || "Ubah",
     address: initialData?.address || "",
     latitude: initialData?.latitude ? String(initialData.latitude) : "",
     longitude: initialData?.longitude ? String(initialData.longitude) : "",
@@ -317,8 +311,8 @@ export default function DynamicPropertyForm({
         brokerCommission: initialData.brokerCommission !== undefined && initialData.brokerCommission !== null
           ? String(initialData.brokerCommission)
           : "500",
-        city: initialData.city || "Mogadishu",
-        location: initialData.location || "",
+        city: "Abudwak",
+        location: initialData.location || "Ubah",
         address: initialData.address || "",
         latitude: initialData.latitude !== undefined && initialData.latitude !== null ? String(initialData.latitude) : "",
         longitude: initialData.longitude !== undefined && initialData.longitude !== null ? String(initialData.longitude) : "",
@@ -1386,46 +1380,42 @@ export default function DynamicPropertyForm({
               </div>
             </div>
 
-            {/* Location (City & Neighborhood) */}
+            {/* Location (Abudwak & Village) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-[#07111F]">
-                  Municipality / City <span className="text-[#C89B3C]">*</span>
+                  City / Town <span className="text-[#C89B3C]">*</span>
                 </Label>
-                <Select
-                  value={common.city}
-                  onValueChange={(val) => setCommon((p) => ({ ...p, city: val }))}
-                >
-                  <SelectTrigger className="h-11 border-[#E8E1D4] rounded-xl bg-[#FCFBF7] text-[#07111F]">
-                    <SelectValue placeholder={loadingCities ? "Loading registered cities..." : "Select city"} />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#FCFBF7] border-[#E8E1D4] max-h-60 overflow-y-auto">
-                    {cities.length === 0 ? (
-                      <SelectItem value="none" disabled>
-                        No registered cities available
-                      </SelectItem>
-                    ) : (
-                      cities.map((c) => (
-                        <SelectItem key={c} value={c}>
-                          {c}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                <Input
+                  name="city"
+                  value="Abudwak, Galmudug, Somalia"
+                  disabled
+                  className="h-11 border-[#E8E1D4] bg-[#F7F3EA] text-[#07111F] font-semibold rounded-xl text-sm cursor-not-allowed"
+                />
               </div>
 
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-[#07111F]">
-                  District / Neighborhood
+                  Village (Abudwak) <span className="text-[#C89B3C]">*</span>
                 </Label>
-                <Input
-                  name="location"
+                <Select
                   value={common.location}
-                  onChange={(e) => setCommon((p) => ({ ...p, location: e.target.value }))}
-                  placeholder="e.g. Hodan, Wadajir, Waberi"
-                  className="h-11 border-[#E8E1D4] bg-[#FCFBF7] rounded-xl text-sm"
-                />
+                  onValueChange={(val) => setCommon((p) => ({ ...p, city: "Abudwak", location: val }))}
+                >
+                  <SelectTrigger className="h-11 border-[#E8E1D4] rounded-xl bg-[#FCFBF7] text-[#07111F]">
+                    <SelectValue placeholder={loadingCities ? "Loading villages..." : "Select Abudwak village"} />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#FCFBF7] border-[#E8E1D4] max-h-60 overflow-y-auto">
+                    {(cities.length > 0
+                      ? cities
+                      : ["Ubah", "Horsed", "October", "1da-Lulio", "Ammano", "Waberi"]
+                    ).map((v) => (
+                      <SelectItem key={v} value={v}>
+                        {v}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -1436,7 +1426,7 @@ export default function DynamicPropertyForm({
                 name="address"
                 value={common.address}
                 onChange={(e) => setCommon((p) => ({ ...p, address: e.target.value }))}
-                placeholder="e.g. Near Maka Al-Mukarama Road, Opposite Central Mosque"
+                placeholder="e.g. Near Main Road, Opposite Central Mosque, Abudwak"
                 className="h-11 border-[#E8E1D4] bg-[#FCFBF7] rounded-xl text-sm"
               />
             </div>

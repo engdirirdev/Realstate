@@ -69,7 +69,7 @@ export default function Footer() {
             <div className="space-y-2.5 text-sm">
               <div className="flex items-center gap-2.5">
                 <MapPin className="h-4 w-4 text-[#C89B3C] flex-shrink-0" />
-                <span className="text-[#E2E8F0]">Wadajir &amp; Hodan Districts, Mogadishu, Somalia</span>
+                <span className="text-[#E2E8F0]">Abudwak, Galmudug, Somalia</span>
               </div>
               <div className="flex items-center gap-2.5">
                 <Phone className="h-4 w-4 text-[#C89B3C] flex-shrink-0" />

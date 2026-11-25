@@ -1,7 +1,7 @@
 // ================================================================
 // PAGE NAME  : Public Home Page (Kiro-Maal Real Estate)
 // ROUTE      : /
-// DESCRIPTION: Kiro-Maal Master Design System
+// DESCRIPTION: Kiro-Maal Master Design System — Abudwak, Galmudug, Somalia
 // ================================================================
 import Link from "next/link";
 import Image from "next/image";
@@ -14,25 +14,26 @@ import PropertyCard from "@/components/PropertyCard";
 import OpenAIChatButton from "@/components/OpenAIChatButton";
 import type { Metadata } from "next";
 import { cachedDbQuery } from "@/lib/cache";
+import { ABUDWAK_VILLAGES, SYSTEM_LOCATION_LABEL } from "@/lib/abudwak-locations";
 
 export const metadata: Metadata = {
-  title: "Kiro-Maal Real Estate | Somalia's Premier Luxury Properties & AI Valuation",
+  title: "Kiro-Maal Real Estate | Abudwak, Galmudug Properties & AI Valuation",
   description:
-    "Discover, buy, rent, or sell luxury properties with the power of AI. Smart semantic search, machine learning price valuations, and verified luxury living across Mogadishu, Hargeisa, and Somalia.",
+    "Discover, buy, rent, or sell verified properties in Abudwak, Galmudug, Somalia. Smart AI search and price valuations across Ubah, Horsed, October, 1da-Lulio, Ammano, and Waberi.",
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "Kiro-Maal Real Estate | Somalia's Premier Luxury Properties",
+    title: "Kiro-Maal Real Estate | Abudwak, Galmudug Premier Properties",
     description:
-      "Find verified luxury villas, penthouses, and prime commercial plots in Somalia with AI valuation.",
+      "Find verified villas, family homes, and commercial plots across all 6 villages of Abudwak, Galmudug, Somalia.",
     url: "/",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Kiro-Maal Real Estate | Somalia's Premier Luxury Properties",
-    description: "Verified luxury properties, 360 tours, and AI valuation in Somalia.",
+    title: "Kiro-Maal Real Estate | Abudwak, Galmudug Properties",
+    description: "Verified properties, virtual tours, and AI valuation in Abudwak, Galmudug, Somalia.",
   },
 };
 
@@ -41,9 +42,9 @@ export const revalidate = 60; // ISR cache 60s
 async function getHomeData() {
   try {
     return await cachedDbQuery(
-      ["home", "featured-data"],
+      ["home", "featured-data-abudwak-v2"],
       async () => {
-        const [featuredProperties, totalCount] = await Promise.all([
+        const [featuredProperties, totalCount, allApprovedLocations] = await Promise.all([
           prisma.property.findMany({
             where: { status: "APPROVED" },
             include: { images: { orderBy: { order: "asc" }, take: 1 } },
@@ -51,8 +52,23 @@ async function getHomeData() {
             orderBy: { createdAt: "desc" },
           }),
           prisma.property.count({ where: { status: "APPROVED" } }),
+          prisma.property.findMany({
+            where: { status: "APPROVED" },
+            select: { location: true, city: true },
+          }),
         ]);
-        return { featuredProperties, totalCount };
+
+        const villageCounts: Record<string, number> = {};
+        for (const v of ABUDWAK_VILLAGES) {
+          const target = v.name.toLowerCase();
+          villageCounts[v.name] = allApprovedLocations.filter(
+            (p) =>
+              (p.location || "").toLowerCase().includes(target) ||
+              (p.city || "").toLowerCase().includes(target)
+          ).length;
+        }
+
+        return { featuredProperties, totalCount, villageCounts };
       },
       {
         tags: ["home", "properties", "featured"],
@@ -61,21 +77,12 @@ async function getHomeData() {
     );
   } catch (error) {
     console.error("Database connection failed in getHomeData:", error);
-    return { featuredProperties: [], totalCount: 0 };
+    return { featuredProperties: [], totalCount: 0, villageCounts: {} as Record<string, number> };
   }
 }
 
-const popularLocations = [
-  { city: "Mogadishu", emoji: "🏙️", count: "402+ Properties", desc: "Capital & economic powerhouse" },
-  { city: "Hargeisa", emoji: "🌆", count: "320+ Properties", desc: "Capital of Somaliland" },
-  { city: "Bosaso", emoji: "⚓", count: "188+ Properties", desc: "Major port & commercial hub" },
-  { city: "Garowe", emoji: "🏛️", count: "156+ Properties", desc: "Capital of Puntland" },
-  { city: "Kismayo", emoji: "🌊", count: "98+ Properties", desc: "Southern port & coastal villas" },
-  { city: "Berbera", emoji: "🏖️", count: "65+ Properties", desc: "Historic coastal trade center" },
-];
-
 export default async function HomePage() {
-  const { featuredProperties, totalCount } = await getHomeData();
+  const { featuredProperties, totalCount, villageCounts } = await getHomeData();
 
   return (
     <div className="overflow-x-hidden bg-[#F7F3EA]">
@@ -85,27 +92,26 @@ export default async function HomePage() {
         <div className="absolute inset-0 z-0 overflow-hidden">
           <Image
             src="/images/luxury_villa_twilight.jpg"
-            alt="Kiro-Maal Luxury Villa"
+            alt="Kiro-Maal Luxury Villa in Abudwak"
             fill
             priority
             sizes="100vw"
             className="object-cover object-center scale-105"
           />
-          {/* Deep Navy Gradient Overlay matching Kiro-Maal Master Reference */}
           <div className="absolute inset-0 bg-gradient-to-r from-[#07111F]/95 via-[#0B1728]/85 to-[#07111F]/70" />
         </div>
 
         <div className="section-container relative z-10 w-full">
           <div className="max-w-3xl mx-auto text-white text-center py-6 sm:py-10">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#C89B3C]/20 border border-[#C89B3C]/40 text-[#D9B45B] text-xs font-bold uppercase tracking-wider mb-5">
-              <span>✦ Official Kiro-Maal Real Estate</span>
+              <span>✦ Official Kiro-Maal Real Estate • {SYSTEM_LOCATION_LABEL}</span>
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black font-serif tracking-tight leading-tight text-[#FCFBF7] mb-5">
               Smart Property Search <br />
               <span className="bg-gradient-to-r from-[#C89B3C] via-[#F3D78A] to-[#D9B45B] bg-clip-text text-transparent">Powered by AI</span>
             </h1>
             <p className="text-base sm:text-lg text-[#E2E8F0] leading-relaxed max-w-2xl mx-auto mb-9">
-              Discover verified luxury villas, modern apartments, and premium commercial listings across Somalia with precision valuations and trusted agents.
+              Discover verified homes, modern apartments, and prime land plots across Abudwak, Galmudug, Somalia with precision AI valuations and trusted local agents.
             </p>
 
             {/* Action Button: Search Properties */}
@@ -134,7 +140,7 @@ export default async function HomePage() {
               </div>
               <div>
                 <p className="text-xl sm:text-2xl font-black text-[#FCFBF7]">
-                  {totalCount > 0 ? `${totalCount}+` : "1,200+"}
+                  {totalCount}
                 </p>
                 <p className="text-xs text-[#94A3B8] font-medium">Verified Listings</p>
               </div>
@@ -145,8 +151,8 @@ export default async function HomePage() {
                 <Users className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xl sm:text-2xl font-black text-[#FCFBF7]">5,400+</p>
-                <p className="text-xs text-[#94A3B8] font-medium">Happy Clients</p>
+                <p className="text-xl sm:text-2xl font-black text-[#FCFBF7]">6 Villages</p>
+                <p className="text-xs text-[#94A3B8] font-medium">Full Abudwak Coverage</p>
               </div>
             </div>
 
@@ -155,8 +161,8 @@ export default async function HomePage() {
                 <Award className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xl sm:text-2xl font-black text-[#FCFBF7]">180+</p>
-                <p className="text-xs text-[#94A3B8] font-medium">Certified Agents</p>
+                <p className="text-xl sm:text-2xl font-black text-[#FCFBF7]">100%</p>
+                <p className="text-xs text-[#94A3B8] font-medium">Verified Local Agents</p>
               </div>
             </div>
 
@@ -165,8 +171,8 @@ export default async function HomePage() {
                 <Star className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xl sm:text-2xl font-black text-[#FCFBF7]">12+</p>
-                <p className="text-xs text-[#94A3B8] font-medium">Years in Somalia</p>
+                <p className="text-xl sm:text-2xl font-black text-[#FCFBF7]">Galmudug</p>
+                <p className="text-xs text-[#94A3B8] font-medium">Abudwak Market Leader</p>
               </div>
             </div>
           </div>
@@ -182,10 +188,10 @@ export default async function HomePage() {
                 ✦ Handpicked Selection
               </p>
               <h2 className="text-2xl sm:text-3xl font-black font-serif text-[#07111F] tracking-tight">
-                Featured Kiro-Maal Properties
+                Featured Abudwak Properties
               </h2>
               <p className="text-sm text-[#6B7280] mt-1">
-                Explore verified, premium properties curated for elegance, security, and investment growth.
+                Explore verified, premium properties across Abudwak&apos;s villages curated for elegance, security, and growth.
               </p>
             </div>
             <Link
@@ -197,28 +203,40 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featuredProperties.map((p, index) => (
-              <div key={p.id} className="content-visibility-auto">
-                <PropertyCard
-                  priority={index < 4}
-                  property={{
-                    id: p.id,
-                    title: p.title,
-                    price: p.price,
-                    location: p.location,
-                    city: p.city,
-                    type: p.type,
-                    bedrooms: p.bedrooms,
-                    bathrooms: p.bathrooms,
-                    area: p.area,
-                    images: p.images,
-                    isFeatured: p.isFeatured,
-                  }}
-                />
-              </div>
-            ))}
-          </div>
+          {featuredProperties.length === 0 ? (
+            <div className="bg-[#FCFBF7] border border-[#E8E1D4] rounded-3xl p-12 text-center shadow-xs">
+              <Building2 className="w-10 h-10 text-[#C89B3C]/50 mx-auto mb-3" />
+              <h3 className="font-serif font-bold text-lg text-[#07111F]">
+                New Abudwak Listings Coming Soon
+              </h3>
+              <p className="text-sm text-[#6B7280] mt-1 max-w-md mx-auto">
+                Verified homes, villas, and plots across Ubah, Horsed, October, 1da-Lulio, Ammano, and Waberi will appear here once published.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {featuredProperties.map((p, index) => (
+                <div key={p.id} className="content-visibility-auto">
+                  <PropertyCard
+                    priority={index < 4}
+                    property={{
+                      id: p.id,
+                      title: p.title,
+                      price: p.price,
+                      location: p.location,
+                      city: p.city,
+                      type: p.type,
+                      bedrooms: p.bedrooms,
+                      bathrooms: p.bathrooms,
+                      area: p.area,
+                      images: p.images,
+                      isFeatured: p.isFeatured,
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -297,7 +315,7 @@ export default async function HomePage() {
                 </div>
                 <h3 className="text-2xl font-black font-serif text-[#FCFBF7]">Meet Kiro-Maal AI</h3>
                 <p className="text-xs sm:text-sm text-[#CBD5E1] leading-relaxed">
-                  Ask anything about verified properties, districts in Mogadishu, market prices, and investment returns.
+                  Ask anything about verified properties, villages in Abudwak, market prices, and investment opportunities in Galmudug.
                 </p>
                 <div>
                   <OpenAIChatButton
@@ -318,7 +336,7 @@ export default async function HomePage() {
                 ))}
               </div>
               <p className="text-[#07111F] italic text-sm sm:text-base leading-relaxed font-serif">
-                &ldquo;Kiro-Maal Real Estate made our villa purchase in Mogadishu completely seamless. The AI valuations gave us total clarity, and their luxury portfolio is second to none.&rdquo;
+                &ldquo;Kiro-Maal Real Estate made our home purchase in Abudwak completely seamless. The AI valuations gave us total clarity, and every village listing is verified and trustworthy.&rdquo;
               </p>
               <div className="flex items-center gap-3 pt-2">
                 <div className="w-11 h-11 rounded-full bg-[#F7F3EA] border border-[#E8E1D4] flex items-center justify-center font-bold text-[#A97918]">
@@ -326,7 +344,7 @@ export default async function HomePage() {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-[#07111F]">Ahmed Hassan</h3>
-                  <p className="text-xs text-[#6B7280]">Verified Buyer • Hodan District, Mogadishu</p>
+                  <p className="text-xs text-[#6B7280]">Verified Buyer • Horsed Village, Abudwak</p>
                 </div>
               </div>
             </div>
@@ -334,36 +352,41 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ─── 6. POPULAR LOCATIONS SECTION ───────────────────── */}
+      {/* ─── 6. ABUDWAK VILLAGES SECTION ────────────────────── */}
       <section className="py-14 sm:py-16 bg-[#F7F3EA]">
         <div className="section-container">
           <div className="text-center mb-10">
             <p className="text-xs font-bold text-[#C89B3C] uppercase tracking-wider mb-1">
-              ✦ Explore by Territory
+              ✦ Explore Abudwak, Galmudug
             </p>
             <h2 className="text-2xl sm:text-3xl font-black font-serif text-[#07111F] tracking-tight">
-              Prime Somali Locations
+              Prime Villages in Abudwak
             </h2>
             <p className="text-sm text-[#6B7280] mt-1.5 max-w-xl mx-auto">
-              Browse verified luxury properties across Somalia&apos;s leading cities and economic zones.
+              Browse verified properties across all 6 villages of Abudwak, Galmudug, Somalia.
             </p>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {popularLocations.map(({ city, emoji, count, desc }) => (
-              <Link
-                key={city}
-                href={`/properties?location=${city}`}
-                className="group flex flex-col items-center text-center p-4 rounded-2xl border border-[#E8E1D4] bg-[#FCFBF7] hover:border-[#C89B3C] hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
-              >
-                <span className="text-3xl mb-2.5 group-hover:scale-110 transition-transform">{emoji}</span>
-                <h3 className="font-bold text-[#07111F] group-hover:text-[#C89B3C] transition-colors text-sm font-serif">
-                  {city}
-                </h3>
-                <p className="text-[11px] text-[#A97918] font-bold mt-0.5">{count}</p>
-                <p className="text-[10px] text-[#6B7280] mt-1 line-clamp-1">{desc}</p>
-              </Link>
-            ))}
+            {ABUDWAK_VILLAGES.map(({ name, emoji, desc }) => {
+              const count = villageCounts?.[name] ?? 0;
+              return (
+                <Link
+                  key={name}
+                  href={`/properties?location=${encodeURIComponent(name)}`}
+                  className="group flex flex-col items-center text-center p-4 rounded-2xl border border-[#E8E1D4] bg-[#FCFBF7] hover:border-[#C89B3C] hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+                >
+                  <span className="text-3xl mb-2.5 group-hover:scale-110 transition-transform">{emoji}</span>
+                  <h3 className="font-bold text-[#07111F] group-hover:text-[#C89B3C] transition-colors text-sm font-serif">
+                    {name}
+                  </h3>
+                  <p className="text-[11px] text-[#A97918] font-bold mt-0.5">
+                    {count === 1 ? "1 Property" : `${count} Properties`}
+                  </p>
+                  <p className="text-[10px] text-[#6B7280] mt-1 line-clamp-1">{desc}</p>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </section>

@@ -360,14 +360,14 @@ export default function AIChatbot() {
     if (role === "CUSTOMER") {
       return [
         "Recommend properties matching my budget",
-        "Show 3-bedroom houses in Mogadishu",
+        "Show 3-bedroom houses in Abudwak",
         "Explain how ML price prediction works",
       ];
     }
     return [
-      "Find apartments under $50,000",
+      "Find apartments under $50,000 in Abudwak",
       "What real estate services do you provide?",
-      "Show me properties in Mogadishu",
+      "Show me properties in Ubah or Horsed, Abudwak",
     ];
   }, [role]);
 

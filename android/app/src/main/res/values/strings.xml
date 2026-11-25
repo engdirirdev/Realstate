@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Kiro-Maal Real Estate</string>
+    <string name="title_activity_main">Kiro-Maal Real Estate</string>
+    <string name="package_name">so.kiromaal.realestate</string>
+    <string name="custom_url_scheme">so.kiromaal.realestate</string>
+</resources>

@@ -30,6 +30,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
+  viewportFit: "cover",
 };
 
 export const metadata: Metadata = {
@@ -110,6 +111,7 @@ export const metadata: Metadata = {
 import SkipToContent from "@/components/layout/SkipToContent";
 import GlobalLanguageTranslator from "@/components/layout/GlobalLanguageTranslator";
 import AutoRefreshSync from "@/components/layout/AutoRefreshSync";
+import CapacitorBridge from "@/components/mobile/CapacitorBridge";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const agentSchema = generateRealEstateAgentSchema();
@@ -216,6 +218,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>
           <GlobalLanguageTranslator />
           <AutoRefreshSync />
+          <CapacitorBridge />
           <div id="main-content" suppressHydrationWarning>
             {children}
           </div>

@@ -290,8 +290,15 @@
   }
 }
 
-/* ── Mobile Touch Performance ──────────────────────────────────── */
-/* Eliminates legacy 300ms double-tap delay and removes grey tap flash */
+/* ── Mobile Safe-Area & Touch Performance ──────────────────────── */
+/* Supports edge-to-edge Android displays and eliminates 300ms tap delay */
+body {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
 button, a, input, select, textarea, [role="button"] {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;

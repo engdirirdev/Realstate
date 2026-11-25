@@ -12,3 +12,9 @@ prisma/generated/
 *.db
 *.sqlite
 *.tsbuildinfo
+
+# Android Play Store secrets (never commit)
+android/keystore.properties
+android/*.jks
+android/*.keystore
+android/app/google-services.json

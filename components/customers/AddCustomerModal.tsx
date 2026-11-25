@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { SomaliPhoneInput } from "@/components/ui/SomaliPhoneInput";
-import { validateEmailFormat, validateSomaliPhone } from "@/lib/validation";
+import { validateEmailFormat, validateSomaliPhone, validateStrongPassword } from "@/lib/validation";
 
 export interface CustomerCreatedData {
   id: string;
@@ -105,6 +105,18 @@ export function AddCustomerModal({
         variant: "destructive",
       });
       return;
+    }
+
+    if (password.trim()) {
+      const pwdCheck = validateStrongPassword(password.trim());
+      if (!pwdCheck.valid) {
+        toast({
+          title: "Weak Password",
+          description: pwdCheck.error,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setLoading(true);

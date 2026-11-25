@@ -5,14 +5,17 @@
 // 3. Global Cross-Portal Uniqueness for Email & Phone across ALL roles
 // ================================================================
 import dns from "dns/promises";
+import net from "net";
 import { prisma } from "@/lib/prisma";
 import {
   extractSomaliLocalDigits,
   validateEmailFormat,
   validateSomaliPhone,
+  validateStrongPassword,
 } from "@/lib/validation";
 
 const DNS_TIMEOUT_MS = 4500;
+const SMTP_TIMEOUT_MS = 5500;
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -29,9 +32,105 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   });
 }
 
+type SmtpProbeResult =
+  | { verdict: "EXISTS" }
+  | { verdict: "NOT_FOUND"; reply: string }
+  | { verdict: "INCONCLUSIVE"; reason: string };
+
+/**
+ * Connects directly to the domain's MX mail server over SMTP (port 25) and
+ * issues RCPT TO:<email> without sending any email, verifying whether the
+ * actual mailbox exists (e.g. catches fake @gmail.com addresses via 550 5.1.1).
+ */
+function probeSmtpMailbox(email: string, mxHost: string): Promise<SmtpProbeResult> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (result: SmtpProbeResult) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try {
+        socket.destroy();
+      } catch {
+        // ignore
+      }
+      resolve(result);
+    };
+
+    const socket = net.createConnection({ port: 25, host: mxHost });
+    const timer = setTimeout(() => {
+      finish({ verdict: "INCONCLUSIVE", reason: "SMTP_TIMEOUT" });
+    }, SMTP_TIMEOUT_MS);
+
+    let step = 0;
+    let buffer = "";
+
+    socket.on("error", (err: any) => {
+      finish({ verdict: "INCONCLUSIVE", reason: err?.code || "SMTP_ERROR" });
+    });
+
+    socket.on("close", () => {
+      finish({ verdict: "INCONCLUSIVE", reason: "SMTP_CLOSED" });
+    });
+
+    socket.on("data", (chunk) => {
+      buffer += chunk.toString("utf8");
+      if (!buffer.includes("\n")) return;
+
+      const lines = buffer.split(/\r?\n/).filter((l) => l.length > 0);
+      const lastLine = lines[lines.length - 1] || "";
+
+      // Wait until final line of multi-line SMTP response (code followed by space, not hyphen)
+      if (!/^\d{3} /.test(lastLine)) return;
+
+      const code = parseInt(lastLine.slice(0, 3), 10);
+      const fullReply = lines.join(" ").trim();
+      buffer = "";
+
+      if (step === 0) {
+        if (code === 220) {
+          step = 1;
+          socket.write("EHLO kiromaal.so\r\n");
+        } else {
+          finish({ verdict: "INCONCLUSIVE", reason: `BANNER_${code}` });
+        }
+      } else if (step === 1) {
+        if (code === 250) {
+          step = 2;
+          socket.write("MAIL FROM:<noreply@kiromaal.so>\r\n");
+        } else {
+          finish({ verdict: "INCONCLUSIVE", reason: `EHLO_${code}` });
+        }
+      } else if (step === 2) {
+        if (code === 250) {
+          step = 3;
+          socket.write(`RCPT TO:<${email}>\r\n`);
+        } else {
+          finish({ verdict: "INCONCLUSIVE", reason: `MAILFROM_${code}` });
+        }
+      } else if (step === 3) {
+        try {
+          socket.write("QUIT\r\n");
+        } catch {
+          // ignore
+        }
+
+        if (code === 250 || code === 251) {
+          finish({ verdict: "EXISTS" });
+        } else if (code >= 500 && code < 600) {
+          finish({ verdict: "NOT_FOUND", reply: fullReply });
+        } else {
+          finish({ verdict: "INCONCLUSIVE", reason: `RCPT_${code}` });
+        }
+      }
+    });
+  });
+}
+
 /**
  * Verifies that an email address is syntactically valid, not disposable/fake,
- * AND that its domain actually exists with active MX mail servers via live DNS.
+ * has active DNS MX mail servers, AND passes live SMTP mailbox verification
+ * so fake addresses (like random12345@gmail.com) are rejected.
  */
 export async function verifyRealEmailServer(rawEmail: string | null | undefined): Promise<{
   valid: boolean;
@@ -47,9 +146,9 @@ export async function verifyRealEmailServer(rawEmail: string | null | undefined)
 
   try {
     const mxRecords = await withTimeout(dns.resolveMx(domain), DNS_TIMEOUT_MS);
-    const activeMx = (mxRecords || []).filter(
-      (r) => r.exchange && r.exchange.trim() !== "" && r.exchange.trim() !== "."
-    );
+    const activeMx = (mxRecords || [])
+      .filter((r) => r.exchange && r.exchange.trim() !== "" && r.exchange.trim() !== ".")
+      .sort((a, b) => a.priority - b.priority);
 
     if (activeMx.length === 0) {
       return {
@@ -59,6 +158,22 @@ export async function verifyRealEmailServer(rawEmail: string | null | undefined)
       };
     }
 
+    // Live SMTP RCPT TO mailbox check against primary MX host (fallback to 2nd MX if inconclusive)
+    for (const mx of activeMx.slice(0, 2)) {
+      const probe = await probeSmtpMailbox(fmt.normalized, mx.exchange);
+      if (probe.verdict === "EXISTS") {
+        return { valid: true, normalized: fmt.normalized };
+      }
+      if (probe.verdict === "NOT_FOUND") {
+        return {
+          valid: false,
+          normalized: fmt.normalized,
+          error: `The email address "${fmt.normalized}" does not exist. Please enter a real, existing email address.`,
+        };
+      }
+    }
+
+    // If MX exists and SMTP probe was blocked/greylisted by provider, allow verified MX domain
     return { valid: true, normalized: fmt.normalized };
   } catch (err: any) {
     const code = err?.code || err?.message || "";
@@ -76,24 +191,11 @@ export async function verifyRealEmailServer(rawEmail: string | null | undefined)
       };
     }
 
-    // If DNS timed out due to temporary network hiccup, do a secondary A-record check before rejecting
-    try {
-      const aRecords = await withTimeout(dns.resolve4(domain), 2500);
-      if (!aRecords || aRecords.length === 0) {
-        return {
-          valid: false,
-          normalized: fmt.normalized,
-          error: `Could not verify email domain "${domain}". Please use a real, existing email address.`,
-        };
-      }
-      return { valid: true, normalized: fmt.normalized };
-    } catch {
-      return {
-        valid: false,
-        normalized: fmt.normalized,
-        error: `The email address "${fmt.normalized}" could not be verified as an existing email domain. Please enter a real email address.`,
-      };
-    }
+    return {
+      valid: false,
+      normalized: fmt.normalized,
+      error: `The email address "${fmt.normalized}" could not be verified as an existing email. Please enter a real email address.`,
+    };
   }
 }
 
@@ -161,5 +263,5 @@ export async function assertUniqueUserIdentity(params: {
   return { ok: true };
 }
 
-export { validateSomaliPhone };
+export { validateSomaliPhone, validateStrongPassword };
 

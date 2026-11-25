@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import {
   verifyRealEmailServer,
   validateSomaliPhone,
+  validateStrongPassword,
   assertUniqueUserIdentity,
 } from "@/lib/server/identity-validation";
 
@@ -175,9 +176,10 @@ export async function PATCH(request: NextRequest) {
     // Optional password update in the same request
     if (newPassword && String(newPassword).trim()) {
       const cleanNew = String(newPassword).trim();
-      if (cleanNew.length < 6) {
+      const pwdCheck = validateStrongPassword(cleanNew);
+      if (!pwdCheck.valid) {
         return NextResponse.json(
-          { success: false, error: "New password must be at least 6 characters long." },
+          { success: false, error: pwdCheck.error },
           { status: 400 }
         );
       }

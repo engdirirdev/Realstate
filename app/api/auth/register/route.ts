@@ -5,6 +5,7 @@ import { checkRateLimit, getClientIdentifier, createRateLimitResponse } from "@/
 import {
   verifyRealEmailServer,
   validateSomaliPhone,
+  validateStrongPassword,
   assertUniqueUserIdentity,
 } from "@/lib/server/identity-validation";
 
@@ -23,8 +24,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Name, username, email, and password are required." }, { status: 400 });
     }
 
-    if (password.length < 8) {
-      return NextResponse.json({ success: false, error: "Password must be at least 8 characters." }, { status: 400 });
+    const pwdCheck = validateStrongPassword(password);
+    if (!pwdCheck.valid) {
+      return NextResponse.json({ success: false, error: pwdCheck.error }, { status: 400 });
     }
 
     // 1. Validate real, existing email

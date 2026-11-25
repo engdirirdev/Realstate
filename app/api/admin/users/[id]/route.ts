@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import bcrypt from "bcryptjs";
+import {
+  verifyRealEmailServer,
+  validateSomaliPhone,
+  validateStrongPassword,
+  assertUniqueUserIdentity,
+} from "@/lib/server/identity-validation";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -70,30 +77,102 @@ export async function GET(request: NextRequest, { params }: Props) {
   }
 }
 
-// PATCH: Update user status or role
+// PATCH: Update user account details (name, email, phone, role, isActive, optional password)
 export async function PATCH(request: NextRequest, { params }: Props) {
   try {
     const { id } = await params;
     const session = await auth();
     if (!session || (session.user as any)?.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const { role, isActive } = await request.json();
+    const existingUser = await prisma.user.findUnique({ where: { id } });
+    if (!existingUser) {
+      return NextResponse.json({ success: false, error: "User not found." }, { status: 404 });
+    }
+
+    const body = await request.json();
+    const { name, email, phone, role, isActive, password } = body;
 
     const updateData: any = {};
-    if (role) updateData.role = role;
-    if (isActive !== undefined) updateData.isActive = isActive;
 
-    const user = await prisma.user.update({
+    if (name !== undefined) {
+      const cleanName = String(name).trim();
+      if (cleanName.length < 2) {
+        return NextResponse.json({ success: false, error: "Full name must be at least 2 characters." }, { status: 400 });
+      }
+      updateData.name = cleanName;
+    }
+
+    if (email !== undefined) {
+      const targetEmail = String(email).trim().toLowerCase();
+      if (targetEmail !== existingUser.email.toLowerCase()) {
+        const emailCheck = await verifyRealEmailServer(targetEmail);
+        if (!emailCheck.valid) {
+          return NextResponse.json({ success: false, error: emailCheck.error }, { status: 400 });
+        }
+        const uniqueCheck = await assertUniqueUserIdentity({
+          email: emailCheck.normalized,
+          excludeUserId: id,
+        });
+        if (!uniqueCheck.ok) {
+          return NextResponse.json({ success: false, error: uniqueCheck.error }, { status: 409 });
+        }
+        updateData.email = emailCheck.normalized;
+      }
+    }
+
+    if (phone !== undefined) {
+      const phoneCheck = validateSomaliPhone(phone, { required: false });
+      if (!phoneCheck.valid) {
+        return NextResponse.json({ success: false, error: phoneCheck.error }, { status: 400 });
+      }
+      if (phoneCheck.normalized) {
+        const uniqueCheck = await assertUniqueUserIdentity({
+          phone: phoneCheck.normalized,
+          excludeUserId: id,
+        });
+        if (!uniqueCheck.ok) {
+          return NextResponse.json({ success: false, error: uniqueCheck.error }, { status: 409 });
+        }
+      }
+      updateData.phone = phoneCheck.normalized;
+    }
+
+    if (role !== undefined && (role === "ADMIN" || role === "USER" || role === "CUSTOMER")) {
+      updateData.role = role;
+    }
+
+    if (typeof isActive === "boolean") {
+      updateData.isActive = isActive;
+    }
+
+    if (password !== undefined && String(password).trim() !== "") {
+      const pwdCheck = validateStrongPassword(String(password));
+      if (!pwdCheck.valid) {
+        return NextResponse.json({ success: false, error: pwdCheck.error }, { status: 400 });
+      }
+      updateData.password = await bcrypt.hash(String(password), 12);
+    }
+
+    const updated = await prisma.user.update({
       where: { id },
       data: updateData,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+      },
     });
 
-    return NextResponse.json({ success: true, user });
+    return NextResponse.json({ success: true, user: updated });
   } catch (error) {
     console.error("[PATCH /api/admin/users/[id]]", error);
-    return NextResponse.json({ error: "Failed to update user account" }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Failed to update user account" }, { status: 500 });
   }
 }
 

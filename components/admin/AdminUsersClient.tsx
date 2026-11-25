@@ -15,7 +15,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   Users, Search, Mail, Phone, UserPlus,
-  Eye, AlertTriangle, ShieldCheck, Loader2, Trash2, Sparkles
+  Eye, Pencil, AlertTriangle, ShieldCheck, Loader2, Trash2, Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SomaliPhoneInput } from "@/components/ui/SomaliPhoneInput";
-import { validateEmailFormat, validateSomaliPhone } from "@/lib/validation";
+import { validateEmailFormat, validateSomaliPhone, validateStrongPassword } from "@/lib/validation";
 import { toast } from "@/hooks/use-toast";
 
 export interface UserItem {
@@ -47,10 +47,12 @@ export interface UserItem {
 const UserTableRow = memo(function UserTableRow({
   user,
   onToggleActive,
+  onOpenEdit,
   onOpenDelete,
 }: {
   user: UserItem;
   onToggleActive: (id: string, current: boolean) => void;
+  onOpenEdit: (user: UserItem) => void;
   onOpenDelete: (user: UserItem) => void;
 }) {
   return (
@@ -140,20 +142,31 @@ const UserTableRow = memo(function UserTableRow({
         </button>
       </td>
 
-      {/* Actions: View Dashboard & Delete User */}
+      {/* Actions: View, Edit & Delete User */}
       <td className="px-5 py-4 text-right whitespace-nowrap">
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-end gap-1.5">
           <Link
             href={`/admin/users/${user.id}`}
-            className="inline-flex items-center gap-1.5 bg-[#07111F] hover:bg-[#0B1728] text-white text-xs font-semibold px-3 py-2 rounded-xl transition-all shadow-xs border border-[#C89B3C]/30"
+            className="inline-flex items-center gap-1 bg-[#07111F] hover:bg-[#0B1728] text-white text-xs font-semibold px-2.5 py-2 rounded-xl transition-all shadow-xs border border-[#C89B3C]/30"
           >
             <Eye className="h-3.5 w-3.5 text-[#D9B45B]" /> View
           </Link>
           <Button
+            type="button"
+            onClick={() => onOpenEdit(user)}
+            variant="outline"
+            size="sm"
+            className="h-9 px-2.5 border-[#C89B3C]/40 text-[#07111F] bg-[#FCFBF7] hover:bg-[#F7F3EA] hover:border-[#C89B3C] rounded-xl inline-flex items-center gap-1 text-xs font-semibold transition-colors cursor-pointer"
+            title="Edit User Account"
+          >
+            <Pencil className="h-3.5 w-3.5 text-[#C89B3C]" /> Edit
+          </Button>
+          <Button
+            type="button"
             onClick={() => onOpenDelete(user)}
             variant="outline"
             size="sm"
-            className="h-9 w-9 p-0 border-[#E8E1D4] text-[#DC2626] bg-[#FCFBF7] hover:bg-red-50 hover:border-red-200 rounded-xl flex items-center justify-center transition-colors"
+            className="h-9 w-9 p-0 border-[#E8E1D4] text-[#DC2626] bg-[#FCFBF7] hover:bg-red-50 hover:border-red-200 rounded-xl flex items-center justify-center transition-colors cursor-pointer"
             title="Delete User Account"
           >
             <Trash2 className="h-4 w-4" />
@@ -195,6 +208,18 @@ function UsersDirectoryContent({ initialUsers = [] }: { initialUsers?: UserItem[
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserItem | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserItem | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    role: "USER" as "ADMIN" | "USER" | "CUSTOMER",
+    isActive: true,
+    password: "",
+  });
 
   const [form, setForm] = useState({
     name: "",
@@ -265,6 +290,11 @@ function UsersDirectoryContent({ initialUsers = [] }: { initialUsers?: UserItem[
       toast({ title: "Invalid Phone Number", description: phoneCheck.error, variant: "destructive" });
       return;
     }
+    const pwdCheck = validateStrongPassword(form.password);
+    if (!pwdCheck.valid) {
+      toast({ title: "Weak Password", description: pwdCheck.error, variant: "destructive" });
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await fetch("/api/admin/users", {
@@ -304,6 +334,98 @@ function UsersDirectoryContent({ initialUsers = [] }: { initialUsers?: UserItem[
       setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, isActive: !currentActive } : u)));
     } catch {
       toast({ title: "Error", description: "Failed to update status.", variant: "destructive" });
+    }
+  };
+
+  const handleOpenEdit = (user: UserItem) => {
+    setEditingUser(user);
+    setEditForm({
+      name: user.name || "",
+      email: user.email || "",
+      phone: user.phone || "",
+      role: user.role,
+      isActive: user.isActive,
+      password: "",
+    });
+    setEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+
+    if (!editForm.name.trim() || !editForm.email.trim()) {
+      toast({ title: "Missing fields", description: "Full name and email are required.", variant: "destructive" });
+      return;
+    }
+
+    if (editForm.email.trim().toLowerCase() !== editingUser.email.toLowerCase()) {
+      const emailCheck = validateEmailFormat(editForm.email);
+      if (!emailCheck.valid) {
+        toast({ title: "Invalid Email", description: emailCheck.error, variant: "destructive" });
+        return;
+      }
+    }
+
+    const phoneCheck = validateSomaliPhone(editForm.phone, { required: false });
+    if (!phoneCheck.valid) {
+      toast({ title: "Invalid Phone Number", description: phoneCheck.error, variant: "destructive" });
+      return;
+    }
+
+    if (editForm.password.trim()) {
+      const pwdCheck = validateStrongPassword(editForm.password);
+      if (!pwdCheck.valid) {
+        toast({ title: "Weak Password", description: pwdCheck.error, variant: "destructive" });
+        return;
+      }
+    }
+
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`/api/admin/users/${editingUser.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: editForm.name.trim(),
+          email: editForm.email.trim().toLowerCase(),
+          phone: editForm.phone,
+          role: editForm.role,
+          isActive: editForm.isActive,
+          password: editForm.password.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        toast({ title: "Update Failed", description: data.error || "Could not update user.", variant: "destructive" });
+        return;
+      }
+
+      toast({
+        title: "Account Updated 🎉",
+        description: `Updated ${data.user.name || data.user.email} successfully.`,
+      });
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === editingUser.id
+            ? {
+                ...u,
+                name: data.user.name,
+                email: data.user.email,
+                phone: data.user.phone,
+                role: data.user.role,
+                isActive: data.user.isActive,
+              }
+            : u
+        )
+      );
+      setEditModalOpen(false);
+      setEditingUser(null);
+      fetchUsers();
+    } catch {
+      toast({ title: "Error", description: "Failed to update user account.", variant: "destructive" });
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -432,15 +554,15 @@ function UsersDirectoryContent({ initialUsers = [] }: { initialUsers?: UserItem[
           </div>
         ) : (
           <div className="overflow-x-auto momentum-scroll">
-            <table className="w-full text-sm table-fixed-layout min-w-[860px]">
+            <table className="w-full text-sm table-fixed-layout min-w-[960px]">
               <colgroup>
-                <col className="w-[220px]" />
-                <col className="w-[200px]" />
-                <col className="w-[130px]" />
-                <col className="w-[180px]" />
-                <col className="w-[110px]" />
-                <col className="w-[110px]" />
-                <col className="w-[110px]" />
+                <col className="w-[210px]" />
+                <col className="w-[210px]" />
+                <col className="w-[125px]" />
+                <col className="w-[170px]" />
+                <col className="w-[105px]" />
+                <col className="w-[100px]" />
+                <col className="w-[185px]" />
               </colgroup>
               <thead className="bg-[#F7F3EA] border-b border-[#E8E1D4]">
                 <tr>
@@ -459,6 +581,7 @@ function UsersDirectoryContent({ initialUsers = [] }: { initialUsers?: UserItem[
                     key={user.id}
                     user={user}
                     onToggleActive={handleToggleActive}
+                    onOpenEdit={handleOpenEdit}
                     onOpenDelete={handleOpenDelete}
                   />
                 ))}
@@ -536,10 +659,13 @@ function UsersDirectoryContent({ initialUsers = [] }: { initialUsers?: UserItem[
                 type="password"
                 value={form.password}
                 onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
-                placeholder="••••••••"
+                placeholder="8+ different chars (A-Z, a-z, 0-9, !@#)"
                 className="h-10 border-[#E8E1D4] bg-white rounded-xl text-sm focus:border-[#C89B3C] focus:ring-1 focus:ring-[#C89B3C]"
                 required
               />
+              <p className="text-[11px] text-[#6B7280]">
+                Must have at least 8 different characters including uppercase, lowercase, number, and symbol.
+              </p>
             </div>
 
             <DialogFooter className="pt-3 gap-2">
@@ -558,7 +684,119 @@ function UsersDirectoryContent({ initialUsers = [] }: { initialUsers?: UserItem[
         </DialogContent>
       </Dialog>
 
-      {/* ─── Modal 2: Delete User Confirmation ─── */}
+      {/* ─── Modal 2: Edit User Account ─── */}
+      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+        <DialogContent className="max-w-md bg-[#FCFBF7] rounded-2xl p-6 shadow-xl border border-[#E8E1D4]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-serif font-bold text-[#07111F] flex items-center gap-2">
+              <Pencil className="h-5 w-5 text-[#C89B3C]" /> Edit User Account
+            </DialogTitle>
+            <DialogDescription className="text-xs text-[#6B7280]">
+              Update account details, contact number, role, status, or reset password.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSaveEdit} className="space-y-4 mt-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">Account Role</Label>
+                <Select value={editForm.role} onValueChange={(val) => setEditForm((p) => ({ ...p, role: val as any }))}>
+                  <SelectTrigger className="h-10 border-[#E8E1D4] rounded-xl bg-white text-[#07111F] text-xs">
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#FCFBF7] border-[#E8E1D4]">
+                    <SelectItem value="CUSTOMER">CUSTOMER</SelectItem>
+                    <SelectItem value="USER">MANAGER</SelectItem>
+                    <SelectItem value="ADMIN">ADMIN</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">Status</Label>
+                <Select
+                  value={editForm.isActive ? "ACTIVE" : "INACTIVE"}
+                  onValueChange={(val) => setEditForm((p) => ({ ...p, isActive: val === "ACTIVE" }))}
+                >
+                  <SelectTrigger className="h-10 border-[#E8E1D4] rounded-xl bg-white text-[#07111F] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#FCFBF7] border-[#E8E1D4]">
+                    <SelectItem value="ACTIVE">Active</SelectItem>
+                    <SelectItem value="INACTIVE">Suspended</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">Full Name</Label>
+              <Input
+                value={editForm.name}
+                onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))}
+                className="h-10 border-[#E8E1D4] bg-white rounded-xl text-sm focus:border-[#C89B3C]"
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">Email Address</Label>
+              <Input
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm((p) => ({ ...p, email: e.target.value }))}
+                className="h-10 border-[#E8E1D4] bg-white rounded-xl text-sm focus:border-[#C89B3C]"
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">Phone Number</Label>
+              <SomaliPhoneInput
+                value={editForm.phone}
+                onChange={(val) => setEditForm((p) => ({ ...p, phone: val }))}
+                placeholder="612345678"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">
+                New Password <span className="text-[#6B7280] font-normal normal-case">(optional)</span>
+              </Label>
+              <Input
+                type="password"
+                value={editForm.password}
+                onChange={(e) => setEditForm((p) => ({ ...p, password: e.target.value }))}
+                placeholder="Leave blank to keep current password"
+                className="h-10 border-[#E8E1D4] bg-white rounded-xl text-sm focus:border-[#C89B3C]"
+              />
+              <p className="text-[11px] text-[#6B7280]">
+                If changing: at least 8 different characters with uppercase, lowercase, number, and symbol.
+              </p>
+            </div>
+
+            <DialogFooter className="pt-3 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditModalOpen(false)}
+                className="rounded-xl border-[#E8E1D4] text-[#07111F] hover:bg-[#F7F3EA]"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={savingEdit}
+                className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] font-bold hover:brightness-105 rounded-xl border-0 shadow-sm cursor-pointer"
+              >
+                {savingEdit ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Modal 3: Delete User Confirmation ─── */}
       <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
         <DialogContent className="max-w-md bg-[#FCFBF7] rounded-2xl p-6 shadow-xl border border-[#E8E1D4]">
           <DialogHeader>

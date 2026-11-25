@@ -28,7 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SomaliPhoneInput } from "@/components/ui/SomaliPhoneInput";
-import { validateSomaliPhone } from "@/lib/validation";
+import { validateSomaliPhone, validateStrongPassword } from "@/lib/validation";
 import { toast } from "@/hooks/use-toast";
 import { usePortalLanguage, PortalLanguage } from "@/lib/customer-i18n";
 
@@ -151,12 +151,11 @@ export default function CustomerProfilePage() {
         });
         return;
       }
-      if (passwords.newPassword.length < 6) {
+      const pwdCheck = validateStrongPassword(passwords.newPassword);
+      if (!pwdCheck.valid) {
         toast({
-          title: isSo ? "Erayga sirta ah waa gaaban yahay" : "Password too short",
-          description: isSo
-            ? "Erayga sirta ah waa inuu ugu yaraan 6 xaraf noqdaa."
-            : "New password must be at least 6 characters.",
+          title: isSo ? "Erayga sirta ah waa daciif" : "Weak Password",
+          description: pwdCheck.error,
           variant: "destructive",
         });
         return;

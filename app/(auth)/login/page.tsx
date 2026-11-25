@@ -35,7 +35,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SomaliPhoneInput } from "@/components/ui/SomaliPhoneInput";
-import { validateEmailFormat, validateSomaliPhone } from "@/lib/validation";
+import { validateEmailFormat, validateSomaliPhone, validateStrongPassword } from "@/lib/validation";
 import { toast } from "@/hooks/use-toast";
 
 interface AuthPageProps {
@@ -191,10 +191,11 @@ function AuthContent({ initialTab = "login" }: AuthPageProps) {
       });
       return;
     }
-    if (registerForm.password.length < 8) {
+    const pwdCheck = validateStrongPassword(registerForm.password);
+    if (!pwdCheck.valid) {
       toast({
         title: "Weak password",
-        description: "Password must be at least 8 characters.",
+        description: pwdCheck.error,
         variant: "destructive",
       });
       return;
@@ -819,7 +820,7 @@ function AuthContent({ initialTab = "login" }: AuthPageProps) {
                       className="text-[11px] font-bold text-[#07111F]"
                     >
                       Password <span className="text-[#991B1B]">*</span>{" "}
-                      <span className="text-[#6B7280] font-normal text-[10px]">(Min. 8 chars)</span>
+                      <span className="text-[#6B7280] font-normal text-[10px]">(8+ different chars: A-Z, a-z, 0-9, !@#)</span>
                     </Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#A97918]" />

@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import {
   verifyRealEmailServer,
   validateSomaliPhone,
+  validateStrongPassword,
   assertUniqueUserIdentity,
 } from "@/lib/server/identity-validation";
 
@@ -136,8 +137,9 @@ export async function POST(req: NextRequest) {
       ? password.trim()
       : "Customer123!";
 
-    if (rawPassword.length < 6) {
-      return NextResponse.json({ success: false, error: "Password must be at least 6 characters." }, { status: 400 });
+    const pwdCheck = validateStrongPassword(rawPassword);
+    if (!pwdCheck.valid) {
+      return NextResponse.json({ success: false, error: pwdCheck.error }, { status: 400 });
     }
 
     const hashedPassword = await bcrypt.hash(rawPassword, 12);

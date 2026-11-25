@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth-guards";
 import { checkRateLimit, createRateLimitResponse } from "@/lib/rate-limiter";
 import bcrypt from "bcryptjs";
+import { validateStrongPassword } from "@/lib/validation";
 
 // PATCH: Change user password with brute-force rate limiting and length enforcement
 export async function PATCH(request: NextRequest) {
@@ -31,9 +32,10 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    if (newPassword.length < 6) {
+    const pwdCheck = validateStrongPassword(newPassword);
+    if (!pwdCheck.valid) {
       return NextResponse.json(
-        { success: false, error: "New password must be at least 6 characters long." },
+        { success: false, error: pwdCheck.error },
         { status: 400 }
       );
     }

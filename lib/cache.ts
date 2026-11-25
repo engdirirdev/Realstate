@@ -102,22 +102,15 @@ export class MemoryCache {
   }
 
   /**
-   * Get item from cache or compute and store it.
+   * Always fetch fresh data from the live database so changes appear immediately.
    */
   async getOrSet<T>(
-    key: string,
-    ttlSeconds: number,
+    _key: string,
+    _ttlSeconds: number,
     fetcher: () => Promise<T>,
-    tags: string[] = []
+    _tags: string[] = []
   ): Promise<T> {
-    const cached = this.get<T>(key);
-    if (cached !== null) {
-      return cached;
-    }
-
-    const fresh = await fetcher();
-    this.set(key, fresh, ttlSeconds, tags);
-    return fresh;
+    return fetcher();
   }
 
   /**
@@ -217,38 +210,15 @@ export interface CachedDbQueryOptions {
 }
 
 /**
- * Executes query with Next.js unstable_cache when in Next.js runtime,
- * falling back gracefully to MemoryCache in scripts/tests.
+ * Always executes query live against the database so edits, additions,
+ * and deletions appear immediately without requiring manual refresh.
  */
 export async function cachedDbQuery<T>(
-  keyParts: string[],
+  _keyParts: string[],
   fetcher: () => Promise<T>,
-  options: CachedDbQueryOptions = {}
+  _options: CachedDbQueryOptions = {}
 ): Promise<T> {
-  const { tags = [], revalidate = 60 } = options;
-  const cacheKey = keyParts.join(":");
-
-  try {
-    // Next.js App Router Data Cache
-    if (typeof unstable_cache === "function") {
-      const cachedFn = unstable_cache(
-        async () => {
-          // Double-check memory cache inside cachedFn
-          return dbCache.getOrSet(cacheKey, revalidate, fetcher, tags);
-        },
-        keyParts,
-        {
-          tags,
-          revalidate,
-        }
-      );
-      return await cachedFn();
-    }
-  } catch {
-    // If unstable_cache fails outside App Router context (e.g. CLI script), fall back to dbCache
-  }
-
-  return dbCache.getOrSet(cacheKey, revalidate, fetcher, tags);
+  return fetcher();
 }
 
 // ── 3. React Request Memoization (Per-Request Deduplication) ──────

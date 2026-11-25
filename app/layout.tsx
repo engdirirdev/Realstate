@@ -109,6 +109,7 @@ export const metadata: Metadata = {
 
 import SkipToContent from "@/components/layout/SkipToContent";
 import GlobalLanguageTranslator from "@/components/layout/GlobalLanguageTranslator";
+import AutoRefreshSync from "@/components/layout/AutoRefreshSync";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const agentSchema = generateRealEstateAgentSchema();
@@ -214,6 +215,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SkipToContent />
         <Providers>
           <GlobalLanguageTranslator />
+          <AutoRefreshSync />
           <div id="main-content" suppressHydrationWarning>
             {children}
           </div>

@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   },
 };
 
-export const revalidate = 60; // ISR cache 60s
+export const dynamic = "force-dynamic";
 
 async function getHomeData() {
   try {

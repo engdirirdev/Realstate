@@ -66,8 +66,8 @@ const nextConfig = {
 
   experimental: {
     staleTimes: {
-      dynamic: 60,
-      static: 300,
+      dynamic: 0,
+      static: 0,
     },
     optimizePackageImports: [
       "lucide-react",

@@ -27,10 +27,22 @@ function shouldSkipElement(el: Element | null): boolean {
   return false;
 }
 
+interface TranslatedNodeRecord {
+  originalEn: string;
+  translatedSo: string;
+}
+
+interface TranslatedAttrRecord {
+  placeholder?: { originalEn: string; translatedSo: string };
+  title?: { originalEn: string; translatedSo: string };
+}
+
 export default function GlobalLanguageTranslator() {
   const [lang] = usePortalLanguage();
-  const originalTextMap = useRef<WeakMap<Text, string>>(new WeakMap());
-  const originalAttrMap = useRef<WeakMap<Element, Record<string, string>>>(new WeakMap());
+  // Only track nodes/attributes that THIS translator actually mutated!
+  // This prevents ever overwriting React-managed bilingual components.
+  const textRecords = useRef<WeakMap<Text, TranslatedNodeRecord>>(new WeakMap());
+  const attrRecords = useRef<WeakMap<Element, TranslatedAttrRecord>>(new WeakMap());
   const isApplyingRef = useRef(false);
 
   useEffect(() => {
@@ -50,19 +62,31 @@ export default function GlobalLanguageTranslator() {
           if (parentEl && !shouldSkipElement(parentEl)) {
             const currentVal = node.nodeValue || "";
             if (currentVal.trim().length > 0) {
-              if (!originalTextMap.current.has(node)) {
-                originalTextMap.current.set(node, currentVal);
-              }
-              const originalEn = originalTextMap.current.get(node) || currentVal;
+              const rec = textRecords.current.get(node);
 
               if (targetLang === "so") {
-                const translated = translateToSomali(originalEn);
+                // If already translated by us and unchanged, skip
+                if (rec && currentVal === rec.translatedSo) {
+                  node = walker.nextNode() as Text | null;
+                  continue;
+                }
+                const translated = translateToSomali(currentVal);
                 if (translated !== currentVal) {
+                  textRecords.current.set(node, {
+                    originalEn: currentVal,
+                    translatedSo: translated,
+                  });
                   node.nodeValue = translated;
                 }
               } else {
-                if (originalEn !== currentVal) {
-                  node.nodeValue = originalEn;
+                // Switching to English: ONLY restore if WE translated this node
+                // and React hasn't already updated it to something else
+                if (rec && currentVal === rec.translatedSo) {
+                  node.nodeValue = rec.originalEn;
+                  textRecords.current.delete(node);
+                } else if (rec && currentVal !== rec.translatedSo) {
+                  // React updated this node natively; stop tracking it
+                  textRecords.current.delete(node);
                 }
               }
             }
@@ -75,31 +99,49 @@ export default function GlobalLanguageTranslator() {
           const elements = root.querySelectorAll("input[placeholder], textarea[placeholder], [title]");
           elements.forEach((el) => {
             if (shouldSkipElement(el)) return;
-            const saved = originalAttrMap.current.get(el) || {};
+            const rec = attrRecords.current.get(el) || {};
 
             const placeholder = el.getAttribute("placeholder");
             if (placeholder) {
-              if (saved.placeholder === undefined) saved.placeholder = placeholder;
-              const nextPlaceholder =
-                targetLang === "so"
-                  ? translateToSomali(saved.placeholder)
-                  : saved.placeholder;
-              if (nextPlaceholder !== placeholder) {
-                el.setAttribute("placeholder", nextPlaceholder);
+              if (targetLang === "so") {
+                if (!rec.placeholder || placeholder !== rec.placeholder.translatedSo) {
+                  const translated = translateToSomali(placeholder);
+                  if (translated !== placeholder) {
+                    rec.placeholder = { originalEn: placeholder, translatedSo: translated };
+                    el.setAttribute("placeholder", translated);
+                  }
+                }
+              } else if (rec.placeholder) {
+                if (placeholder === rec.placeholder.translatedSo) {
+                  el.setAttribute("placeholder", rec.placeholder.originalEn);
+                }
+                delete rec.placeholder;
               }
             }
 
             const title = el.getAttribute("title");
             if (title) {
-              if (saved.title === undefined) saved.title = title;
-              const nextTitle =
-                targetLang === "so" ? translateToSomali(saved.title) : saved.title;
-              if (nextTitle !== title) {
-                el.setAttribute("title", nextTitle);
+              if (targetLang === "so") {
+                if (!rec.title || title !== rec.title.translatedSo) {
+                  const translated = translateToSomali(title);
+                  if (translated !== title) {
+                    rec.title = { originalEn: title, translatedSo: translated };
+                    el.setAttribute("title", translated);
+                  }
+                }
+              } else if (rec.title) {
+                if (title === rec.title.translatedSo) {
+                  el.setAttribute("title", rec.title.originalEn);
+                }
+                delete rec.title;
               }
             }
 
-            originalAttrMap.current.set(el, saved);
+            if (rec.placeholder || rec.title) {
+              attrRecords.current.set(el, rec);
+            } else {
+              attrRecords.current.delete(el);
+            }
           });
         }
       } finally {
@@ -107,8 +149,10 @@ export default function GlobalLanguageTranslator() {
       }
     };
 
-    // Initial pass
-    applyTranslationToSubtree(document.body, lang);
+    // Initial pass after React commits the new language render
+    const initRaf = requestAnimationFrame(() => {
+      applyTranslationToSubtree(document.body, lang);
+    });
 
     // Observe dynamic route transitions, modals, and async content
     let rafId: number | null = null;
@@ -127,6 +171,7 @@ export default function GlobalLanguageTranslator() {
     });
 
     return () => {
+      cancelAnimationFrame(initRaf);
       observer.disconnect();
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
@@ -134,4 +179,3 @@ export default function GlobalLanguageTranslator() {
 
   return null;
 }
-

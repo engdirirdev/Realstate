@@ -383,7 +383,7 @@ export default async function HomePage() {
                   <p className="text-[11px] text-[#A97918] font-bold mt-0.5">
                     {count === 1 ? "1 Property" : `${count} Properties`}
                   </p>
-                  <p className="text-[10px] text-[#6B7280] mt-1 line-clamp-1">{desc}</p>
+                  <p className="text-[10px] text-[#6B7280] mt-1 line-clamp-2 leading-snug">{desc}</p>
                 </Link>
               );
             })}

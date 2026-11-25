@@ -1,6 +1,6 @@
 "use client";
 
-import { useState , memo } from "react";
+import { memo } from "react";
 import {
   Receipt,
   ShieldCheck,
@@ -27,14 +27,10 @@ function PropertyCostSummary({
   basePrice,
   companyServiceFee,
   legalTransferFee,
-  brokerCommission,
-  propertyType = "Property",
-  city = "Somalia",
   listingType,
   rentPeriod,
 }: PropertyCostSummaryProps) {
   const isRent = listingType === "FOR_RENT";
-  const [useBroker, setUseBroker] = useState(false);
 
   const effectiveCompanyFee =
     typeof companyServiceFee === "number" && companyServiceFee >= 0
@@ -44,17 +40,12 @@ function PropertyCostSummary({
     typeof legalTransferFee === "number" && legalTransferFee >= 0
       ? legalTransferFee
       : (isRent ? 0 : 200);
-  const effectiveBrokerFee =
-    typeof brokerCommission === "number" && brokerCommission >= 0
-      ? brokerCommission
-      : (isRent ? 0 : 500);
   const effectiveBasePrice =
     typeof basePrice === "number" && basePrice > 0
       ? basePrice
       : Math.max(0, propertyPrice - effectiveCompanyFee - effectiveLegalFee);
 
-  const totalBasePlusFees = effectiveBasePrice + effectiveCompanyFee + effectiveLegalFee;
-  const finalPrice = totalBasePlusFees + (useBroker ? effectiveBrokerFee : 0);
+  const finalPrice = effectiveBasePrice + effectiveCompanyFee + effectiveLegalFee;
 
   const periodUnit = (rentPeriod || "monthly").toLowerCase().replace("ly", "").replace("dai", "day");
 
@@ -82,8 +73,6 @@ function PropertyCostSummary({
           <p className="text-[11px] font-semibold text-[#6B7280] uppercase tracking-wider">
             {isRent
               ? `Base Rate (${periodUnit}) + One-Time Fees`
-              : useBroker
-              ? "Final Purchase Price (with Broker)"
               : "Total Purchase Price"}
           </p>
           <p className="text-2xl sm:text-3xl font-serif font-extrabold text-[#C89B3C] leading-none mt-1">
@@ -128,32 +117,12 @@ function PropertyCostSummary({
               </span>
               <span className="font-semibold text-[#07111F]">{formatPrice(effectiveLegalFee)}</span>
             </div>
-
-            {/* 4. Broker Commission Toggle (Optional, not included by default) */}
-            <div className="flex items-center justify-between py-1 pt-1.5 border-t border-[#E8E1D4]/60">
-              <label className="text-[#4B5563] flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={useBroker}
-                  onChange={(e) => setUseBroker(e.target.checked)}
-                  className="rounded border-[#E8E1D4] text-[#C89B3C] focus:ring-[#C89B3C] accent-[#C89B3C] h-3.5 w-3.5 cursor-pointer"
-                />
-                <span>Broker Commission (Optional)</span>
-              </label>
-              <span className={`font-semibold ${useBroker ? "text-[#07111F]" : "text-[#9CA3AF] line-through"}`}>
-                {useBroker ? formatPrice(effectiveBrokerFee) : formatPrice(effectiveBrokerFee)}
-              </span>
-            </div>
           </div>
 
           {/* Subtotal summary banner */}
           <div className="pt-3 border-t border-[#E8E1D4] flex items-center justify-between text-xs font-bold text-[#07111F]">
             <span className="text-[#6B7280]">
-              {isRent
-                ? "Total Initial Period + Fees:"
-                : useBroker
-                ? "Final Purchase Price (with Broker):"
-                : "Total Purchase Price:"}
+              {isRent ? "Total Initial Period + Fees:" : "Total Purchase Price:"}
             </span>
             <span className="text-sm font-serif font-extrabold text-[#C89B3C]">
               {formatPrice(finalPrice)}

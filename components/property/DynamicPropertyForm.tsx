@@ -220,9 +220,7 @@ export default function DynamicPropertyForm({
     legalTransferFee: initialData?.legalTransferFee !== undefined && initialData?.legalTransferFee !== null
       ? String(initialData.legalTransferFee)
       : "200",
-    brokerCommission: initialData?.brokerCommission !== undefined && initialData?.brokerCommission !== null
-      ? String(initialData.brokerCommission)
-      : "500",
+    brokerCommission: "0",
     city: "Abudwak",
     location: initialData?.location || "Ubah",
     address: initialData?.address || "",
@@ -1195,7 +1193,7 @@ export default function DynamicPropertyForm({
                   <p className="text-[11px] text-[#6B7280]">
                     {listingType === "FOR_RENT"
                       ? "Configure base rent per period, company service fee, and legal transfer fee. (Only Base Rent multiplies by duration booked)."
-                      : "Configure base selling price, company service fee, legal transfer fee, and optional broker commission."}
+                      : "Configure base selling price, company service fee, and legal transfer fee."}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 text-xs font-bold text-[#07111F]">
@@ -1212,7 +1210,7 @@ export default function DynamicPropertyForm({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {/* 1. Property Base Price * */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
@@ -1317,66 +1315,22 @@ export default function DynamicPropertyForm({
                   </div>
                   <p className="text-[10px] text-[#6B7280]">Ownership transfer & legal notary.</p>
                 </div>
-
-                {/* 4. Broker Commission (Optional) */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs font-bold text-[#07111F]">
-                      Broker Commission (Optional)
-                    </Label>
-                    {validationErrors.brokerCommission && (
-                      <span className="text-[10px] text-red-600 font-semibold">{validationErrors.brokerCommission}</span>
-                    )}
-                  </div>
-                  <div className="relative">
-                    <span className="absolute left-3 top-3 text-sm font-bold text-[#C89B3C]">$</span>
-                    <Input
-                      name="brokerCommission"
-                      type="number"
-                      min="0"
-                      value={common.brokerCommission}
-                      onChange={(e) => setCommon((p) => ({ ...p, brokerCommission: e.target.value }))}
-                      placeholder="500"
-                      className="h-11 pl-7 border-[#E8E1D4] bg-[#FCFBF7] rounded-xl text-sm font-bold"
-                    />
-                  </div>
-                  <p className="text-[10px] text-[#6B7280]">Only charged if buyer selects broker.</p>
-                </div>
               </div>
 
               {/* Live Totals Bar */}
               <div className="p-3 bg-[#FCFBF7] border border-[#E8E1D4] rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-4">
-                  <div>
-                    <span className="text-[#6B7280]">
-                      {listingType === "FOR_RENT" ? "1st Period + Fees (Excludes broker): " : "Total Purchase Price (Never includes broker): "}
-                    </span>
-                    <strong className="text-[#07111F] font-serif text-sm">
-                      ${(
-                        Number(common.basePrice || 0) +
-                        Number(common.companyServiceFee || 0) +
-                        Number(common.legalTransferFee || 0)
-                      ).toLocaleString()}
-                    </strong>
-                  </div>
-                  <div className="hidden sm:block text-[#E8E1D4]">|</div>
-                  <div>
-                    <span className="text-[#6B7280]">
-                      {listingType === "FOR_RENT" ? "Initial Cost (with Broker): " : "Final Purchase Price (with Broker): "}
-                    </span>
-                    <strong className="text-[#C89B3C] font-serif text-sm">
-                      ${(
-                        Number(common.basePrice || 0) +
-                        Number(common.companyServiceFee || 0) +
-                        Number(common.legalTransferFee || 0) +
-                        Number(common.brokerCommission || 0)
-                      ).toLocaleString()}
-                    </strong>
-                  </div>
+                <div>
+                  <span className="text-[#6B7280]">
+                    {listingType === "FOR_RENT" ? "1st Period Rent + Fees: " : "Total Purchase Price: "}
+                  </span>
+                  <strong className="text-[#07111F] font-serif text-sm">
+                    ${(
+                      Number(common.basePrice || 0) +
+                      Number(common.companyServiceFee || 0) +
+                      Number(common.legalTransferFee || 0)
+                    ).toLocaleString()}
+                  </strong>
                 </div>
-                <span className="text-[11px] text-[#6B7280] italic">
-                  Broker fee is excluded by default until buyer chooses representation.
-                </span>
               </div>
             </div>
 

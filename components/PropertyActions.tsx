@@ -85,7 +85,6 @@ export default function PropertyActions({
 
   const [inquiryModalOpen, setInquiryModalOpen] = useState(false);
   const [buyOpen, setBuyOpen] = useState(false);
-  const [useBroker, setUseBroker] = useState(false);
 
   const resolvedCompanyFee =
     typeof companyServiceFee === "number" && companyServiceFee >= 0
@@ -95,16 +94,11 @@ export default function PropertyActions({
     typeof legalTransferFee === "number" && legalTransferFee >= 0
       ? legalTransferFee
       : (isRent ? 0 : 200);
-  const resolvedBrokerFee =
-    typeof brokerCommission === "number" && brokerCommission >= 0
-      ? brokerCommission
-      : (isRent ? 0 : 500);
   const resolvedBasePrice =
     typeof basePrice === "number" && basePrice > 0
       ? basePrice
       : Math.max(0, propertyPrice - resolvedCompanyFee - resolvedLegalFee);
   const totalPurchasePrice = resolvedBasePrice + resolvedCompanyFee + resolvedLegalFee;
-  const finalPurchasePrice = totalPurchasePrice + (useBroker ? resolvedBrokerFee : 0);
   const [rentOpen, setRentOpen] = useState(false);
   const [rentalStep, setRentalStep] = useState<1 | 2>(1);
 
@@ -169,9 +163,9 @@ export default function PropertyActions({
     return computeRental(resolvedBasePrice, rentPeriod, securityDeposit, s, e, {
       companyServiceFee: resolvedCompanyFee,
       legalTransferFee: resolvedLegalFee,
-      brokerFee: useBroker ? resolvedBrokerFee : 0,
+      brokerFee: 0,
     });
-  }, [startDate, endDate, resolvedBasePrice, rentPeriod, securityDeposit, resolvedCompanyFee, resolvedLegalFee, useBroker, resolvedBrokerFee]);
+  }, [startDate, endDate, resolvedBasePrice, rentPeriod, securityDeposit, resolvedCompanyFee, resolvedLegalFee]);
 
   const selectedPaymentMethod = useMemo(() => {
     return paymentMethods.find((m) => m.id === selectedMethodId) || paymentMethods[0];
@@ -208,7 +202,7 @@ export default function PropertyActions({
       const res = await fetch("/api/purchase-requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ propertyId, notes, useBroker }),
+        body: JSON.stringify({ propertyId, notes, useBroker: false }),
       });
       const data = await res.json();
       if (data.success) {
@@ -449,34 +443,6 @@ export default function PropertyActions({
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-2">
-            {/* Broker Choice Toggle */}
-            <div className="bg-[#F7F3EA] border border-[#E8E1D4] p-3.5 rounded-xl flex items-center justify-between gap-3">
-              <div className="space-y-0.5">
-                <p className="text-xs font-bold text-[#07111F]">Do you want to use a broker?</p>
-                <p className="text-[11px] text-[#6B7280]">Optional representation (+{formatPrice(resolvedBrokerFee)})</p>
-              </div>
-              <div className="inline-flex items-center rounded-lg p-0.5 bg-[#E8E1D4]/80 border border-[#E8E1D4] shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setUseBroker(true)}
-                  className={`px-3 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
-                    useBroker ? "bg-[#07111F] text-[#D9B45B] shadow-xs" : "text-[#6B7280] hover:text-[#07111F]"
-                  }`}
-                >
-                  Yes
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setUseBroker(false)}
-                  className={`px-3 py-1 text-xs font-bold rounded-md transition-all cursor-pointer ${
-                    !useBroker ? "bg-[#07111F] text-[#D9B45B] shadow-xs" : "text-[#6B7280] hover:text-[#07111F]"
-                  }`}
-                >
-                  No
-                </button>
-              </div>
-            </div>
-
             {/* Itemized Cost Breakdown */}
             <div className="bg-[#F7F3EA] border border-[#E8E1D4] p-4 rounded-xl space-y-2 text-xs">
               <div className="flex justify-between gap-3">
@@ -500,19 +466,11 @@ export default function PropertyActions({
                   <span className="text-[#6B7280]">Legal Transfer Fee</span>
                   <span className="font-semibold text-[#07111F]">{formatPrice(resolvedLegalFee)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-[#6B7280]">Broker Commission</span>
-                  <span className={`font-semibold ${useBroker ? "text-[#07111F]" : "text-[#9CA3AF] italic"}`}>
-                    {useBroker ? formatPrice(resolvedBrokerFee) : "Not Selected"}
-                  </span>
-                </div>
               </div>
               <div className="flex justify-between border-t border-[#E8E1D4] pt-2 items-center">
-                <span className="font-bold text-[#07111F]">
-                  {useBroker ? "Final Purchase Price" : "Total Purchase Price"}
-                </span>
+                <span className="font-bold text-[#07111F]">Total Purchase Price</span>
                 <span className="font-extrabold text-[#C89B3C] text-lg font-serif">
-                  {formatPrice(finalPurchasePrice)}
+                  {formatPrice(totalPurchasePrice)}
                 </span>
               </div>
             </div>

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { dbCache } from "@/lib/cache";
 
 export async function GET() {
   try {
@@ -40,6 +42,10 @@ export async function POST(request: NextRequest) {
         )
       );
     }
+
+    dbCache.invalidateTags(["settings"]);
+    revalidatePath("/about");
+    revalidatePath("/admin/settings");
 
     return NextResponse.json({ success: true });
   } catch (error) {

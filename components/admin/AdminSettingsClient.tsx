@@ -23,15 +23,27 @@ import {
   Moon,
   CheckCircle2,
   Building2,
+  Users,
+  Plus,
+  Pencil,
+  Trash2,
+  Camera,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import type { PaymentMethodConfig } from "@/lib/payment-settings";
 import { usePortalLanguage, usePortalTheme } from "@/lib/customer-i18n";
+import {
+  EXECUTIVE_TEAM_SETTING_KEY,
+  parseExecutiveTeam,
+  type ExecutiveTeamMember,
+} from "@/lib/executive-team";
 
 interface AdminSettingsClientProps {
   initialSettings?: {
@@ -42,11 +54,24 @@ interface AdminSettingsClientProps {
     enable_ai_chat: boolean;
   };
   initialPaymentMethods?: PaymentMethodConfig[];
+  initialExecutiveTeam?: ExecutiveTeamMember[];
+}
+
+function getMemberInitials(name: string) {
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((p) => p[0]?.toUpperCase() || "")
+      .join("") || "KM"
+  );
 }
 
 function AdminSettingsClient({
   initialSettings,
   initialPaymentMethods,
+  initialExecutiveTeam,
 }: AdminSettingsClientProps) {
   const [lang, setLang] = usePortalLanguage();
   const [theme, setTheme] = usePortalTheme();
@@ -55,6 +80,21 @@ function AdminSettingsClient({
 
   const [saving, setSaving] = useState(false);
   const [savingPayment, setSavingPayment] = useState(false);
+
+  // Executive Team state
+  const [team, setTeam] = useState<ExecutiveTeamMember[]>(
+    initialExecutiveTeam ?? parseExecutiveTeam(undefined)
+  );
+  const [teamModalOpen, setTeamModalOpen] = useState(false);
+  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
+  const [memberForm, setMemberForm] = useState({
+    name: "",
+    role: "",
+    bio: "",
+    image: "" as string,
+  });
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [savingTeam, setSavingTeam] = useState(false);
 
   const [form, setForm] = useState(
     initialSettings || {
@@ -84,6 +124,9 @@ function AdminSettingsClient({
           auto_approve_properties: settingsRes.settings.auto_approve_properties === "true",
           enable_ai_chat: settingsRes.settings.enable_ai_chat !== "false",
         }));
+        if (settingsRes.settings[EXECUTIVE_TEAM_SETTING_KEY] !== undefined) {
+          setTeam(parseExecutiveTeam(settingsRes.settings[EXECUTIVE_TEAM_SETTING_KEY]));
+        }
       }
 
       if (methodsRes.success && Array.isArray(methodsRes.methods)) {
@@ -152,6 +195,147 @@ function AdminSettingsClient({
     setPaymentMethods((prev) =>
       prev.map((m) => (m.id === id ? { ...m, [field]: val } : m))
     );
+  };
+
+  const persistExecutiveTeam = useCallback(
+    async (nextTeam: ExecutiveTeamMember[], successMsg: string) => {
+      setSavingTeam(true);
+      try {
+        const res = await fetch("/api/admin/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            [EXECUTIVE_TEAM_SETTING_KEY]: JSON.stringify(nextTeam),
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setTeam(nextTeam);
+          toast({
+            title: isSo ? "Kooxda Waa La Cusboonaysiiyay 🎉" : "Executive Team Updated 🎉",
+            description: successMsg,
+          });
+          return true;
+        } else {
+          toast({
+            title: "Error",
+            description: data.error || "Failed to save team changes.",
+            variant: "destructive",
+          });
+          return false;
+        }
+      } catch {
+        toast({
+          title: "Error",
+          description: "Failed to save executive team.",
+          variant: "destructive",
+        });
+        return false;
+      } finally {
+        setSavingTeam(false);
+      }
+    },
+    [isSo]
+  );
+
+  const openAddMemberModal = () => {
+    setEditingMemberId(null);
+    setMemberForm({ name: "", role: "", bio: "", image: "" });
+    setTeamModalOpen(true);
+  };
+
+  const openEditMemberModal = (member: ExecutiveTeamMember) => {
+    setEditingMemberId(member.id);
+    setMemberForm({
+      name: member.name,
+      role: member.role,
+      bio: member.bio || "",
+      image: member.image || "",
+    });
+    setTeamModalOpen(true);
+  };
+
+  const handleMemberPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingPhoto(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setMemberForm((prev) => ({ ...prev, image: data.url }));
+        toast({
+          title: isSo ? "Sawirka Waa La Soo Geliyay 📸" : "Profile Photo Uploaded 📸",
+          description: "Click Save Member to apply this photo.",
+        });
+      } else {
+        toast({
+          title: "Upload Failed",
+          description: data.error || "Could not upload profile photo.",
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: "Upload Error",
+        description: "Failed to upload image.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingPhoto(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleSaveMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanName = memberForm.name.trim();
+    const cleanRole = memberForm.role.trim();
+    if (!cleanName || !cleanRole) return;
+
+    let nextTeam: ExecutiveTeamMember[];
+    if (editingMemberId) {
+      nextTeam = team.map((m) =>
+        m.id === editingMemberId
+          ? {
+              ...m,
+              name: cleanName,
+              role: cleanRole,
+              bio: memberForm.bio.trim(),
+              image: memberForm.image.trim() || null,
+            }
+          : m
+      );
+    } else {
+      nextTeam = [
+        ...team,
+        {
+          id: `exec-${Date.now()}`,
+          name: cleanName,
+          role: cleanRole,
+          bio: memberForm.bio.trim(),
+          image: memberForm.image.trim() || null,
+        },
+      ];
+    }
+
+    const ok = await persistExecutiveTeam(
+      nextTeam,
+      editingMemberId
+        ? `Updated ${cleanName}'s profile on the About page.`
+        : `Registered ${cleanName} to the Executive Team.`
+    );
+    if (ok) {
+      setTeamModalOpen(false);
+      setEditingMemberId(null);
+    }
+  };
+
+  const handleDeleteMember = async (member: ExecutiveTeamMember) => {
+    const nextTeam = team.filter((m) => m.id !== member.id);
+    await persistExecutiveTeam(nextTeam, `Removed ${member.name} from the Executive Team.`);
   };
 
   const handleSavePaymentMethods = async () => {
@@ -478,7 +662,238 @@ function AdminSettingsClient({
         </div>
       </form>
 
-      {/* ─── ROW 3: Centralized Payment Accounts (2x2 Luxury Grid) ─── */}
+      {/* ─── ROW 3: Executive Team Management (Register, Edit, Delete & Profile Photo) ─── */}
+      <div className="bg-[#FCFBF7] p-6 rounded-3xl shadow-sm border border-[#E8E1D4] space-y-6">
+        <div className="border-b border-[#E8E1D4] pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-[#07111F] text-[#D9B45B] flex items-center justify-center border border-[#C89B3C]/40 shrink-0 shadow-xs">
+              <Users className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-serif font-bold text-[#07111F]">
+                {isSo ? "Kooxda Hoggaanka (Executive Team)" : "Executive Team Management"}
+              </h2>
+              <p className="text-xs text-[#6B7280] mt-0.5">
+                {isSo
+                  ? "Ku dar, wax ka beddel, ama tirtir xubnaha kooxda hoggaanka iyo sawirradooda (About Us)."
+                  : "Register, edit, delete leadership members and upload or change their profile photos shown on the About Us page."}
+              </p>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            onClick={openAddMemberModal}
+            className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] hover:brightness-105 rounded-xl gap-2 font-bold px-5 h-10 text-xs shadow-sm border-0 self-start sm:self-auto cursor-pointer"
+          >
+            <Plus className="h-4 w-4" />
+            {isSo ? "Ku Dar Xubin" : "Add Team Member"}
+          </Button>
+        </div>
+
+        {team.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-dashed border-[#E8E1D4] p-10 text-center space-y-3">
+            <Users className="h-10 w-10 text-[#C89B3C]/50 mx-auto" />
+            <p className="font-serif font-bold text-[#07111F] text-base">
+              No Executive Team Members Registered
+            </p>
+            <p className="text-xs text-[#6B7280] max-w-sm mx-auto">
+              Add your leadership team members with their profile photos and roles to showcase them on the public About Us page.
+            </p>
+            <Button
+              type="button"
+              onClick={openAddMemberModal}
+              className="bg-[#07111F] text-[#D9B45B] hover:bg-[#0D1E35] rounded-xl gap-1.5 text-xs font-bold border border-[#C89B3C]/40 cursor-pointer"
+            >
+              <Plus className="h-3.5 w-3.5" /> Add First Member
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {team.map((member) => (
+              <div
+                key={member.id}
+                className="bg-white rounded-2xl border border-[#E8E1D4] hover:border-[#C89B3C]/60 p-5 shadow-2xs flex flex-col items-center text-center justify-between gap-4 transition-all"
+              >
+                <div className="flex flex-col items-center">
+                  <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-[#C89B3C]/50 bg-[#07111F] flex items-center justify-center shadow-sm mb-3 shrink-0">
+                    {member.image ? (
+                      <img
+                        src={member.image}
+                        alt={member.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="font-serif text-lg font-bold text-[#D9B45B]">
+                        {getMemberInitials(member.name)}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="font-serif font-bold text-[#07111F] text-sm leading-snug">
+                    {member.name}
+                  </h3>
+                  <p className="text-[11px] text-[#C89B3C] font-bold uppercase tracking-wide mt-1">
+                    {member.role}
+                  </p>
+                  {member.bio && (
+                    <p className="text-[11px] text-[#6B7280] mt-1.5 line-clamp-2 leading-relaxed">
+                      {member.bio}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 w-full pt-3 border-t border-[#F1ECE1]">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openEditMemberModal(member)}
+                    disabled={savingTeam}
+                    className="flex-1 h-8 rounded-xl border-[#C89B3C]/40 text-[#07111F] hover:bg-[#F7F3EA] text-xs font-semibold gap-1 cursor-pointer"
+                  >
+                    <Pencil className="h-3.5 w-3.5 text-[#C89B3C]" /> Edit
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDeleteMember(member)}
+                    disabled={savingTeam}
+                    className="h-8 px-2.5 rounded-xl border-[#E8E1D4] text-[#DC2626] hover:bg-red-50 hover:border-red-200 cursor-pointer"
+                    aria-label={`Delete ${member.name}`}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Add / Edit Executive Team Member Modal */}
+      <Dialog open={teamModalOpen} onOpenChange={setTeamModalOpen}>
+        <DialogContent className="max-w-md bg-[#FCFBF7] rounded-2xl p-6 border border-[#E8E1D4] shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-serif font-bold text-[#07111F] flex items-center gap-2">
+              <Users className="h-5 w-5 text-[#C89B3C]" />
+              {editingMemberId ? "Edit Executive Member" : "Register Executive Member"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleSaveMember} className="space-y-4 mt-2">
+            {/* Profile Photo Uploader */}
+            <div className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-white border border-[#E8E1D4]">
+              <div className="relative w-22 h-22 rounded-full overflow-hidden border-2 border-[#C89B3C] bg-[#07111F] flex items-center justify-center shadow-sm">
+                {memberForm.image ? (
+                  <img
+                    src={memberForm.image}
+                    alt={memberForm.name || "Member"}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="font-serif text-xl font-bold text-[#D9B45B]">
+                    {getMemberInitials(memberForm.name || "KM")}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#07111F] text-[#D9B45B] hover:bg-[#0D1E35] border border-[#C89B3C]/40 text-xs font-bold cursor-pointer transition-colors">
+                  {uploadingPhoto ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Camera className="h-3.5 w-3.5" />
+                  )}
+                  <span>{memberForm.image ? "Change Photo" : "Upload Photo"}</span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/avif"
+                    onChange={handleMemberPhotoUpload}
+                    disabled={uploadingPhoto}
+                    className="hidden"
+                  />
+                </label>
+
+                {memberForm.image && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMemberForm((prev) => ({ ...prev, image: "" }))}
+                    className="h-8 px-2.5 rounded-xl border-[#E8E1D4] text-rose-600 hover:bg-rose-50 text-xs gap-1 cursor-pointer"
+                  >
+                    <X className="h-3.5 w-3.5" /> Remove
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">
+                Full Name *
+              </Label>
+              <Input
+                value={memberForm.name}
+                onChange={(e) => setMemberForm((p) => ({ ...p, name: e.target.value }))}
+                placeholder="e.g. Mohamed Ali Hassan"
+                required
+                className="h-10 rounded-xl border-[#E8E1D4] bg-white focus:border-[#C89B3C]"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">
+                Position / Role *
+              </Label>
+              <Input
+                value={memberForm.role}
+                onChange={(e) => setMemberForm((p) => ({ ...p, role: e.target.value }))}
+                placeholder="e.g. CEO & Co-Founder"
+                required
+                className="h-10 rounded-xl border-[#E8E1D4] bg-white focus:border-[#C89B3C]"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">
+                Short Bio (Optional)
+              </Label>
+              <Textarea
+                value={memberForm.bio}
+                onChange={(e) => setMemberForm((p) => ({ ...p, bio: e.target.value }))}
+                placeholder="Brief leadership note shown under their title..."
+                className="min-h-[68px] rounded-xl border-[#E8E1D4] bg-white text-xs focus:border-[#C89B3C]"
+              />
+            </div>
+
+            <DialogFooter className="pt-2 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setTeamModalOpen(false)}
+                className="rounded-xl border-[#E8E1D4] text-[#07111F] hover:bg-[#F7F3EA]"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={savingTeam || uploadingPhoto || !memberForm.name.trim() || !memberForm.role.trim()}
+                className="bg-gradient-to-r from-[#C89B3C] via-[#D9B45B] to-[#C89B3C] text-[#07111F] font-bold hover:brightness-105 rounded-xl border-0 shadow-sm gap-1.5"
+              >
+                {savingTeam ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                {editingMemberId ? "Save Changes" : "Register Member"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── ROW 4: Centralized Payment Accounts (2x2 Luxury Grid) ─── */}
       <div className="bg-[#FCFBF7] p-6 rounded-3xl shadow-sm border border-[#E8E1D4] space-y-6">
         <div className="border-b border-[#E8E1D4] pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">

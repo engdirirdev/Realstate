@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getPaymentMethodsConfig } from "@/lib/payment-settings";
+import { EXECUTIVE_TEAM_SETTING_KEY, parseExecutiveTeam } from "@/lib/executive-team";
 import { dbCache } from "@/lib/cache";
 
 // ─── 1. RENTAL & BOOKINGS DASHBOARD DATA ───────────────────────────
@@ -381,6 +382,7 @@ export async function getSettingsDashboardData() {
         enable_ai_chat: map.enable_ai_chat !== "false",
       },
       paymentMethods: methods || [],
+      executiveTeam: parseExecutiveTeam(map[EXECUTIVE_TEAM_SETTING_KEY]),
     };
   }, ["settings"]);
 }

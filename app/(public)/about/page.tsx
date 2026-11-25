@@ -1,63 +1,81 @@
 // ================================================================
 // PAGE NAME  : About Page
 // ROUTE      : /about
-// DESCRIPTION: Company info, mission, team, technology stack
-//              and platform statistics — Kiro-Maal Real Estate
+// DESCRIPTION: Company info, mission, dynamic executive team,
+//              technology stack, and platform stats — Kiro-Maal Real Estate
 // ================================================================
 import Link from "next/link";
 import { Building2, Users, Bot, Globe, Heart, Zap, CheckCircle2, Star, Sparkles, ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
+import { prisma } from "@/lib/prisma";
 import JsonLd from "@/components/seo/JsonLd";
 import { generateBreadcrumbSchema } from "@/lib/seo-schema";
+import {
+  EXECUTIVE_TEAM_SETTING_KEY,
+  parseExecutiveTeam,
+  type ExecutiveTeamMember,
+} from "@/lib/executive-team";
 
 export const metadata: Metadata = {
   title: "About Us — Kiro-Maal Luxury Real Estate & AI Intelligence",
   description:
-    "Learn about Somalia's leading luxury AI-powered real estate platform, our leadership team, technology stack, and mission to modernize property investment.",
+    "Learn about Abudwak, Galmudug's leading AI-powered real estate platform, our leadership team, technology stack, and mission to modernize property investment.",
   alternates: {
     canonical: "/about",
   },
   openGraph: {
-    title: "About Us — Kiro-Maal Luxury Real Estate Somalia",
-    description: "Somalia's premier AI-powered property platform and luxury real estate brokerage.",
+    title: "About Us — Kiro-Maal Luxury Real Estate",
+    description: "Abudwak's premier AI-powered property platform and luxury real estate brokerage.",
     url: "/about",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "About Kiro-Maal Real Estate Somalia",
-    description: "Modernizing property acquisitions, title transparency, and AI valuation in Somalia.",
+    title: "About Kiro-Maal Real Estate",
+    description: "Modernizing property acquisitions, title transparency, and AI valuation in Abudwak, Galmudug, Somalia.",
   },
 };
 
-export const revalidate = 86400; // 24-hour static cache revalidation
-
-const team = [
-  { name: "Mohamed Ali Hassan", role: "CEO & Co-Founder", emoji: "👨‍💼" },
-  { name: "Fadumo Warsame", role: "Chief AI Officer", emoji: "👩‍💻" },
-  { name: "Abdi Noor", role: "Head of Properties", emoji: "🏠" },
-  { name: "Ifrah Said", role: "Lead Designer", emoji: "🎨" },
-];
+export const revalidate = 0;
 
 const stats = [
-  { value: "55+", label: "Verified Luxury Properties", icon: Building2 },
-  { value: "11+", label: "Happy Clients & Investors", icon: Users },
+  { value: "6 Villages", label: "Full Abudwak Coverage", icon: Building2 },
+  { value: "100%", label: "Verified Local Listings", icon: Users },
   { value: "99%", label: "Market Data Accuracy", icon: Star },
   { value: "24/7", label: "AI Concierge & Valuation", icon: Bot },
 ];
 
 const values = [
   { icon: Zap, title: "Innovation First", desc: "We leverage cutting-edge AI and ML to transform how clients find and value premium properties." },
-  { icon: Heart, title: "Community Driven", desc: "Built by Somalis, for Somalis. We understand the local luxury market deeply." },
+  { icon: Heart, title: "Community Driven", desc: "Built by Somalis, for Somalis. We understand the Abudwak and Galmudug property market deeply." },
   { icon: Globe, title: "Transparent Platform", desc: "No hidden fees, no fake listings. Every property is rigorously verified before listing." },
   { icon: CheckCircle2, title: "Data Integrity", desc: "Our AI assistant speaks exclusively from real database listings — zero hallucinations." },
 ];
 
-export default function AboutPage() {
+function getInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() || "")
+    .join("") || "KM";
+}
+
+export default async function AboutPage() {
   const breadcrumbSchema = generateBreadcrumbSchema([
     { name: "Home", url: "/" },
     { name: "About Us", url: "/about" },
   ]);
+
+  let team: ExecutiveTeamMember[] = parseExecutiveTeam(undefined);
+  try {
+    const setting = await prisma.systemSetting.findUnique({
+      where: { key: EXECUTIVE_TEAM_SETTING_KEY },
+    });
+    team = parseExecutiveTeam(setting?.value ?? null);
+  } catch (error) {
+    console.error("Failed to load executive team:", error);
+  }
 
   return (
     <div className="overflow-hidden bg-[#F7F3EA] min-h-screen">
@@ -71,10 +89,10 @@ export default function AboutPage() {
               <Sparkles className="w-3.5 h-3.5 text-[#C89B3C]" /> Our Heritage &amp; Vision
             </div>
             <h1 className="font-serif text-4xl sm:text-5xl font-bold text-white mb-5 tracking-tight">
-              Transforming Real Estate in Somalia with <span className="text-[#D9B45B]">Kiro-Maal AI</span>
+              Transforming Real Estate in Abudwak with <span className="text-[#D9B45B]">Kiro-Maal AI</span>
             </h1>
             <p className="text-[#E8E1D4]/80 text-lg leading-relaxed max-w-2xl mx-auto font-light">
-              We&apos;re on a mission to make luxury property discovery smarter, fairer, and seamlessly accessible for every Somali — whether you&apos;re in Mogadishu or anywhere across the diaspora.
+              We&apos;re on a mission to make property discovery smarter, fairer, and seamlessly accessible for every resident and diaspora investor in Abudwak, Galmudug, Somalia.
             </p>
           </div>
         </div>
@@ -103,10 +121,10 @@ export default function AboutPage() {
           <p className="text-[#C89B3C] font-semibold text-xs tracking-wider uppercase mb-2">✦ Our Mission</p>
           <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#07111F] mb-5">Why We Built Kiro-Maal</h2>
           <p className="text-[#4B5563] text-base leading-relaxed mb-4">
-            Finding luxury real estate in Somalia has traditionally been difficult — a mix of word-of-mouth, unverified listings, and fragmented brokers. We established Kiro-Maal Real Estate to set the master standard for transparency, architecture, and technology.
+            Finding trusted real estate in Abudwak has traditionally been difficult — a mix of word-of-mouth, unverified listings, and fragmented brokers. We established Kiro-Maal Real Estate to set the master standard for transparency, architecture, and technology across all 6 villages.
           </p>
           <p className="text-[#4B5563] text-base leading-relaxed">
-            By combining an exquisite digital experience with machine learning price intelligence and an interactive 24/7 AI concierge, we deliver the most prestigious property platform in East Africa.
+            By combining an exquisite digital experience with machine learning price intelligence and an interactive 24/7 AI concierge, we deliver the most prestigious property platform in Galmudug, Somalia.
           </p>
         </div>
       </section>
@@ -132,33 +150,55 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Team */}
-      <section className="py-16 bg-[#F7F3EA]">
-        <div className="section-container">
-          <div className="text-center mb-12">
-            <p className="text-[#C89B3C] font-semibold text-xs tracking-wider uppercase mb-2">✦ The Leadership</p>
-            <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#07111F]">Meet Our Executive Team</h2>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-3xl mx-auto">
-            {team.map(({ name, role, emoji }) => (
-              <div key={name} className="text-center bg-[#FCFBF7] border border-[#E8E1D4] shadow-sm rounded-2xl p-6 transition-all hover:border-[#C89B3C]">
-                <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-3 text-4xl border border-[#E8E1D4] shadow-inner">
-                  {emoji}
+      {/* Dynamic Executive Team */}
+      {team.length > 0 && (
+        <section className="py-16 bg-[#F7F3EA]">
+          <div className="section-container">
+            <div className="text-center mb-12">
+              <p className="text-[#C89B3C] font-semibold text-xs tracking-wider uppercase mb-2">✦ The Leadership</p>
+              <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#07111F]">Meet Our Executive Team</h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+              {team.map((member) => (
+                <div
+                  key={member.id}
+                  className="text-center bg-[#FCFBF7] border border-[#E8E1D4] shadow-sm rounded-2xl p-6 transition-all hover:border-[#C89B3C] hover:shadow-md flex flex-col items-center"
+                >
+                  <div className="w-22 h-22 rounded-full overflow-hidden mx-auto mb-4 border-2 border-[#C89B3C]/50 shadow-sm bg-[#07111F] flex items-center justify-center shrink-0">
+                    {member.image ? (
+                      <img
+                        src={member.image}
+                        alt={member.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="font-serif text-xl font-bold text-[#D9B45B]">
+                        {getInitials(member.name)}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="font-serif font-bold text-[#07111F] text-base">{member.name}</h3>
+                  <p className="text-xs text-[#C89B3C] font-semibold mt-1 uppercase tracking-wide">
+                    {member.role}
+                  </p>
+                  {member.bio && (
+                    <p className="text-xs text-[#6B7280] mt-2 leading-relaxed line-clamp-3">
+                      {member.bio}
+                    </p>
+                  )}
                 </div>
-                <h3 className="font-serif font-bold text-[#07111F] text-sm">{name}</h3>
-                <p className="text-xs text-[#C89B3C] font-semibold mt-1 uppercase tracking-wide">{role}</p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* CTA */}
       <section className="py-16 bg-[#07111F] text-center border-t border-[#C89B3C]/20 relative overflow-hidden">
         <div className="section-container relative z-10">
           <h2 className="font-serif text-3xl font-bold text-white mb-3">Ready to Find Your Dream Property?</h2>
           <p className="text-[#E8E1D4]/80 mb-8 max-w-xl mx-auto">
-            Join discerning buyers, tenants, and investors who trust Kiro-Maal Real Estate for premium properties across Somalia.
+            Join discerning buyers, tenants, and investors who trust Kiro-Maal Real Estate for verified properties across Abudwak, Galmudug, Somalia.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link

@@ -376,7 +376,16 @@ export async function getSettingsDashboardData() {
     return {
       settings: {
         site_name: map.site_name || "Kiro-Maal Real Estate",
-        contact_email: map.contact_email || "support@kiromaal.com",
+        contact_email: map.contact_email || "concierge@kiro-maal.so",
+        contact_phone: map.contact_phone || "+252 61 200 0000 / +252 61 900 0000",
+        contact_address: map.contact_address || "Abudwak, Galmudug, Somalia",
+        company_description:
+          map.company_description ||
+          "Kiro-Maal Real Estate is Abudwak's premier luxury property platform. Discover verified properties, unlock AI-driven valuations, and find your dream home with unmatched trust and precision.",
+        social_facebook: map.social_facebook || "",
+        social_twitter: map.social_twitter || "",
+        social_instagram: map.social_instagram || "",
+        social_linkedin: map.social_linkedin || "",
         currency: map.currency || "USD",
         auto_approve_properties: map.auto_approve_properties === "true",
         enable_ai_chat: map.enable_ai_chat !== "false",

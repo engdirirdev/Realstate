@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     dbCache.invalidateTags(["settings"]);
+    revalidatePath("/", "layout");
     revalidatePath("/about");
     revalidatePath("/admin/settings");
 

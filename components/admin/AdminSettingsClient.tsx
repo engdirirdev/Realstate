@@ -49,6 +49,13 @@ interface AdminSettingsClientProps {
   initialSettings?: {
     site_name: string;
     contact_email: string;
+    contact_phone?: string;
+    contact_address?: string;
+    company_description?: string;
+    social_facebook?: string;
+    social_twitter?: string;
+    social_instagram?: string;
+    social_linkedin?: string;
     currency: string;
     auto_approve_properties: boolean;
     enable_ai_chat: boolean;
@@ -96,15 +103,22 @@ function AdminSettingsClient({
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [savingTeam, setSavingTeam] = useState(false);
 
-  const [form, setForm] = useState(
-    initialSettings || {
-      site_name: "Kiro-Maal Real Estate",
-      contact_email: "support@kiromaal.com",
-      currency: "USD",
-      auto_approve_properties: false,
-      enable_ai_chat: true,
-    }
-  );
+  const [form, setForm] = useState({
+    site_name: initialSettings?.site_name || "Kiro-Maal Real Estate",
+    contact_email: initialSettings?.contact_email || "concierge@kiro-maal.so",
+    contact_phone: initialSettings?.contact_phone || "+252 61 200 0000 / +252 61 900 0000",
+    contact_address: initialSettings?.contact_address || "Abudwak, Galmudug, Somalia",
+    company_description:
+      initialSettings?.company_description ||
+      "Kiro-Maal Real Estate is Abudwak's premier luxury property platform. Discover verified properties, unlock AI-driven valuations, and find your dream home with unmatched trust and precision.",
+    social_facebook: initialSettings?.social_facebook || "",
+    social_twitter: initialSettings?.social_twitter || "",
+    social_instagram: initialSettings?.social_instagram || "",
+    social_linkedin: initialSettings?.social_linkedin || "",
+    currency: initialSettings?.currency || "USD",
+    auto_approve_properties: initialSettings?.auto_approve_properties ?? false,
+    enable_ai_chat: initialSettings?.enable_ai_chat ?? true,
+  });
 
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodConfig[]>(
     initialPaymentMethods || []
@@ -581,6 +595,7 @@ function AdminSettingsClient({
                   type="email"
                   value={form.contact_email}
                   onChange={(e) => setForm((p) => ({ ...p, contact_email: e.target.value }))}
+                  placeholder="concierge@kiro-maal.so"
                   className="h-10 rounded-xl border-[#E8E1D4] bg-white focus:border-[#C89B3C] focus:ring-2 focus:ring-[#C89B3C]/20"
                 />
               </div>
@@ -593,6 +608,91 @@ function AdminSettingsClient({
                   value={form.currency}
                   onChange={(e) => setForm((p) => ({ ...p, currency: e.target.value }))}
                   className="h-10 rounded-xl font-mono font-bold border-[#E8E1D4] bg-white focus:border-[#C89B3C] focus:ring-2 focus:ring-[#C89B3C]/20"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">
+                  Office Phone Number(s)
+                </Label>
+                <Input
+                  value={form.contact_phone}
+                  onChange={(e) => setForm((p) => ({ ...p, contact_phone: e.target.value }))}
+                  placeholder="+252 61 200 0000 / +252 61 900 0000"
+                  className="h-10 rounded-xl border-[#E8E1D4] bg-white focus:border-[#C89B3C] focus:ring-2 focus:ring-[#C89B3C]/20"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">
+                  Office Address (Footer)
+                </Label>
+                <Input
+                  value={form.contact_address}
+                  onChange={(e) => setForm((p) => ({ ...p, contact_address: e.target.value }))}
+                  placeholder="Abudwak, Galmudug, Somalia"
+                  className="h-10 rounded-xl border-[#E8E1D4] bg-white focus:border-[#C89B3C] focus:ring-2 focus:ring-[#C89B3C]/20"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase tracking-wider text-[#07111F]">
+                Company Description (Footer)
+              </Label>
+              <Textarea
+                value={form.company_description}
+                onChange={(e) => setForm((p) => ({ ...p, company_description: e.target.value }))}
+                placeholder="Brief company overview shown in the website footer..."
+                className="min-h-[72px] rounded-xl border-[#E8E1D4] bg-white text-xs sm:text-sm focus:border-[#C89B3C]"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <div className="space-y-1">
+                <Label className="text-[11px] font-bold uppercase tracking-wider text-[#6B7280]">
+                  Facebook URL
+                </Label>
+                <Input
+                  value={form.social_facebook}
+                  onChange={(e) => setForm((p) => ({ ...p, social_facebook: e.target.value }))}
+                  placeholder="https://facebook.com/..."
+                  className="h-9 rounded-xl border-[#E8E1D4] bg-white text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] font-bold uppercase tracking-wider text-[#6B7280]">
+                  Twitter / X URL
+                </Label>
+                <Input
+                  value={form.social_twitter}
+                  onChange={(e) => setForm((p) => ({ ...p, social_twitter: e.target.value }))}
+                  placeholder="https://x.com/..."
+                  className="h-9 rounded-xl border-[#E8E1D4] bg-white text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] font-bold uppercase tracking-wider text-[#6B7280]">
+                  Instagram URL
+                </Label>
+                <Input
+                  value={form.social_instagram}
+                  onChange={(e) => setForm((p) => ({ ...p, social_instagram: e.target.value }))}
+                  placeholder="https://instagram.com/..."
+                  className="h-9 rounded-xl border-[#E8E1D4] bg-white text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] font-bold uppercase tracking-wider text-[#6B7280]">
+                  LinkedIn URL
+                </Label>
+                <Input
+                  value={form.social_linkedin}
+                  onChange={(e) => setForm((p) => ({ ...p, social_linkedin: e.target.value }))}
+                  placeholder="https://linkedin.com/..."
+                  className="h-9 rounded-xl border-[#E8E1D4] bg-white text-xs"
                 />
               </div>
             </div>

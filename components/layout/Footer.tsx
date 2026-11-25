@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin, ArrowRight } from "lucide-react";
 import BrandLogo from "@/components/layout/BrandLogo";
+import { prisma } from "@/lib/prisma";
 
 const footerLinks = {
   Company: [
@@ -21,7 +22,66 @@ const footerLinks = {
   ],
 };
 
-export default function Footer() {
+async function getFooterBrandSettings() {
+  const defaults = {
+    siteName: "Kiro-Maal Real Estate",
+    description:
+      "Kiro-Maal Real Estate is Abudwak's premier luxury property platform. Discover verified properties, unlock AI-driven valuations, and find your dream home with unmatched trust and precision.",
+    address: "Abudwak, Galmudug, Somalia",
+    phone: "+252 61 200 0000 / +252 61 900 0000",
+    email: "concierge@kiro-maal.so",
+    facebook: "#",
+    twitter: "#",
+    instagram: "#",
+    linkedin: "#",
+  };
+
+  try {
+    const rows = await prisma.systemSetting.findMany({
+      where: {
+        key: {
+          in: [
+            "site_name",
+            "company_description",
+            "contact_address",
+            "contact_phone",
+            "contact_email",
+            "social_facebook",
+            "social_twitter",
+            "social_instagram",
+            "social_linkedin",
+          ],
+        },
+      },
+    });
+    const map: Record<string, string> = {};
+    for (const r of rows) map[r.key] = r.value;
+
+    return {
+      siteName: map.site_name?.trim() || defaults.siteName,
+      description: map.company_description?.trim() || defaults.description,
+      address: map.contact_address?.trim() || defaults.address,
+      phone: map.contact_phone?.trim() || defaults.phone,
+      email: map.contact_email?.trim() || defaults.email,
+      facebook: map.social_facebook?.trim() || defaults.facebook,
+      twitter: map.social_twitter?.trim() || defaults.twitter,
+      instagram: map.social_instagram?.trim() || defaults.instagram,
+      linkedin: map.social_linkedin?.trim() || defaults.linkedin,
+    };
+  } catch {
+    return defaults;
+  }
+}
+
+export default async function Footer() {
+  const brand = await getFooterBrandSettings();
+  const socials = [
+    { Icon: Facebook, href: brand.facebook, label: "Facebook" },
+    { Icon: Twitter, href: brand.twitter, label: "Twitter / X" },
+    { Icon: Instagram, href: brand.instagram, label: "Instagram" },
+    { Icon: Linkedin, href: brand.linkedin, label: "LinkedIn" },
+  ];
+
   return (
     <footer className="bg-[#07111F] text-[#94A3B8] border-t border-[#C89B3C]/20">
 
@@ -34,7 +94,7 @@ export default function Footer() {
                 <span>✦ VIP Real Estate Insights</span>
               </div>
               <h3 className="text-xl sm:text-2xl font-bold text-[#FCFBF7] font-serif tracking-tight">
-                Stay Ahead of the Somali Property Market
+                Stay Ahead of the Abudwak Property Market
               </h3>
               <p className="text-[#94A3B8] text-sm mt-1">
                 Subscribe to receive new verified listings, off-market opportunities, and AI market predictions.
@@ -64,33 +124,41 @@ export default function Footer() {
               <BrandLogo variant="dark" size="lg" />
             </div>
             <p className="text-sm leading-relaxed text-[#94A3B8] mb-6 max-w-sm">
-              Kiro-Maal Real Estate is Somalia&apos;s premier luxury property platform. Discover verified properties, unlock AI-driven valuations, and find your dream home with unmatched trust and precision.
+              {brand.description}
             </p>
             <div className="space-y-2.5 text-sm">
               <div className="flex items-center gap-2.5">
                 <MapPin className="h-4 w-4 text-[#C89B3C] flex-shrink-0" />
-                <span className="text-[#E2E8F0]">Abudwak, Galmudug, Somalia</span>
+                <span className="text-[#E2E8F0]">{brand.address}</span>
               </div>
               <div className="flex items-center gap-2.5">
                 <Phone className="h-4 w-4 text-[#C89B3C] flex-shrink-0" />
-                <span className="text-[#E2E8F0]">+252 61 200 0000 / +252 61 900 0000</span>
+                <span className="text-[#E2E8F0]">{brand.phone}</span>
               </div>
               <div className="flex items-center gap-2.5">
                 <Mail className="h-4 w-4 text-[#C89B3C] flex-shrink-0" />
-                <span className="text-[#E2E8F0]">concierge@kiro-maal.so</span>
+                <a href={`mailto:${brand.email}`} className="text-[#E2E8F0] hover:text-[#D9B45B] transition-colors">
+                  {brand.email}
+                </a>
               </div>
             </div>
             {/* Social */}
             <div className="flex items-center gap-3 mt-6">
-              {[Facebook, Twitter, Instagram, Linkedin].map((Icon, i) => (
-                <a
-                  key={i}
-                  href="#"
-                  className="w-9 h-9 rounded-xl bg-[#0B1728] border border-[#C89B3C]/20 flex items-center justify-center text-[#94A3B8] hover:bg-gradient-to-r hover:from-[#C89B3C] hover:to-[#D9B45B] hover:text-[#07111F] hover:border-transparent transition-all duration-200"
-                >
-                  <Icon className="h-4 w-4" />
-                </a>
-              ))}
+              {socials.map(({ Icon, href, label }) => {
+                const isExternal = href.startsWith("http");
+                return (
+                  <a
+                    key={label}
+                    href={href}
+                    aria-label={label}
+                    target={isExternal ? "_blank" : undefined}
+                    rel={isExternal ? "noopener noreferrer" : undefined}
+                    className="w-9 h-9 rounded-xl bg-[#0B1728] border border-[#C89B3C]/20 flex items-center justify-center text-[#94A3B8] hover:bg-gradient-to-r hover:from-[#C89B3C] hover:to-[#D9B45B] hover:text-[#07111F] hover:border-transparent transition-all duration-200"
+                  >
+                    <Icon className="h-4 w-4" />
+                  </a>
+                );
+              })}
             </div>
           </div>
 
@@ -119,7 +187,7 @@ export default function Footer() {
       {/* ── Bottom bar ── */}
       <div className="border-t border-[#0B1728] bg-[#050C16]">
         <div className="section-container py-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#64748B]">
-          <p>© {new Date().getFullYear()} Kiro-Maal Real Estate. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} {brand.siteName}. All rights reserved.</p>
           <div className="flex items-center gap-4">
             <Link href="#" className="hover:text-[#D9B45B] transition-colors">Privacy Policy</Link>
             <Link href="#" className="hover:text-[#D9B45B] transition-colors">Terms of Service</Link>

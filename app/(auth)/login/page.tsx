@@ -820,7 +820,7 @@ function AuthContent({ initialTab = "login" }: AuthPageProps) {
                       className="text-[11px] font-bold text-[#07111F]"
                     >
                       Password <span className="text-[#991B1B]">*</span>{" "}
-                      <span className="text-[#6B7280] font-normal text-[10px]">(8+ different chars: A-Z, a-z, 0-9, !@#)</span>
+                      <span className="text-[#6B7280] font-normal text-[10px]">(Min. 8 chars: A-Z, a-z, 0-9)</span>
                     </Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#A97918]" />

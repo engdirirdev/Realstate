@@ -276,10 +276,11 @@ export function validateEmailFormat(raw: string | null | undefined): {
 // ─── Strong Password Validation ────────────────────────────────────
 
 /**
- * Validates that a password has:
- * - At least 8 characters total
- * - At least 8 different (unique) characters (rejects repeated patterns like "11111111" or "12341234")
- * - At least 1 uppercase letter, 1 lowercase letter, 1 digit, and 1 special character
+ * Validates that a password is user-friendly yet secure (e.g. "Muuse11A"):
+ * - At least 8 characters long
+ * - At least 4 distinct characters (rejects trivial repeats like "11111111" or "Aa1Aa1Aa")
+ * - At least 1 uppercase letter (A-Z), 1 lowercase letter (a-z), and 1 number (0-9)
+ *   (Special characters are allowed and encouraged, but not required)
  */
 export function validateStrongPassword(raw: string | null | undefined): {
   valid: boolean;
@@ -295,10 +296,10 @@ export function validateStrongPassword(raw: string | null | undefined): {
   }
 
   const uniqueChars = new Set(password.split("")).size;
-  if (uniqueChars < 8) {
+  if (uniqueChars < 4) {
     return {
       valid: false,
-      error: `Password must contain at least 8 different characters (currently only ${uniqueChars} unique characters).`,
+      error: "Password is too repetitive. Please use a mix of different letters and numbers.",
     };
   }
 
@@ -320,13 +321,6 @@ export function validateStrongPassword(raw: string | null | undefined): {
     return {
       valid: false,
       error: "Password must include at least one number (0–9).",
-    };
-  }
-
-  if (!/[^A-Za-z0-9]/.test(password)) {
-    return {
-      valid: false,
-      error: "Password must include at least one special character (e.g. ! @ # $ % & *).",
     };
   }
 

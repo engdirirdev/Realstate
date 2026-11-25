@@ -659,12 +659,12 @@ function UsersDirectoryContent({ initialUsers = [] }: { initialUsers?: UserItem[
                 type="password"
                 value={form.password}
                 onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
-                placeholder="8+ different chars (A-Z, a-z, 0-9, !@#)"
+                placeholder="Min. 8 chars (e.g. Muuse11A)"
                 className="h-10 border-[#E8E1D4] bg-white rounded-xl text-sm focus:border-[#C89B3C] focus:ring-1 focus:ring-[#C89B3C]"
                 required
               />
               <p className="text-[11px] text-[#6B7280]">
-                Must have at least 8 different characters including uppercase, lowercase, number, and symbol.
+                At least 8 characters with uppercase, lowercase, and a number.
               </p>
             </div>
 
@@ -771,7 +771,7 @@ function UsersDirectoryContent({ initialUsers = [] }: { initialUsers?: UserItem[
                 className="h-10 border-[#E8E1D4] bg-white rounded-xl text-sm focus:border-[#C89B3C]"
               />
               <p className="text-[11px] text-[#6B7280]">
-                If changing: at least 8 different characters with uppercase, lowercase, number, and symbol.
+                If changing: at least 8 characters with uppercase, lowercase, and a number.
               </p>
             </div>
 
